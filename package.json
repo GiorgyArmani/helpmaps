@@ -1,0 +1,34 @@
+{
+  "name": "helpmaps",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HelpMaps — replicable civic emergency map. One codebase, one deployment, one tenant per country resolved from the subdomain.",
+  "scripts": {
+    "dev": "node --max-old-space-size=4096 node_modules/next/dist/bin/next dev",
+    "dev:default": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "leaflet": "^1.9.4",
+    "next": "16.2.9",
+    "nodemailer": "^9.0.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "typescript": "^5"
+  }
+}

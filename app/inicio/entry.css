@@ -1,0 +1,359 @@
+/*
+ * /inicio — the entry page.
+ *
+ * The one dark screen in the product, and deliberately so: it is the page a printed QR
+ * points at, often read outdoors, and it has to look like a front door rather than a
+ * loading map. Everything after it is the white chrome of the app.
+ *
+ * Colours are derived from the brand tokens (`--accent`, `--brand`) so a clone re-skins
+ * it from `config/brand.ts` like everything else. `color-mix` builds the depth; browsers
+ * without it fall back to the flat `--e-bg` declared first, which is still legible.
+ */
+
+.entry {
+  --e-bg: var(--accent);
+  --e-hi: var(--brand);
+  --e-fg: #fff;
+  --e-mut: rgba(255, 255, 255, 0.68);
+  --e-dim: rgba(255, 255, 255, 0.45);
+  --e-soft: rgba(255, 255, 255, 0.05);
+  --e-edge: rgba(255, 255, 255, 0.09);
+
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--e-bg);
+  background: radial-gradient(
+    120% 90% at 50% 0%,
+    color-mix(in srgb, var(--e-bg) 84%, #7d8aa8) 0%,
+    var(--e-bg) 58%,
+    color-mix(in srgb, var(--e-bg) 88%, #000) 100%
+  );
+  color: var(--e-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.entry-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 24px 0;
+}
+
+/* ── Cabecera ───────────────────────────────────────────────────────────── */
+
+.entry-head {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.entry-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4);
+  outline: 1px solid var(--e-edge);
+  outline-offset: -1px;
+  background: var(--e-hi);
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.entry-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.entry-brand {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--e-dim);
+  margin-bottom: 16px;
+}
+
+.entry-h1 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 0 0 12px;
+}
+
+.entry-hi {
+  color: var(--e-hi);
+  /* The brand colour is chosen for white surfaces; on this dark one it can fall under
+     contrast. Lifting it toward white keeps the accent readable whatever the clone set. */
+  color: color-mix(in srgb, var(--e-hi) 70%, #fff);
+}
+
+.entry-lead {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--e-mut);
+  margin: 0;
+}
+
+/* ── Las dos puertas ────────────────────────────────────────────────────── */
+
+.entry-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.entry-opt {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 18px;
+  border-radius: var(--r-lg);
+  text-decoration: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+/* Priority path: someone looking for help right now. Solid white, highest contrast. */
+.entry-need {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid #fff;
+}
+
+.entry-give {
+  background: var(--e-soft);
+  color: var(--e-fg);
+  border: 1px solid color-mix(in srgb, var(--e-hi) 55%, transparent);
+}
+
+.entry-ico {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--soft2);
+  color: var(--ink);
+}
+
+.entry-give .entry-ico {
+  background: color-mix(in srgb, var(--e-hi) 22%, transparent);
+  color: color-mix(in srgb, var(--e-hi) 70%, #fff);
+}
+
+.entry-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.entry-t {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.entry-d {
+  font-size: 12.5px;
+  line-height: 1.35;
+  opacity: 0.72;
+}
+
+.entry-arrow {
+  flex: 0 0 auto;
+  opacity: 0.55;
+}
+
+/* ── Lo publicado hoy ───────────────────────────────────────────────────── */
+
+.entry-stats {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.entry-stats-t,
+.entry-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.entry-stats-t {
+  color: var(--e-dim);
+  margin-bottom: 12px;
+}
+
+.entry-stat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.entry-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 11px 8px;
+  border-radius: var(--r-md);
+  background: var(--e-soft);
+  border: 1px solid var(--e-edge);
+}
+
+.entry-n {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 1.1;
+}
+
+.entry-l {
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--e-mut);
+}
+
+.entry-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--e-dim);
+  margin: 12px 0 0;
+}
+
+/* ── Campaña ────────────────────────────────────────────────────────────── */
+
+.entry-camp {
+  margin-top: 24px;
+  padding: 18px 18px 20px;
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--e-hi) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--e-hi) 30%, transparent);
+}
+
+.entry-tag {
+  display: inline-block;
+  color: color-mix(in srgb, var(--e-hi) 70%, #fff);
+  background: color-mix(in srgb, var(--e-hi) 18%, transparent);
+  padding: 4px 9px;
+  border-radius: 999px;
+  margin-bottom: 11px;
+}
+
+.entry-camp-h {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin: 0 0 9px;
+}
+
+.entry-camp-p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--e-mut);
+  margin: 0 0 9px;
+}
+
+.entry-camp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 12px 17px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--e-hi) 74%, #fff);
+  color: var(--ink);
+  font-size: 14.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.entry-fine {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--e-dim);
+  margin: 11px 0 0;
+}
+
+/* ── Pie ────────────────────────────────────────────────────────────────── */
+
+.entry-skip {
+  display: block;
+  text-align: center;
+  margin-top: 22px;
+  font-size: 13px;
+  color: var(--e-mut);
+  text-decoration: none;
+}
+
+.entry-skip:hover {
+  color: var(--e-fg);
+}
+
+.entry-foot {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.entry-foot-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--e-dim);
+}
+
+.entry-foot-link {
+  color: var(--e-mut);
+  text-decoration: none;
+  border-bottom: 1px solid var(--e-edge);
+}
+
+.entry-foot-link:hover {
+  color: var(--e-fg);
+}
+
+/* Same rule as the app: the focus ring is not decoration here, it is how this gets used
+   one-handed and with a screen reader. */
+.entry a:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 360px) {
+  .entry-h1 {
+    font-size: 26px;
+  }
+
+  .entry-opt {
+    padding: 15px;
+    gap: 12px;
+  }
+
+  .entry-ico {
+    width: 42px;
+    height: 42px;
+  }
+}
