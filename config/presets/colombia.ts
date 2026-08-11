@@ -80,6 +80,29 @@ const colombia: CountryConfig = {
     dataLaw: "la Ley Estatutaria 1581 de 2012 y el Decreto 1377 de 2013 (habeas data)",
     jurisdiction: "Colombia",
   },
+
+  // What Colombia does differently from the shared kit. Everything omitted follows
+  // `config/brand.ts` and keeps following it when the base changes.
+  //
+  // This logo used to live in `config/brand.ts`, which meant every clone shipped
+  // Colombia's mark: deploying the same repo with NEXT_PUBLIC_COUNTRY=ve produced
+  // "HelpMaps Venezuela" wearing it. A country's asset belongs to that country's preset.
+  brand: {
+    logo: "/colombia.png",
+  },
+
+  // The base dictionary says "Refugio", which is the word Venezuela uses. Every Colombian
+  // source covering the August 2026 quake — alcaldías, gobernaciones, Cruz Roja, the
+  // press — says "albergue", and the point of this map is to be searchable in the words
+  // people actually use when they are looking for one.
+  language: {
+    overrides: {
+      es: {
+        "type.shelter": "Albergue",
+        "type.shelter.plural": "Albergues",
+      },
+    },
+  },
 };
 
 export default colombia;

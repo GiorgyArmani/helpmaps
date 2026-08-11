@@ -11,6 +11,17 @@
 // ⚠️ El cromo es casi negro a propósito. En este mapa el color pertenece a los PUNTOS
 // (cada tipo tiene el suyo, en `config/map.ts`); si la interfaz compite con ellos, los
 // pines se leen peor. Si pones un `accent` de color, revisa el mapa antes de quedártelo.
+//
+// ── QUÉ ES DE LA RED Y QUÉ ES DE UN PAÍS ────────────────────────────────────
+//
+// Lo de abajo es la marca COMPARTIDA: lo que se ve igual en todos los despliegues. Lo
+// que un país hace distinto se declara en SU preset (`config/presets/<pais>.ts` → `brand`)
+// y se funde encima aquí.
+//
+// El reparto importa. `logo` vivía aquí con el valor "/colombia.png", así que desplegar
+// este repo con NEXT_PUBLIC_COUNTRY=ve daba "HelpMaps Venezuela" con el logo de Colombia:
+// un archivo compartido con el valor de un país dentro. Todo lo que sea de UN país va en
+// su preset; aquí solo queda lo que la red comparte.
 
 import type { BrandConfig } from "@/config/types";
 import country from "~/config/country";
@@ -26,15 +37,17 @@ import country from "~/config/country";
  */
 const PLATFORM = "HelpMaps";
 
-const brand: BrandConfig = {
+const base: BrandConfig = {
   platform: PLATFORM,
   name: `${PLATFORM} ${country.name}`,
   short: `${PLATFORM} ${country.code}`,
   tagline: "Encuentra ayuda cerca de ti y muestra dónde hace falta.",
 
-  // Ruta bajo `public/`. Ej.: pon el archivo en `public/colombia.png` y escribe
-  // "/colombia.png". Si es `null` se muestra la inicial del país sobre el color de marca.
-  logo: "/colombia.png",
+  // `null` = la inicial del país sobre el color de marca. Es el valor compartido correcto:
+  // la red no tiene un logo, cada país tiene el suyo. Para poner uno, deja el archivo en
+  // `public/` y escribe la ruta en el preset de ese país:
+  //   brand: { logo: "/colombia.png" }
+  logo: null,
   // Se usa como icono de la PWA y de la pestaña cuando no hay logo.
   emoji: "",
 
@@ -66,6 +79,19 @@ const brand: BrandConfig = {
     // Sin "@". Vacío esconde el enlace.
     instagram: "",
   },
+};
+
+// Fusión de un nivel dentro de cada grupo anidado: `colors: { brand: "#c0392b" }` repinta
+// los enlaces sin obligar al preset a repetir los otros diez colores.
+const o = country.brand ?? {};
+
+const brand: BrandConfig = {
+  ...base,
+  ...o,
+  colors: { ...base.colors, ...o.colors },
+  radius: { ...base.radius, ...o.radius },
+  font: { ...base.font, ...o.font },
+  contact: { ...base.contact, ...o.contact },
 };
 
 export default brand;

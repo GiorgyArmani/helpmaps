@@ -3,10 +3,14 @@
 // Regla: una función se enciende cuando ya existe el dato que la sustenta, no antes.
 // Una lista vacía de personas en un mapa no se lee como "todavía no tenemos datos", se
 // lee como "aquí no pasó nada" — y eso es peor que no ofrecerla.
+//
+// Esto es lo que ofrece la RED por defecto. Un país que quiera apagar o encender algo lo
+// dice en su preset (`config/presets/<pais>.ts` → `features`), y se funde encima.
 
 import type { FeatureConfig } from "@/config/types";
+import country from "~/config/country";
 
-const features: FeatureConfig = {
+const base: FeatureConfig = {
   // Núcleo cívico — lo que un país puede llenar desde el primer día.
   needs: true,
   suggestions: true,
@@ -23,9 +27,18 @@ const features: FeatureConfig = {
   // Requieren una red médica alimentando datos verificados. Además, los módulos
   // correspondientes todavía NO están portados desde HelpMap Venezuela: encenderlos hoy
   // no muestra nada. Ver README → "Migrar Venezuela".
+  //
+  // Los tres van en `false` porque ningún código los lee todavía. `missingReports` estuvo
+  // en `true` durante un tiempo sin que eso encendiera nada — un interruptor muerto y
+  // encendido es peor que uno apagado: el día que se cablee el módulo, aparece solo en
+  // todos los despliegues que heredaron el valor, sin que nadie lo decida.
+  // La validación de `src/config/validate.ts` avisa si alguno vuelve a `true` antes de
+  // tiempo.
   patients: false,
   rescued: false,
-  missingReports: true,
+  missingReports: false,
 };
+
+const features: FeatureConfig = { ...base, ...country.features };
 
 export default features;

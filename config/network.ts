@@ -29,6 +29,12 @@ const network: Deployment[] = [
     name: "Venezuela",
     code: "VE",
     flag: "🇻🇪",
+    // ⚠️ Esta URL NO coincide con el `host` del preset (ve.helpmaps.net), y es a
+    // propósito: el despliegue vivo de Venezuela todavía corre desde su repositorio
+    // original, y el preset apunta a dónde quedará cuando migre. Aquí va la que
+    // responde hoy — mandar al hub a un dominio que aún no existe es peor que la
+    // incoherencia. `src/config/validate.ts` avisa de esto en cada build de VE; el aviso
+    // se apaga solo el día que la migración termine y ambos digan ve.helpmaps.net.
     url: "https://www.helpmapvzla.net",
     status: "live",
     lat: 10.49,

@@ -58,6 +58,24 @@ const venezuela: CountryConfig = {
     dataLaw: "los artículos 28 y 60 de la Constitución y la LOPNNA (art. 65)",
     jurisdiction: "Venezuela",
   },
+
+  // Venezuela against the shared kit. Stated even where it matches the base, because this
+  // preset is what the migration from the original repo fills in — and an explicit `null`
+  // reads as a decision, while an absent key reads as an oversight.
+  //
+  // No logo file yet: the wordmark renders the country initial over the brand colour.
+  // Drop the asset in `public/` and point at it here when the migration brings it over.
+  brand: {
+    logo: null,
+    contact: {
+      email: "info@helpmapvzla.net",
+      whatsapp: "",
+      instagram: "",
+    },
+  },
+
+  // No `language` block on purpose: "Refugio" — the base dictionary's word — is the one
+  // Venezuela uses. Colombia is the country that overrides it, to "Albergue".
 };
 
 export default venezuela;

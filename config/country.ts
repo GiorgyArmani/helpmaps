@@ -20,11 +20,27 @@ const PRESETS: Record<string, CountryConfig> = {
   ve: venezuela,
 };
 
-/** Se usa cuando NEXT_PUBLIC_COUNTRY está vacío o no coincide. Pon el TUYO. */
+/** Se usa cuando NEXT_PUBLIC_COUNTRY está VACÍO. Pon el TUYO. */
 const DEFAULT_COUNTRY: CountryConfig = colombia;
 
 // Referenciado literalmente para que Next lo inyecte en el bundle del cliente.
 const selected = process.env.NEXT_PUBLIC_COUNTRY;
+
+// Vacío → el país por defecto, que es el modo documentado de una clonación de un solo
+// país y también el del hub. Con valor → tiene que existir.
+//
+// Un valor que no coincide REVIENTA aquí, en vez de caer al país por defecto. Antes caía:
+// desplegar con NEXT_PUBLIC_COUNTRY="pe" servía Colombia entera —regiones, encuadre,
+// aviso legal— bajo el dominio de Perú, y nada en la interfaz lo delataba. Un fallo de
+// despliegue tiene que doler en el build, no descubrirse cuando alguien mire el mapa.
+if (selected && !PRESETS[selected]) {
+  throw new Error(
+    `NEXT_PUBLIC_COUNTRY="${selected}" no existe en config/country.ts. ` +
+      `Presets disponibles: ${Object.keys(PRESETS).join(", ")}. ` +
+      `Para un país nuevo: copia config/presets/_template.ts, complétalo y añádelo a PRESETS. ` +
+      `Déjala vacía para usar el país por defecto (${DEFAULT_COUNTRY.slug}).`,
+  );
+}
 
 const country: CountryConfig = (selected && PRESETS[selected]) || DEFAULT_COUNTRY;
 

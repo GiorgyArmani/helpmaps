@@ -15,6 +15,7 @@ import type {
   SiteConfig,
 } from "@/config/types";
 import type { LocationType } from "@/domain/types";
+import { validateConfig } from "@/config/validate";
 
 /**
  * The assembled configuration for this deployment.
@@ -34,6 +35,11 @@ export const SITE: SiteConfig = Object.freeze({
   integrations,
   network,
 });
+
+// Se revisa al ensamblar, no bajo demanda: un preset a medio llenar tiene que romper el
+// build de quien lo despliega, no esperar a la primera persona que abra el mapa. Lanza
+// solo en servidor — ver la nota de `validate.ts`.
+validateConfig(SITE);
 
 export const COUNTRY = SITE.country;
 export const BRAND = SITE.brand;

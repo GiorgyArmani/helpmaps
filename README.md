@@ -4,19 +4,23 @@ Mapa cívico de emergencia, replicable por país. Muestra dónde hay ayuda dispo
 (refugios, comedores, puntos de acopio, iniciativas ciudadanas) y qué necesita cada punto
 ahora mismo.
 
-**Este repositorio es la base que se mantiene y se clona.** Cada país es una clonación con
-su propia carpeta `config/`, su propia base de datos y su propio subdominio. Las mejoras
-que entran aquí bajan a todos los despliegues.
+**Un repositorio, muchos despliegues.** No se hace un fork por país: cada país es un
+archivo de preset dentro de este repo, y un despliegue es ese repo con otra variable de
+entorno y otra base de datos. Un `git push` actualiza todos los países a la vez.
 
 ```
 helpmaps.net          hub: la red, la documentación de la API, los términos
-co.helpmaps.net      Colombia
-ve.helpmaps.net       Venezuela
+co.helpmaps.net       Colombia      NEXT_PUBLIC_COUNTRY=co
+ve.helpmaps.net       Venezuela     NEXT_PUBLIC_COUNTRY=ve
 ```
+
+Fork solo si un país necesita divergir de verdad (otro nombre de plataforma, funciones que
+la base no tiene). Es una salida de emergencia, no el camino: un fork debe un merge en
+cada arreglo que entre aquí, y los archivos que chocan son justo los que ese país editó.
 
 ---
 
-## Clonar para un país nuevo
+## Añadir un país
 
 Cuatro pasos. El primero es el único que toca código.
 
@@ -26,31 +30,47 @@ Todo lo que cambia entre países vive en `config/`. Nada bajo `src/` sabe en qu�
 corre; si te encuentras escribiendo el nombre de un país, una coordenada, un color o una
 frase fuera de `config/`, va en el lugar equivocado.
 
-| Archivo | Qué decide |
-| --- | --- |
-| `config/presets/<pais>.ts` | Identidad, regiones, encuadre del mapa, marco legal |
-| `config/country.ts` | Cuál de esos presets sirve esta clonación |
-| `config/brand.ts` | Nombre, colores, logo, radios, tipografía, contacto |
-| `config/language.ts` | Idioma principal, idiomas disponibles, vocabulario local |
-| `config/features.ts` | Qué módulos están encendidos |
-| `config/map.ts` | Teselas, tipos de punto, colores, agrupación, caducidad |
-| `config/integrations.ts` | Correo, analítica, fuentes externas, PWA |
-| `config/network.ts` | La red de países (alimenta el mapa del hub) |
-| `config/deployment.ts` | Si esta clonación es `country` o `hub` |
+Un país es **un archivo**: copia `config/presets/_template.ts` a
+`config/presets/<pais>.ts`, complétalo e impórtalo en `config/country.ts`. Si el preset ya
+existe, no hay nada que editar: basta con `NEXT_PUBLIC_COUNTRY=co`.
 
-Para un país que ya tiene preset basta con `NEXT_PUBLIC_COUNTRY=co`. Para uno nuevo, copia
-`config/presets/_template.ts`, complétalo e impórtalo en `config/country.ts`.
-
-**Localización sin conflictos de merge:** no edites `src/i18n/dictionaries/`. Cambia
-palabras desde `config/language.ts`, que pisa el diccionario clave por clave y sobrevive
-intacto cuando esta clonación traiga cambios del repo base.
+El preset lleva la geografía **y lo que ese país hace distinto** del resto de la red:
 
 ```ts
-// config/language.ts
-overrides: {
-  es: { "type.shelter": "Albergue", "type.shelter.plural": "Albergues" },
-}
+// config/presets/colombia.ts
+brand:    { logo: "/colombia.png" },
+features: { donations: false },
+language: { overrides: { es: { "type.shelter": "Albergue" } } },
 ```
+
+Lo que omites sigue al kit compartido, y lo sigue cuando la base mejore. Ese es el reparto:
+
+| Archivo | Qué decide | De quién es |
+| --- | --- | --- |
+| `config/presets/<pais>.ts` | Identidad, regiones, encuadre, marco legal, **y sus overrides** | del país |
+| `config/country.ts` | Qué presets existen y cuál sirve por defecto | de la red |
+| `config/brand.ts` | Colores, radios, tipografía **compartidos** | de la red |
+| `config/language.ts` | Idioma y vocabulario **compartidos** | de la red |
+| `config/features.ts` | Qué módulos ofrece la red por defecto | de la red |
+| `config/map.ts` | Teselas, tipos de punto, colores, agrupación, caducidad | de la red |
+| `config/integrations.ts` | Correo, analítica, fuentes externas, PWA | de la red |
+| `config/network.ts` | La red de países (alimenta el mapa del hub) | de la red |
+| `config/deployment.ts` | Si este despliegue es `country` o `hub` | del entorno |
+
+Un valor de un país dentro de un archivo compartido es un error, aunque compile: `logo`
+vivió en `config/brand.ts` con el valor `"/colombia.png"` y eso hacía que desplegar
+con `NEXT_PUBLIC_COUNTRY=ve` diera "HelpMaps Venezuela" con el logo de Colombia.
+
+**Localización sin conflictos de merge:** no edites `src/i18n/dictionaries/`. El bloque
+`language.overrides` del preset pisa el diccionario clave por clave y sobrevive intacto
+cuando bajen cambios de la base. Colombia lo usa para decir "Albergue" donde el
+diccionario dice "Refugio", que es la palabra que usan sus alcaldías y su prensa.
+
+**La configuración se valida al construir.** `src/config/validate.ts` revienta el build si
+el preset tiene `TODO` sin completar, regiones repetidas, límites invertidos, un centro de
+mapa fuera de esos límites o un `NEXT_PUBLIC_COUNTRY` que no existe — antes eso último
+servía el país por defecto en silencio bajo el dominio equivocado. Solo lanza en servidor:
+un error de configuración nunca debe dejar en blanco la pantalla de quien busca ayuda.
 
 ### 2. Su propia base de datos
 
@@ -88,8 +108,19 @@ npm run dev        # http://localhost:3000
 npm run build
 ```
 
-Luego apunta `<pais>.helpmaps.net` al despliegue y añádelo a `config/network.ts` para que
-aparezca en el mapa de la portada.
+**Un proyecto de Vercel por país, todos apuntando a ESTE repositorio.** Lo que los
+distingue son sus variables de entorno, no su código:
+
+| Proyecto | Variables | Dominio |
+| --- | --- | --- |
+| `helpmaps-hub` | `NEXT_PUBLIC_MODE=hub` | helpmaps.net |
+| `helpmaps-co` | `NEXT_PUBLIC_COUNTRY=co` + Supabase de Colombia | co.helpmaps.net |
+| `helpmaps-ve` | `NEXT_PUBLIC_COUNTRY=ve` + Supabase de Venezuela | ve.helpmaps.net |
+
+Así se mantiene: un `git push` a este repo reconstruye los tres. No hay merges entre
+países ni versiones que se queden atrás, porque no hay más que una.
+
+Luego añade el país a `config/network.ts` para que aparezca en el mapa de la portada.
 
 ---
 

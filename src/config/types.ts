@@ -70,6 +70,28 @@ export interface CountryConfig {
   geo: CountryGeo;
   regions: Region[];
   legal: CountryLegal;
+
+  // -------------------------------------------------------------------------
+  // Per-country overrides of the shared kit.
+  //
+  // These three are what let one repository serve every country from one branch.
+  // `config/brand.ts`, `config/features.ts` and `config/language.ts` hold the values the
+  // whole network shares; what a single country does differently is stated HERE, next to
+  // that country, and merged over the shared file at assembly time.
+  //
+  // Without this the shared files are the country's: Colombia's logo shipped to every
+  // clone, and telling Venezuela apart meant forking the repo — which then owes a merge
+  // on every upstream fix, in exactly the files it just edited.
+  //
+  // Say only what differs. Anything omitted follows the base and keeps following it.
+  // -------------------------------------------------------------------------
+
+  /** Logo, colours, contact channels this country does differently. */
+  brand?: BrandOverrides;
+  /** Modules this country turns on or off against the base. */
+  features?: Partial<FeatureConfig>;
+  /** Reading language and local vocabulary. */
+  language?: LanguageOverrides;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,6 +167,26 @@ export interface BrandConfig {
   };
 }
 
+/**
+ * What a country states differently about its brand, merged over `config/brand.ts`.
+ *
+ * Shallow-merged one level into the nested groups, so `colors: { brand: "#c0392b" }`
+ * repaints links without restating the other ten colours.
+ */
+export interface BrandOverrides {
+  platform?: string;
+  name?: string;
+  short?: string;
+  tagline?: string;
+  /** Path under /public, or `null` for the wordmark. State it: the base cannot guess. */
+  logo?: string | null;
+  emoji?: string;
+  colors?: Partial<BrandColors>;
+  radius?: Partial<BrandConfig["radius"]>;
+  font?: Partial<BrandConfig["font"]>;
+  contact?: Partial<BrandConfig["contact"]>;
+}
+
 // ---------------------------------------------------------------------------
 // Language — how this deployment speaks
 // ---------------------------------------------------------------------------
@@ -162,6 +204,18 @@ export interface LanguageConfig {
   /** Offered in the language switcher. Always include `default`. */
   available: Lang[];
   overrides: CopyOverrides;
+}
+
+/**
+ * A country's own language settings, merged over `config/language.ts`.
+ *
+ * `overrides` merges per language and per key, so a country renaming "refugio" to
+ * "albergue" keeps every other override the base ships.
+ */
+export interface LanguageOverrides {
+  default?: Lang;
+  available?: Lang[];
+  overrides?: CopyOverrides;
 }
 
 // ---------------------------------------------------------------------------
