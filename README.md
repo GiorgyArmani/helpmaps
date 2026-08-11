@@ -222,5 +222,27 @@ punta antes de anunciar el despliegue.
 
 ## Licencia
 
-Código abierto. Los datos publicados se ofrecen bajo CC BY 4.0; la cartografía base es de
-OpenStreetMap (ODbL).
+**[MIT](./LICENSE).** Se puede usar, modificar, redistribuir y desplegar comercialmente,
+conservando el aviso de copyright. Las contribuciones se aceptan bajo esa misma licencia
+—*inbound equals outbound*— sin ningún acuerdo aparte que firmar: ver
+[`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+Los **datos publicados** por cada despliegue se ofrecen bajo
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); la **cartografía base** es de
+OpenStreetMap (ODbL) con teselas de CARTO, y las capas sísmicas son de USGS. Esas tres
+atribuciones son condición de licencia, no cortesía: van visibles en el mapa y no se quitan. El
+inventario completo, con su evidencia, está en
+[`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md).
+
+## Comunidad y seguridad
+
+| | |
+| --- | --- |
+| [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) · [español](./CODE_OF_CONDUCT.es.md) | Cómo se participa aquí |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Licencia de las contribuciones, DCO, y las reglas que no se negocian |
+| [`SECURITY.md`](./SECURITY.md) | Cómo reportar una vulnerabilidad, qué es grave y las reglas de prueba |
+| [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) | Todo lo de terceros que el proyecto usa o muestra |
+| `db/099_security_check.sql` | Verifica que RLS protege lo que debe. Córrelo tras cada cambio de esquema |
+
+Los problemas de seguridad o privacidad **no van en un issue público**: escribe a
+info@helpmaps.net con `[SECURITY]` en el asunto.

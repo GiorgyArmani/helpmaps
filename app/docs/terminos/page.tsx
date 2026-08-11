@@ -50,7 +50,20 @@ export default function TermsPage() {
           <a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer">
             OpenStreetMap
           </a>{" "}
-          (ODbL). El código del proyecto es abierto.
+          (ODbL). El código del proyecto es abierto bajo{" "}
+          <a href="https://opensource.org/license/mit" rel="noopener noreferrer">
+            licencia MIT
+          </a>
+          {BRAND.contact.repo ? (
+            <>
+              {" "}
+              y está publicado en{" "}
+              <a href={BRAND.contact.repo} target="_blank" rel="noopener noreferrer">
+                {repoLabel(BRAND.contact.repo)}
+              </a>
+            </>
+          ) : null}
+          : cualquiera puede auditarlo y desplegarlo en su país.
         </p>
       </DocSection>
 
@@ -61,4 +74,14 @@ export default function TermsPage() {
       </DocSection>
     </DocShell>
   );
+}
+
+/** "github.com/usuario/repo" — sin esquema, que en un enlace visible solo estorba. */
+function repoLabel(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.host}${u.pathname}`.replace(/\/$/, "");
+  } catch {
+    return url;
+  }
 }
