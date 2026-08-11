@@ -2509,36 +2509,256 @@ textarea.finput {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Hub landing */
+/* Hub landing (helpmaps.net)
+ *
+ * Una sola columna, mucho blanco y casi nada de cromo: la portada de la red no tiene que
+ * vender nada, tiene que decir qué es esto y llevar al mapa del país.
+ *
+ * ── LAS TRES DECISIONES QUE ARREGLAN EL "no parece haber orden" ──────────────
+ *
+ * 1. UNA MEDIDA POR ROL, Y SIEMPRE LA MISMA. Antes el `h1` no tenía ancho máximo y
+ *    corría los 944 px del contenedor (más de 100 caracteres por línea) mientras el
+ *    párrafo de debajo se cortaba a 62ch. Dos ritmos distintos apilados: el ojo no
+ *    encontraba un borde derecho al que agarrarse. Ahora la frase para a 26ch y el
+ *    párrafo a 58ch — siguen siendo distintos, pero es una escalera deliberada, no ruido.
+ *
+ * 2. EL ESPACIO AGRUPA. Todo tenía `gap: 14px` dentro y `40px` fuera, así que la bajada
+ *    quedaba tan separada de su título como el título de la sección anterior. Aquí hay
+ *    cuatro escalones (8 / 16 / 28 / 72) y cada uno significa una cosa: dentro de un
+ *    grupo, entre grupos, del encabezado a su contenido, entre secciones.
+ *
+ * 3. LA MARCA ES LO MÁS GRANDE. "HelpMaps" iba a 1.05rem al lado de un titular de
+ *    2.6rem: el nombre era el elemento más pequeño de la página que existe para
+ *    presentarlo. Ahora es la primera línea del `h1` y la pieza mayor de la portada.
+ *
+ * Contraste: el texto secundario NO usa `--mut` (#7b818c da 3.6:1 sobre blanco y no
+ * pasa el mínimo AA de 4.5:1 para texto). `--hub-mut` es la misma idea a 6.2:1.
+ */
 .hub {
+  --hub-mut: #5b616b;
+  --hub-gap-tight: 8px;
+  --hub-gap-item: 16px;
+  --hub-gap-block: 28px;
+  --hub-gap-section: clamp(56px, 8vw, 72px);
+
   max-width: 980px;
   margin: 0 auto;
-  padding: 28px 18px 64px;
+  padding: clamp(32px, 7vw, 72px) 20px 72px;
   color: var(--ink);
   font-family: var(--font-sans);
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: var(--hub-gap-section);
 }
 
-.hub-title {
-  font-size: clamp(1.75rem, 5vw, 2.6rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+/* ── Selector de idioma ──────────────────────────────────────────────────── */
+
+/* Arriba a la derecha y en píldora: es lo único de la página que no es contenido, así
+   que se anuncia como control sin robarle peso a la marca. Margen negativo abajo para
+   que no consuma un escalón entero del ritmo vertical — es una barra, no una sección. */
+.hub-langs {
+  align-self: flex-end;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  margin-bottom: calc(var(--hub-gap-section) * -1 + var(--hub-gap-block));
+}
+
+.hub-lang {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--hub-mut);
+  text-decoration: none;
+  transition: background-color 180ms ease-out, color 180ms ease-out;
+}
+
+.hub-lang:hover {
+  color: var(--ink);
+}
+
+.hub-lang[aria-current] {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ── Portada ─────────────────────────────────────────────────────────────── */
+
+/* Centrada. Con una sola columna y tan poco dentro, el eje central es lo que hace que
+   la marca lea como el asunto de la página y no como una etiqueta en un margen. */
+.hub-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--hub-gap-block);
+}
+
+/* Marca y frase son un solo h1 en dos líneas. `display: flex` en columna para que la
+   frase no herede el interlineado apretado del logotipo. */
+.hub-masthead {
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hub-gap-item);
+  font-weight: 800;
+}
+
+.hub-mark {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 18px);
+}
+
+.hub-mark-logo {
+  width: clamp(44px, 7vw, 60px);
+  height: clamp(44px, 7vw, 60px);
+  border-radius: 14px;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.hub-wordmark {
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+/* Peso 500 y no 800: la frase explica, no compite con el nombre. */
+.hub-tagline {
+  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  color: var(--hub-mut);
+  /* 38ch, no 26ch: a 26 la frase caía en cuatro líneas de ~23 caracteres, una columna
+     más estrecha que el propio logotipo — se leía apretada y desalineada respecto a él.
+     A 38 son tres líneas algo más anchas que "HelpMaps", que es lo que hace que el
+     bloque se lea como una unidad con la marca y no como una nota al margen. */
+  max-width: 38ch;
+  margin-inline: auto;
+  text-wrap: balance;
 }
 
 .hub-lead {
   font-size: 1.0625rem;
-  line-height: 1.6;
+  line-height: 1.65;
   color: #454a53;
-  max-width: 62ch;
+  max-width: 58ch;
+  margin: 0 auto;
+}
+
+.hub-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hub-gap-item);
+}
+
+/* Una sola acción primaria en la portada; la otra queda como enlace. */
+.hub-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 180ms ease-out;
+}
+
+.hub-cta:hover {
+  opacity: 0.86;
+}
+
+/* Un enlace de texto, no un botón.
+ *
+ * Dos correcciones sobre la versión anterior:
+ *
+ *   · El subrayado es `text-decoration`, no `border-bottom`. Un borde se dibuja en el
+ *     BORDE DE LA CAJA, así que al darle `min-height: 44px` para que fuera un objetivo
+ *     táctil decente la línea se despegaba y quedaba flotando muy por debajo del texto,
+ *     con pinta de botón a medio hacer. `text-decoration` sigue al texto, de modo que el
+ *     área táctil puede crecer por `padding` sin arrastrar la línea.
+ *
+ *   · Sin flecha. Aparecía en los cinco enlaces de la página y, repetida, deja de
+ *     significar "esto lleva a otro sitio" y pasa a ser ruido.
+ */
+.hub-action {
+  display: inline-block;
+  padding: 11px 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  transition: text-decoration-color 180ms ease-out;
+}
+
+.hub-action:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ── Secciones ───────────────────────────────────────────────────────────── */
+
+.hub-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-gap-block);
+}
+
+/* Filete de separación: el recurso más barato para que una sección se lea como una
+   sección sin añadir ni una caja ni un color. */
+.hub-section + .hub-section,
+.hub-foot {
+  border-top: 1px solid var(--line);
+  padding-top: var(--hub-gap-section);
+}
+
+.hub-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--hub-gap-tight);
+}
+
+.hub-h2 {
+  font-size: clamp(1.25rem, 2.2vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
   margin: 0;
 }
 
+.hub-sub {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--hub-mut);
+  max-width: 58ch;
+  margin: 0 auto;
+}
+
+/* ── Mapa ────────────────────────────────────────────────────────────────── */
+
 .hub-map {
-  height: 380px;
+  height: clamp(280px, 46vw, 400px);
   width: 100%;
   border-radius: 18px;
   border: 1px solid var(--line);
@@ -2562,66 +2782,178 @@ textarea.finput {
 
 .hub-pin-soon {
   border-style: dashed;
-  border-color: var(--mut);
+  border-color: var(--hub-mut);
   opacity: 0.7;
   cursor: default;
 }
 
+/* ── Tarjetas ────────────────────────────────────────────────────────────── */
+
 .hub-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
+  gap: 12px;
+}
+
+.hub-grid > li {
+  display: flex;
 }
 
 .hub-card {
+  flex: 1;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 16px 18px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: flex-start;
+  gap: var(--hub-gap-tight);
   color: inherit;
   text-decoration: none;
+  transition: border-color 180ms ease-out;
+}
+
+/* Toda la tarjeta es el destino, así que tiene que anunciarse como pulsable sin
+   recurrir a una flecha ni a un botón dentro: el borde se oscurece y el fondo se tiñe
+   apenas. Dos señales a la vez, porque solo el color del borde es demasiado sutil para
+   quien no lo está buscando. */
+a.hub-card {
+  cursor: pointer;
 }
 
 a.hub-card:hover {
   border-color: var(--accent);
+  background: var(--soft);
 }
 
-.hub-card-head {
+.hub-card-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  width: 100%;
+  font-size: 1.0625rem;
   font-weight: 700;
-  font-size: 1.05rem;
+  line-height: 1.3;
 }
 
-.hub-h2 {
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  margin: 0;
+.hub-flag {
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
-.hub-section {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+.hub-card-name {
+  flex: 1;
 }
+
+/* El estado es una palabra, no un color: `data-live` cambia el punto Y el texto, así que
+   no depende de distinguir verde de gris. */
+.hub-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--hub-mut);
+  white-space: nowrap;
+}
+
+.hub-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+  flex: 0 0 auto;
+}
+
+/* El verde va SOLO en el punto, nunca en el texto: `--ok` sobre blanco da ~3:1 y no
+   llega al 4.5:1 que necesita un texto de 12px. La palabra ya dice el estado, así que el
+   color es refuerzo y puede permitirse ser decorativo. */
+.hub-status[data-live]::before {
+  background: var(--ok);
+  opacity: 1;
+}
+
+/* 15px, no 13px: era el cuerpo de texto de las tarjetas y quedaba por debajo de lo
+   cómodo de leer en un teléfono. */
+.hub-card-body {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--hub-mut);
+}
+
+.hub-host {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.8125rem;
+  color: var(--hub-mut);
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+/* Un enlace suelto como hijo directo de la sección: `align-items` por defecto lo
+   estiraría a todo el ancho y el subrayado cruzaría la página entera. */
+.hub-section > .hub-action {
+  align-self: center;
+}
+
+/* ── API ─────────────────────────────────────────────────────────────────── */
+
+.hub-code {
+  display: block;
+  white-space: pre;
+  overflow-x: auto;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+/* ── Pie ─────────────────────────────────────────────────────────────────── */
 
 .hub-foot {
-  border-top: 1px solid var(--line);
-  padding-top: 18px;
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  font-size: 0.85rem;
-  color: var(--mut);
+  justify-content: center;
+  gap: var(--hub-gap-item);
+  font-size: 0.875rem;
+  color: var(--hub-mut);
 }
 
 .hub-foot a {
-  color: var(--mut);
+  color: var(--hub-mut);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.hub-foot a:hover {
+  color: var(--ink);
+}
+
+/* ── Accesibilidad ───────────────────────────────────────────────────────── */
+
+.hub a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub *,
+  .hub *::before,
+  .hub *::after {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .small {
@@ -2904,6 +3236,104 @@ a.hub-card:hover {
 .ovbody .admwrap-body {
   max-width: none;
   padding: 0;
+}
+
+/* Panel header: who you are on the left, one gear on the right. The <h1> that used to sit
+   here duplicated the overlay's own title directly above it, and the three account
+   actions sat loose in the flow competing with the tabs for a 430px column. */
+.admhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+}
+
+.admwho {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 0.75rem;
+}
+
+.admwho b {
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admrole {
+  font-size: 0.6563rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--mut);
+}
+
+.admsettings {
+  position: relative;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.amini-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.admmenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 650;
+  min-width: 210px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  box-shadow: 0 12px 30px rgba(16, 20, 28, 0.2);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admmenu-item {
+  border: none;
+  background: none;
+  border-radius: 9px;
+  padding: 9px 10px;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.admmenu-item:hover {
+  background: var(--soft);
+}
+
+.admmenu-danger {
+  color: var(--danger);
+}
+
+/* The password form lives inside the menu, so it gets the room rather than the row. */
+.admmenu .pwform {
+  padding: 6px 4px 2px;
+  gap: 10px;
+}
+
+.admmenu .linkbtn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
 
 /* Already indented by the panel; a second indent just narrows the tab row further. */

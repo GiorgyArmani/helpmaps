@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabaseServer } from "@/lib/supabase/server";
+import { isGate, requireAdmin, type StaffGate } from "@/lib/staffGate";
+import { absoluteUrl } from "@/config";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendVolunteerWelcome } from "@/lib/email";
-import { generateTempPassword, passwordTooShort } from "@/lib/password";
+import { passwordTooShort } from "@/lib/password";
 import { isPwnedPassword } from "@/lib/passwordBreach";
 import { cleanName, isEmail } from "@/lib/sanitize";
 
@@ -32,27 +32,6 @@ import { cleanName, isEmail } from "@/lib/sanitize";
  * WhatsApp — until SPF/DKIM/DMARC are configured that is not a rare case.
  */
 
-interface Gate {
-  sb: SupabaseClient;
-  uid: string;
-  email: string | null;
-}
-
-async function requireAdmin(): Promise<Gate | NextResponse> {
-  const sb = await supabaseServer();
-  if (!sb) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  const { data: auth } = await sb.auth.getUser();
-  const user = auth.user;
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const { data } = await sb.from("staff_users").select("role").eq("user_id", user.id).maybeSingle();
-  if (data?.role !== "admin") return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  return { sb, uid: user.id, email: user.email ?? null };
-}
-
-function isGate(value: Gate | NextResponse): value is Gate {
-  return !(value instanceof NextResponse);
-}
-
 async function body(req: Request): Promise<Record<string, unknown> | null> {
   try {
     const parsed: unknown = await req.json();
@@ -62,11 +41,56 @@ async function body(req: Request): Promise<Record<string, unknown> | null> {
   }
 }
 
+/**
+ * How long the emailed link is good for, in hours. Informational only — the real expiry
+ * is Supabase's `MAILER_OTP_EXP` setting; this is what the copy tells the person. Keep
+ * them in step if you change it there.
+ */
+const RECOVERY_HOURS = 24;
+
+/**
+ * A single-use link that lets somebody set their own password.
+ *
+ * `generateLink` MINTS the link without sending anything: Supabase's own mailer is not
+ * involved, so the message goes out through this deployment's SMTP with the rest of the
+ * product's email, in the product's own template and language.
+ *
+ * Returns null rather than throwing. A missing link degrades the welcome to "sign in with
+ * the password you have", which is wrong but harmless; failing the whole approval because
+ * a link could not be minted would leave a volunteer approved in the queue with no
+ * account behind them.
+ */
+async function recoveryLink(email: string): Promise<string | null> {
+  const admin = supabaseAdmin();
+  if (!admin) return null;
+  try {
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: absoluteUrl("/reset") },
+    });
+    if (error) {
+      console.error("[staff] generateLink failed:", error.message);
+      return null;
+    }
+    return data.properties?.action_link ?? null;
+  } catch (err) {
+    console.error("[staff] generateLink threw:", err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 interface Provisioned {
   ok: true;
   user_id: string;
   emailed: boolean;
-  tempPassword?: string;
+  /**
+   * The set-password link, returned ONLY when the email did not go out — so an admin can
+   * pass it on another way instead of the person being stranded. It is single-use and
+   * short-lived, which is the whole reason it is safe to hand over at all; the generated
+   * password it replaces was neither.
+   */
+  setPasswordUrl?: string;
 }
 
 /**
@@ -78,14 +102,15 @@ interface Provisioned {
  * told they were accepted.
  */
 async function provision(
-  gate: Gate,
+  gate: StaffGate,
   input: { email: string; name?: string | null; password?: string },
 ): Promise<Provisioned | NextResponse> {
   const admin = supabaseAdmin();
   if (!admin) return NextResponse.json({ error: "not_configured" }, { status: 503 });
 
-  // An admin may set one; otherwise it is generated, which is both stronger and one less
-  // thing to invent while triaging a queue.
+  // An admin may still set a password directly (handing it over in person). Omitted —
+  // the normal path — the account is created WITHOUT one and the person sets their own
+  // from the emailed link, so no credential is ever generated on their behalf.
   const chosen = typeof input.password === "string" && input.password ? input.password : null;
   if (chosen) {
     // Same floor as any other door into this building: an admin-issued password grants
@@ -97,11 +122,10 @@ async function provision(
       return NextResponse.json({ error: "pwned_password" }, { status: 422 });
     }
   }
-  const password = chosen ?? generateTempPassword();
 
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email: input.email,
-    password,
+    ...(chosen ? { password: chosen } : {}),
     // No confirmation round trip: the welcome email is already the round trip, and a
     // volunteer blocked behind an unconfirmed address is a volunteer who never starts.
     email_confirm: true,
@@ -122,15 +146,23 @@ async function provision(
     return NextResponse.json({ error: "role_failed", detail: roleErr.message }, { status: 400 });
   }
 
+  const setPasswordUrl = await recoveryLink(input.email);
+
   const emailed = await sendVolunteerWelcome({
     to: input.email,
     name: input.name ?? undefined,
-    tempPassword: password,
+    setPasswordUrl: setPasswordUrl ?? undefined,
+    setPasswordHours: RECOVERY_HOURS,
   }).catch(() => false);
 
-  // Only when the mail did not go out. Otherwise the credential lives in exactly one
-  // place — the recipient's inbox — rather than also in an admin's screen and history.
-  return { ok: true, user_id: created.user.id, emailed, ...(emailed ? {} : { tempPassword: password }) };
+  // Only when the mail did not go out — otherwise the link lives in exactly one place,
+  // the recipient's inbox, rather than also in an admin's screen and browser history.
+  return {
+    ok: true,
+    user_id: created.user.id,
+    emailed,
+    ...(emailed || !setPasswordUrl ? {} : { setPasswordUrl }),
+  };
 }
 
 export async function POST(req: Request) {
@@ -222,6 +254,60 @@ export async function GET() {
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: "list_failed" }, { status: 500 });
   return NextResponse.json({ staff: data ?? [] });
+}
+
+/**
+ * Re-send the onboarding email to somebody who already has access.
+ *
+ *   PUT { user_id }
+ *
+ * The gap this closes: the welcome is only ever sent by `provision()`, so an account
+ * created any OTHER way never gets one — and the documented way to bootstrap the first
+ * account (db/002_staff.sql) is a hand-written `insert into staff_users`, which no
+ * trigger watches because the database sends no mail at all. Same for anyone whose
+ * welcome bounced while SMTP was misconfigured.
+ *
+ * Sends the no-credential variant deliberately: we cannot recover their existing
+ * password, and resetting it to re-send an email would lock out a volunteer who was
+ * working fine. They get the login link and the manuals.
+ *
+ * NOTE: this deployment has no password-recovery flow yet, so somebody who has lost their
+ * password cannot get back in on their own — an admin has to re-provision them through
+ * POST. Until `resetPasswordForEmail` and a `/reset` page exist, that is the only route
+ * back, and this endpoint is not it.
+ */
+export async function PUT(req: Request) {
+  const gate = await requireAdmin();
+  if (!isGate(gate)) return gate;
+
+  const raw = await body(req);
+  if (!raw) return NextResponse.json({ error: "bad_request" }, { status: 400 });
+  const userId = typeof raw.user_id === "string" ? raw.user_id : "";
+  if (!userId) return NextResponse.json({ error: "invalid_input" }, { status: 422 });
+
+  // Read the address from `staff_users` through the CALLER's session, so RLS applies and
+  // this cannot be used to enumerate auth records.
+  const { data: target } = await gate.sb
+    .from("staff_users")
+    .select("email,role")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!target?.email) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+  // A fresh link every time: the previous one is single-use and may well be why they
+  // are asking for another.
+  const setPasswordUrl = await recoveryLink(target.email);
+
+  const emailed = await sendVolunteerWelcome({
+    to: target.email,
+    name: cleanName(raw.name, 80) || null,
+    setPasswordUrl: setPasswordUrl ?? undefined,
+    setPasswordHours: RECOVERY_HOURS,
+  }).catch(() => false);
+
+  // 200 with `emailed:false` rather than an error: the caller asked whether it went out,
+  // and "no, and here is that fact" is a successful answer to that question.
+  return NextResponse.json({ ok: true, emailed, to: target.email });
 }
 
 export async function DELETE(req: Request) {

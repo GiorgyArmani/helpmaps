@@ -299,7 +299,7 @@ const es = {
   // Con el correo caído (o en spam) esta es la única forma de que la persona entre: el
   // servidor devuelve la contraseña temporal justamente para poder pasarla a mano.
   "admin.volApprovedNoMail":
-    "Aprobada, pero el correo no salió. Pásale por WhatsApp esta contraseña temporal y el enlace del manual: {p}",
+    "Aprobada, pero el correo no salió. Pásale este enlace para que cree su contraseña (es de un solo uso y caduca): {p}",
   "admin.volRejected": "Solicitud descartada.",
   "admin.reviewed": "Revisado",
   "admin.confirmOpen": "Confirmar que sigue abierto",
@@ -380,7 +380,7 @@ const es = {
   "hub.openSite": "Abrir {name}",
   "hub.whatTitle": "Qué es",
   "hub.whatBody":
-    "HelpMaps publica, en un mapa, los puntos donde una comunidad puede recibir ayuda y los que necesitan algo ahora mismo: refugios, comedores, puntos de acopio e iniciativas ciudadanas. Nació durante una emergencia real y está hecho para funcionar con mala señal, en un teléfono cualquiera.",
+    "HelpMaps publica, en un mapa, los puntos donde una comunidad puede recibir ayuda y los que necesitan algo ahora mismo: refugios, comedores, puntos de acopio e iniciativas ciudadanas. Nació durante una emergencia real y está hecho para funcionar en entornos de baja conectividad y en cualquier dispositivo móvil o de escritorio.",
   "hub.joinTitle": "Cómo ser parte",
   "hub.joinCountry": "Traer HelpMaps a tu país",
   "hub.joinCountryBody":
@@ -401,6 +401,26 @@ const es = {
   // Tono especialmente cuidado aquí: esto lo lee alguien que acaba de sentir el sismo.
   // Nada de cifras de víctimas, nada de superlativos, y siempre la palabra "estimación"
   // donde el dato es un modelo y no una medición.
+  "admin.settings": "Ajustes de la cuenta",
+  "admin.role.admin": "Administra",
+  "admin.role.volunteer": "Voluntariado",
+  "admin.howItWorks": "Cómo funciona el panel",
+  "reset.title": "Crea tu contraseña",
+  "reset.subtitle": "Elige una contraseña para entrar al panel del equipo.",
+  "reset.invalid":
+    "Este enlace ya se usó o caducó. Pídele al equipo que te envíe uno nuevo.",
+  "reset.submit": "Guardar y entrar",
+  "reset.done": "Listo. Entrando al panel…",
+  "password.change": "Cambiar contraseña",
+  "password.new": "Contraseña nueva",
+  "password.confirm": "Repite la contraseña",
+  "password.hint": "Mínimo {n} caracteres. Una frase que recuerdes es mejor que algo corto y enredado.",
+  "password.tooShort": "Muy corta: mínimo {n} caracteres.",
+  "password.mismatch": "Las dos contraseñas no coinciden.",
+  "password.pwned": "Esa contraseña aparece en filtraciones conocidas. Elige otra.",
+  "password.save": "Guardar contraseña",
+  "password.done": "Contraseña actualizada. Úsala la próxima vez que entres.",
+
   "layers.title": "Capas del mapa",
   "layers.cta": "Capas",
   "layers.epicenters": "Epicentros",

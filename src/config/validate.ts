@@ -21,6 +21,7 @@
 
 import type { LocationType } from "@/domain/types";
 import type { CountryConfig, SiteConfig } from "@/config/types";
+import { HUB_HOST } from "~/config/network";
 
 const isServer = typeof window === "undefined";
 
@@ -143,6 +144,15 @@ export function validateConfig(site: SiteConfig): void {
   for (const f of ["patients", "rescued", "missingReports"] as const) {
     if (site.features[f])
       warnings.push(`features.${f} está en true, pero el módulo todavía no está portado: no aparecerá nada`);
+  }
+
+  if (site.mode === "hub") {
+    // Mismo criterio que `country.host`: de aquí salen las canónicas y el sitemap del hub.
+    if (!HUB_HOST.trim()) errors.push("HUB_HOST vacío en config/network.ts");
+    else if (/^https?:\/\//.test(HUB_HOST) || HUB_HOST.includes("/"))
+      errors.push(`HUB_HOST "${HUB_HOST}" debe ser solo el nombre de dominio, sin esquema ni ruta`);
+    if (site.network.length === 0)
+      warnings.push("config/network.ts vacío: el mapa del hub no tendría ningún país que mostrar");
   }
 
   if (site.mode === "country") {

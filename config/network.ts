@@ -12,6 +12,17 @@
 
 import type { Deployment } from "@/config/types";
 
+/**
+ * El dominio del hub. Solo el nombre, sin esquema ni barra.
+ *
+ * Vive aquí y no en una variable de entorno porque el hub no tiene país, y sin este valor
+ * `siteUrl()` caía al `host` del país por defecto: el hub en helpmaps.net publicaba un
+ * sitemap, canónicas e imágenes OG que decían co.helpmaps.net — es decir, se anunciaba a
+ * los buscadores como una copia de Colombia y sus tarjetas al compartir llevaban allí.
+ * NEXT_PUBLIC_SITE_URL sigue ganando sobre esto, para previews y desarrollo.
+ */
+export const HUB_HOST = "helpmaps.net";
+
 const network: Deployment[] = [
   {
     slug: "co",

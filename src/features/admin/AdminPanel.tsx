@@ -30,6 +30,7 @@ import { Badge, Notice } from "@/ui/primitives";
 import { Icon } from "@/ui/icons";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import CenterForm from "@/features/admin/CenterForm";
+import PasswordChange from "@/features/admin/PasswordChange";
 import DonationForm from "@/features/admin/DonationForm";
 import type { DictKey } from "@/i18n";
 
@@ -51,12 +52,15 @@ type Tab = "activity" | "centers" | "submissions" | "volunteers" | "donations";
 export default function AdminPanel({
   session,
   onSignedOut,
+  onOpenTour,
   onPinDrag,
   onDraftPin,
 }: {
   session: StaffSession;
   /** Closes the panel; the map underneath is never torn down. */
   onSignedOut: () => void;
+  /** Replays the panel walkthrough (`STAFF_STEPS`). */
+  onOpenTour: () => void;
   /** Slot the map's pin-drag writes through, straight into the open form. */
   onPinDrag: React.MutableRefObject<((at: { lat: number; lng: number }) => void) | null>;
   /** Publishes the edited point's coordinates so the map can draw them. */
@@ -81,6 +85,7 @@ export default function AdminPanel({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const load = useCallback(async () => {
     const sb = getSupabase();
@@ -183,9 +188,10 @@ export default function AdminPanel({
    * the service role (`/api/staff/volunteers`).
    *
    * The response is not just ok/failed: when the welcome email does not go out it comes
-   * back with the temporary password, and that is shown here so the admin can hand it
-   * over another way. An approved volunteer who never learns their password is the same
-   * as a rejected one, except nobody notices.
+   * back with the single-use set-password LINK, shown here so the admin can pass it on
+   * another way. An approved volunteer who never gets in is the same as a rejected one,
+   * except nobody notices. No password is generated or displayed any more — the link is
+   * what travels, and it expires.
    */
   async function reviewVolunteer(id: string, action: "approve" | "reject") {
     setBusy(true);
@@ -196,7 +202,7 @@ export default function AdminPanel({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ id, action }),
       });
-      const data: { emailed?: boolean; tempPassword?: string; error?: string } = await res
+      const data: { emailed?: boolean; setPasswordUrl?: string; error?: string } = await res
         .json()
         .catch(() => ({}));
       if (!res.ok && res.status !== 207) {
@@ -205,7 +211,7 @@ export default function AdminPanel({
       }
       if (action === "reject") setNotice(t("admin.volRejected"));
       else if (data.emailed) setNotice(t("admin.volApproved"));
-      else setNotice(t("admin.volApprovedNoMail", { p: data.tempPassword ?? "—" }));
+      else setNotice(t("admin.volApprovedNoMail", { p: data.setPasswordUrl ?? "—" }));
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.saveError"));
@@ -280,19 +286,55 @@ export default function AdminPanel({
 
   return (
     <div className="admwrap-body">
-      <div className="wrapline">
-        <h1>{t("admin.title")}</h1>
-        <span className="small mut">
-          {session.email} · {session.role}
+      {/* No <h1> here: the overlay's own header already says "Panel del equipo" directly
+          above this, so a second copy was pure repetition eating the top of a 430px
+          column. What is left is the thing the title could not tell you — WHO you are
+          signed in as — and the account actions, folded behind one gear so they stop
+          competing with the tabs.
+
+          No "back to map" link either: the map is on screen beside this panel and the
+          overlay's ← closes it. The old link navigated to `/`, which tore the client tree
+          down and re-resolved the session — which is what made it look like a sign-out. */}
+      <div className="admhead">
+        <span className="admwho">
+          <b>{session.email}</b>
+          <span className="admrole">{t(`admin.role.${session.role}` as DictKey)}</span>
         </span>
-        <span style={{ marginLeft: "auto" }} />
-        {/* No "back to map" link here any more: the map is already on screen next to
-            this panel, and the overlay's own ← closes it. The old link navigated to `/`,
-            which tore the whole client tree down and re-resolved the session — which is
-            what made pressing it look like being signed out. */}
-        <button type="button" className="signout" onClick={() => void signOut()}>
-          {t("login.signOut")}
-        </button>
+        <div className="admsettings">
+          <button
+            type="button"
+            className={`amini${settingsOpen ? " amini-on" : ""}`}
+            aria-expanded={settingsOpen}
+            aria-label={t("admin.settings")}
+            title={t("admin.settings")}
+            onClick={() => setSettingsOpen((v) => !v)}
+          >
+            <Icon.gear />
+          </button>
+          {settingsOpen ? (
+            <>
+              <button
+                type="button"
+                className="layers-backdrop"
+                aria-label={t("common.close")}
+                onClick={() => setSettingsOpen(false)}
+              />
+              <div className="admmenu" role="group" aria-label={t("admin.settings")}>
+                <button type="button" className="admmenu-item" onClick={onOpenTour}>
+                  {t("admin.howItWorks")}
+                </button>
+                <PasswordChange />
+                <button
+                  type="button"
+                  className="admmenu-item admmenu-danger"
+                  onClick={() => void signOut()}
+                >
+                  {t("login.signOut")}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
       </div>
 
       <Notice tone="info">{t("admin.liveNote")}</Notice>

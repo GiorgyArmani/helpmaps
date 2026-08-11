@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { supabasePublic } from "@/lib/supabase/server";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { cleanName, cleanText } from "@/lib/sanitize";
@@ -57,7 +57,12 @@ export async function POST(req: Request) {
 
   // Best-effort: the row is already saved and visible in the staff panel, so a mail
   // server having a bad day must not turn a successful submission into an error.
-  void notifySubmission(submission);
+  //
+  // `after()` rather than a bare floating promise. On a serverless host the instance can
+  // be frozen the moment the response is returned, and an SMTP handshake takes seconds —
+  // so `void send()` means the notification is racing the runtime and usually loses. This
+  // keeps the send off the response's critical path AND guarantees it runs.
+  after(() => notifySubmission(submission));
 
   return NextResponse.json({ ok: true });
 }

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { supabasePublic } from "@/lib/supabase/server";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { cleanName, cleanPhone, cleanText, isEmail } from "@/lib/sanitize";
@@ -51,7 +51,10 @@ export async function POST(req: Request) {
 
   // Best-effort, and note it goes to the TEAM inbox only — never back to the address the
   // applicant typed. See the phishing note in src/lib/email.ts.
-  void notifyVolunteerRequest(request);
+  //
+  // `after()`, not a floating promise: see the note in /api/suggest. A serverless
+  // instance frozen at response time kills an in-flight SMTP send.
+  after(() => notifyVolunteerRequest(request));
 
   return NextResponse.json({ ok: true });
 }

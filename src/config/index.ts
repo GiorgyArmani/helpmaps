@@ -5,7 +5,7 @@ import features from "~/config/features";
 import map from "~/config/map";
 import hazard from "~/config/hazard";
 import integrations from "~/config/integrations";
-import network from "~/config/network";
+import network, { HUB_HOST } from "~/config/network";
 import mode from "~/config/deployment";
 import type {
   Deployment,
@@ -118,11 +118,14 @@ export function enabledTypes(): LocationType[] {
 /**
  * Canonical absolute origin. NEXT_PUBLIC_SITE_URL wins (previews, local dev), otherwise
  * the configured host — so share links and OG images are right with no extra setup.
+ *
+ * The hub has no country, so it uses HUB_HOST. Falling back to the default country's host
+ * here published helpmaps.net's sitemap and canonicals as co.helpmaps.net.
  */
 export function siteUrl(): string {
   const env = process.env.NEXT_PUBLIC_SITE_URL;
   if (env) return env.replace(/\/$/, "");
-  return `https://${COUNTRY.host}`;
+  return `https://${IS_HUB ? HUB_HOST : COUNTRY.host}`;
 }
 
 export function absoluteUrl(path: string): string {

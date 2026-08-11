@@ -25,7 +25,7 @@ import DonateView from "@/features/donate/DonateView";
 import ContactForm from "@/features/donate/ContactForm";
 import VolunteerForm from "@/features/volunteer/VolunteerForm";
 import GuidedTour from "@/features/tour/GuidedTour";
-import { PUBLIC_STEPS } from "@/features/tour/tourSteps";
+import { PUBLIC_STEPS, STAFF_STEPS } from "@/features/tour/tourSteps";
 import { watchConnection } from "@/features/suggest/offlineQueue";
 
 // Leaflet touches `window` at import time, so the map never renders on the server.
@@ -52,6 +52,9 @@ type View = "list" | "detail" | "needs" | "suggest" | "volunteer" | "donate" | "
 export type EntryAction = "needs" | "suggest" | "initiative" | "volunteer" | "donate";
 
 const TOUR_KEY = storageKey("tour:v1");
+// Separate from the public one: a volunteer who already dismissed the visitor tour
+// still has to be walked through the panel the first time they open it.
+const STAFF_TOUR_KEY = storageKey("stafftour:v1");
 
 /**
  * The country app.
@@ -129,6 +132,7 @@ export default function AppShell({
   // server HTML (tour vs no tour), so it is read after mount instead: the first client
   // render matches the server, then the effect opens the tour on the next commit.
   const [tourOpen, setTourOpen] = useState(false);
+  const [staffTourOpen, setStaffTourOpen] = useState(false);
   useEffect(() => {
     // Someone who arrived with an intent ("I want to help", "register my initiative")
     // gets what they asked for, not a tour over it. The flag is left unset, so the tour
@@ -141,6 +145,21 @@ export default function AppShell({
       /* private mode: no tour rather than a tour on every load */
     }
   }, [initialAction]);
+
+  // First time a staff member opens the panel, walk them through it. This IS the
+  // onboarding: the welcome email links to the written manual, but somebody who just got
+  // access is already looking at the panel, and the rules that matter here (the pin, the
+  // status field, what never gets published) are things to be told before the first
+  // entry, not after.
+  useEffect(() => {
+    if (view !== "admin" || !staff.session) return;
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- external store at mount
+      if (!window.localStorage.getItem(STAFF_TOUR_KEY)) setStaffTourOpen(true);
+    } catch {
+      /* private mode: no tour rather than one on every sign-in */
+    }
+  }, [view, staff.session]);
 
   // The tour's "open a real record" step needs the current list without the control
   // object being rebuilt (and the step's `before()` re-running) on every load tick.
@@ -204,6 +223,15 @@ export default function AppShell({
     }
   }
 
+  function closeStaffTour() {
+    setStaffTourOpen(false);
+    try {
+      window.localStorage.setItem(STAFF_TOUR_KEY, "1");
+    } catch {
+      /* private mode: it simply shows again next time */
+    }
+  }
+
   /**
    * The handles the tour uses to drive the real app. Anything this base does not have
    * yet is a no-op: the corresponding step finds no anchor and is skipped, so the deck
@@ -225,7 +253,7 @@ export default function AppShell({
       },
       openDonate: () => {},
       openVolunteer: () => setView("volunteer"),
-      openAdmin: () => {},
+      openAdmin: () => setView("admin"),
       switchTab: () => {},
       editSample: () => {},
       clearEdit: () => {},
@@ -576,6 +604,7 @@ export default function AppShell({
               staff.session ? (
                 <AdminPanel
                   session={staff.session}
+                  onOpenTour={() => setStaffTourOpen(true)}
                   onDraftPin={setDraftPin}
                   onPinDrag={pinDragRef}
                   onSignedOut={() => {
@@ -599,6 +628,13 @@ export default function AppShell({
           extra state to keep in sync. */}
       {tourOpen ? (
         <GuidedTour steps={PUBLIC_STEPS} lang={lang} ctl={tourCtl} onClose={closeTour} />
+      ) : null}
+
+      {/* The staff deck. It has always existed in `tourSteps.ts` and was never launched:
+          nothing called `openAdmin`, and while the panel was its own route there was no
+          way for a tour running over the map to drive it. */}
+      {staffTourOpen ? (
+        <GuidedTour steps={STAFF_STEPS} lang={lang} ctl={tourCtl} onClose={closeStaffTour} />
       ) : null}
     </div>
   );

@@ -23,8 +23,9 @@
 // un archivo compartido con el valor de un país dentro. Todo lo que sea de UN país va en
 // su preset; aquí solo queda lo que la red comparte.
 
-import type { BrandConfig } from "@/config/types";
+import type { BrandConfig, BrandOverrides } from "@/config/types";
 import country from "~/config/country";
+import mode from "~/config/deployment";
 
 /**
  * El nombre de la PLATAFORMA, no el de este despliegue.
@@ -78,12 +79,34 @@ const base: BrandConfig = {
     whatsapp: "",
     // Sin "@". Vacío esconde el enlace.
     instagram: "",
+    // El código. Compartido por toda la red: un país no tiene repositorio propio, y un
+    // fork que se lleve la plataforma cambia esta línea y nada más.
+    repo: "https://github.com/GiorgyArmani/helpmaps",
   },
 };
 
+/**
+ * La marca del HUB (helpmaps.net). No es la de ningún país: es la de la plataforma.
+ *
+ * Existe porque el hub no tiene país y aun así `country` resuelve a DEFAULT_COUNTRY para
+ * que todo lo demás funcione. Sin este bloque el hub heredaba los overrides de ese país y
+ * se presentaba como "HelpMaps Colombia", con el logo de Colombia, en helpmaps.net — el
+ * mismo fallo que hacía que su sitemap dijera co.helpmaps.net.
+ *
+ * El logo es la cruz de HelpMaps: la marca común, sin bandera de nadie.
+ */
+const HUB: BrandOverrides = {
+  name: PLATFORM,
+  short: PLATFORM,
+  logo: "/general.png",
+};
+
+// En modo hub se ignoran a propósito los overrides del país por defecto: el hub no es un
+// despliegue de ese país, solo comparte su preset para resolver idioma y encuadre.
+//
 // Fusión de un nivel dentro de cada grupo anidado: `colors: { brand: "#c0392b" }` repinta
 // los enlaces sin obligar al preset a repetir los otros diez colores.
-const o = country.brand ?? {};
+const o: BrandOverrides = mode === "hub" ? HUB : country.brand ?? {};
 
 const brand: BrandConfig = {
   ...base,

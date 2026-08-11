@@ -18,21 +18,8 @@ export const MIN_PASSWORD = 12;
 export const passwordTooShort = (p: unknown): boolean =>
   typeof p !== "string" || p.length < MIN_PASSWORD;
 
-// No 0/O/1/l/I: this gets read off a screen and typed on a phone, sometimes dictated over
-// the phone, and an ambiguous character there costs a support conversation.
-const ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
-
-/**
- * A temporary password for an account an admin is provisioning.
- *
- * 16 characters from a 31-symbol alphabet (~79 bits) grouped in fours for legibility. It
- * is generated rather than chosen because the person choosing it is not the person who
- * will use it: an admin inventing a password for someone else invents a weak one, and it
- * has to survive being read aloud when the welcome email lands in spam.
- */
-export function generateTempPassword(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  const chars = Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]);
-  return [0, 4, 8, 12].map((i) => chars.slice(i, i + 4).join("")).join("-");
-}
+// REMOVED: `generateTempPassword`. Accounts are no longer provisioned with a password
+// somebody else invented and mailed — `provision()` creates the account with none and
+// emails a single-use `generateLink` recovery URL, so the volunteer chooses their own and
+// no credential ever sits in an inbox. Do not bring it back: a generated password in
+// email is permanent, forwardable, and crosses servers we do not control.

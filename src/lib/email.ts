@@ -10,9 +10,7 @@ import {
   field,
   heading,
   linkCard,
-  mono,
   note,
-  panel,
   paragraph,
   quote,
   sectionLabel,
@@ -61,6 +59,94 @@ let transporter: nodemailer.Transporter | null = null;
 
 export function emailConfigured(): boolean {
   return Boolean(PASS && HOST && USER && TO);
+}
+
+/** Half an address: enough to confirm it is the right mailbox, not enough to harvest. */
+function mask(value: string): string {
+  if (!value) return "";
+  const [user = "", domain = ""] = value.split("@");
+  if (!domain) return `${value.slice(0, 2)}…`;
+  return `${user.slice(0, 2)}…@${domain}`;
+}
+
+export interface EmailStatus {
+  configured: boolean;
+  /** Env var NAMES that are missing or empty. Never a value. */
+  missing: string[];
+  host: string;
+  port: number;
+  /** Masked — this is readable by an admin over the network. */
+  user: string;
+  from: string;
+  to: string;
+}
+
+/**
+ * What the mail module thinks it is configured with.
+ *
+ * Exists because the alternative is unfalsifiable: every send here is best-effort and
+ * returns a bare boolean, so a deployment whose SMTP vars never made it out of a local
+ * `.env` behaves EXACTLY like one whose mail is being silently dropped downstream. On a
+ * host whose logs you cannot read, there is otherwise no way to tell those apart.
+ *
+ * Reports names and masked addresses only. Never a password, never a full address.
+ */
+export function emailStatus(): EmailStatus {
+  const missing: string[] = [];
+  if (!HOST) missing.push("SMTP_HOST");
+  if (!USER) missing.push("SMTP_USER");
+  if (!PASS) missing.push("SMTP_PASS (or SMTP_PASSWORD)");
+  if (!TO) missing.push("CONTACT_TO (or config/integrations.ts → email.to)");
+  return {
+    configured: emailConfigured(),
+    missing,
+    host: HOST,
+    port: PORT,
+    user: mask(USER),
+    from: mask(FROM.replace(/^.*<|>$/g, "")),
+    to: mask(TO),
+  };
+}
+
+/**
+ * Prove the SMTP credentials work, and say why if they do not.
+ *
+ * The recipient is NOT a parameter: it is always the signed-in admin's own address,
+ * resolved by the caller from their session. An endpoint that mails an arbitrary address
+ * on request is a spam relay wearing a diagnostic's clothes — see rule 2 above.
+ */
+export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isEmail(to)) return { ok: false, error: "invalid recipient" };
+  const tx = getTransport();
+  if (!tx) return { ok: false, error: `not configured: ${emailStatus().missing.join(", ")}` };
+
+  try {
+    // Verify the connection and credentials separately from the send: a bad password and
+    // a blocked port produce very different errors, and only one of them is your fault.
+    await tx.verify();
+  } catch (err) {
+    return { ok: false, error: `connect/auth failed: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  try {
+    await tx.sendMail({
+      from: FROM,
+      to,
+      subject: `${BRAND.short} — SMTP test`,
+      text: `Sent from ${siteUrl()}. If you are reading this, outbound mail works.`,
+      html: emailShell({
+        preheader: "SMTP test",
+        footer: BRAND.name,
+        body: lines(
+          heading("SMTP test"),
+          paragraph(`Sent from ${siteUrl()}. If you are reading this, outbound mail works.`),
+        ),
+      }),
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: `send failed: ${err instanceof Error ? err.message : String(err)}` };
+  }
 }
 
 function getTransport(): nodemailer.Transporter | null {
@@ -348,11 +434,17 @@ function regionName(code: string): string {
 
 /**
  * The only email that goes to a person instead of the team inbox, and it is triggered by
- * an admin approving a request — never by a public form. Two shapes, one template:
+ * an admin approving a request — never by a public form.
  *
- *   • no `tempPassword` → they signed up and set their own password (the normal path).
- *     We must not invent, echo or "remind" them of a password.
- *   • `tempPassword`    → an admin created the account by hand, so the credential ships.
+ * NO PASSWORD EVER TRAVELS IN THIS EMAIL. It used to carry a generated one, which meant
+ * a working credential sat in an inbox indefinitely, was forwardable, and crossed mail
+ * servers we do not control — and nothing ever forced the person off it. Now it carries
+ * a single-use `setPasswordUrl` (a Supabase recovery link minted by the caller) and the
+ * volunteer chooses their own. If it expires, an admin re-sends; that is strictly better
+ * than a permanent secret in a mailbox.
+ *
+ * Without `setPasswordUrl` it degrades to "sign in with the password you already have",
+ * which is the right text for a re-send to somebody already set up.
  *
  * The manual itself lives in the public docs rather than inside the body: until SPF,
  * DKIM and DMARC are configured, deliverability to external inboxes is unreliable, and a
@@ -361,7 +453,10 @@ function regionName(code: string): string {
 export async function sendVolunteerWelcome(input: {
   to: string;
   name?: string | null;
-  tempPassword?: string;
+  /** Single-use link that lets them set their own password. */
+  setPasswordUrl?: string;
+  /** How long that link is good for, for the copy. */
+  setPasswordHours?: number;
   lang?: Lang;
   /** Overrides the canonical origin (previews, staging). */
   site?: string;
@@ -381,16 +476,16 @@ export async function sendVolunteerWelcome(input: {
     ? t("email.welcome.greeting", { name: greetName })
     : t("email.welcome.greetingPlain");
 
-  const credentials = input.tempPassword
-    ? panel(
-        lines(
-          mono(t("email.label.email"), input.to),
-          `<div style="height:10px"></div>`,
-          mono(t("email.welcome.tempPassword"), input.tempPassword),
-          `<div style="margin-top:10px;font-size:12px;color:#8b93a1">${t("email.welcome.changePassword")}</div>`,
-        ),
-      )
+  const hours = input.setPasswordHours ?? 24;
+  const credentials = input.setPasswordUrl
+    ? paragraph(t("email.welcome.setPasswordBody", { email: input.to, hours }))
     : paragraph(t("email.welcome.ownPassword", { email: input.to }));
+
+  // The primary action is "create your password" when there is a link to do it with;
+  // otherwise it is the plain sign-in.
+  const primary = input.setPasswordUrl
+    ? button(input.setPasswordUrl, t("email.welcome.setPassword"))
+    : button(loginUrl, t("email.welcome.login"));
 
   const html = emailShell({
     site,
@@ -401,7 +496,7 @@ export async function sendVolunteerWelcome(input: {
       paragraph(`${greeting} ${t("email.welcome.intro")}`),
       paragraph(t("email.welcome.live")),
       credentials,
-      button(loginUrl, t("email.welcome.login")),
+      primary,
       sectionLabel(t("email.welcome.manuals")),
       linkCard(manualUrl, t("email.welcome.manualTitle"), t("email.welcome.manualDesc")),
       linkCard(privacyUrl, t("email.welcome.privacyTitle"), t("email.welcome.privacyDesc")),
@@ -421,11 +516,13 @@ export async function sendVolunteerWelcome(input: {
       "",
       t("email.welcome.live"),
       "",
-      input.tempPassword
-        ? `${t("email.label.email")}: ${input.to}\n${t("email.welcome.tempPassword")}: ${input.tempPassword}\n${t("email.welcome.changePassword")}`
+      input.setPasswordUrl
+        ? t("email.welcome.setPasswordBody", { email: input.to, hours })
         : t("email.welcome.ownPassword", { email: input.to }),
       "",
-      `${t("email.welcome.login")}: ${loginUrl}`,
+      input.setPasswordUrl
+        ? `${t("email.welcome.setPassword")}: ${input.setPasswordUrl}`
+        : `${t("email.welcome.login")}: ${loginUrl}`,
       "",
       `${t("email.welcome.manuals")}:`,
       `- ${t("email.welcome.manualTitle")}: ${manualUrl}`,

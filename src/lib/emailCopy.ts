@@ -73,8 +73,12 @@ const es = {
     "Confiamos en ti, así que lo que publicas se ve de inmediato en el mapa: no pasa por una cola de revisión. Por eso te pedimos leer el manual antes de tu primera publicación.",
   "email.welcome.ownPassword":
     "Entra con {email} y la contraseña que elegiste al postularte.",
-  "email.welcome.tempPassword": "Contraseña temporal",
-  "email.welcome.changePassword": "Cámbiala apenas entres.",
+  // Ya no se manda ninguna contraseña por correo: se manda un enlace para que la persona
+  // cree la suya. Un correo es reenviable, se queda en la bandeja para siempre y viaja
+  // por servidores que no controlamos; un enlace de un solo uso que caduca, no.
+  "email.welcome.setPassword": "Crear mi contraseña",
+  "email.welcome.setPasswordBody":
+    "Tu cuenta es {email}. Crea tu contraseña con este botón: el enlace es de un solo uso y caduca en {hours} horas. Si caduca, pídele al equipo que te lo reenvíe.",
   "email.welcome.login": "Iniciar sesión",
   "email.welcome.manuals": "Manuales",
   "email.welcome.manualTitle": "Manual del voluntariado",
@@ -143,8 +147,9 @@ const en: Partial<Record<EmailKey, string>> = {
   "email.welcome.live":
     "We trust you, so what you publish shows on the map immediately: there is no review queue in front of it. That is why we ask you to read the manual before your first entry.",
   "email.welcome.ownPassword": "Sign in with {email} and the password you chose when you applied.",
-  "email.welcome.tempPassword": "Temporary password",
-  "email.welcome.changePassword": "Change it as soon as you are in.",
+  "email.welcome.setPassword": "Create my password",
+  "email.welcome.setPasswordBody":
+    "Your account is {email}. Create your password with this button: the link is single-use and expires in {hours} hours. If it expires, ask the team to send you a new one.",
   "email.welcome.login": "Sign in",
   "email.welcome.manuals": "Manuals",
   "email.welcome.manualTitle": "Volunteer manual",
@@ -210,8 +215,6 @@ const pt: Partial<Record<EmailKey, string>> = {
   "email.welcome.live":
     "Confiamos em você, então o que você publica aparece no mapa imediatamente: não passa por uma fila de revisão. Por isso pedimos que leia o manual antes da sua primeira publicação.",
   "email.welcome.ownPassword": "Entre com {email} e a senha que você escolheu ao se inscrever.",
-  "email.welcome.tempPassword": "Senha temporária",
-  "email.welcome.changePassword": "Troque assim que entrar.",
   "email.welcome.login": "Entrar",
   "email.welcome.manuals": "Manuais",
   "email.welcome.manualTitle": "Manual do voluntariado",

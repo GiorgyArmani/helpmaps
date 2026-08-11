@@ -164,6 +164,13 @@ export interface BrandConfig {
     whatsapp: string;
     /** Handle without "@". Empty hides the link. */
     instagram: string;
+    /**
+     * Source repository, full URL. Empty hides every link to it.
+     *
+     * Goes here and not in the hub component because a fork renames the platform and
+     * moves the code: one line changes, not a URL hunted through JSX.
+     */
+    repo: string;
   };
 }
 
