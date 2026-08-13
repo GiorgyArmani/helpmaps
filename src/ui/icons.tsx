@@ -121,10 +121,32 @@ export const Icon = {
       <path d="M15 11V6.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-1a6 6 0 0 1-5.2-3l-2-3.4a1.5 1.5 0 0 1 2.4-1.8L9 14" />
     </Svg>
   ),
+  // A real cog: a closed toothed rim around the hub. The previous version drew eight
+  // detached spokes radiating from a circle, which at 18px is the universal brightness
+  // glyph — people read the account-settings button as a light/dark toggle and pressed it
+  // expecting the theme to flip. Teeth attached to a ring cannot be read that way.
   gear: (p: IconProps) => (
     <Svg {...p}>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 3v2.2M12 18.8V21M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M3 12h2.2M18.8 12H21M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" />
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2a2 2 0 1 1-4 0V21a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.5 1Z" />
+    </Svg>
+  ),
+  // The activity feed. Rings, not a plain dome — a dome alone reads as a shelter marker,
+  // which this panel also uses.
+  bell: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M18 8a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7" />
+      <path d="M13.7 20a2 2 0 0 1-3.4 0" />
+    </Svg>
+  ),
+  // Sliders — the staff entry once a session exists. Distinct from the padlock (which
+  // means "sign in") because at that point signing in is done: this opens the panel.
+  sliders: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M4 6h16M4 12h16M4 18h16" />
+      <circle cx="9" cy="6" r="2.2" fill="#fff" />
+      <circle cx="15" cy="12" r="2.2" fill="#fff" />
+      <circle cx="8" cy="18" r="2.2" fill="#fff" />
     </Svg>
   ),
   alert: (p: IconProps) => (

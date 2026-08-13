@@ -30,7 +30,6 @@ import { Badge, Notice } from "@/ui/primitives";
 import { Icon } from "@/ui/icons";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import CenterForm from "@/features/admin/CenterForm";
-import PasswordChange from "@/features/admin/PasswordChange";
 import DonationForm from "@/features/admin/DonationForm";
 import type { DictKey } from "@/i18n";
 
@@ -51,20 +50,20 @@ type Tab = "activity" | "centers" | "submissions" | "volunteers" | "donations";
  */
 export default function AdminPanel({
   session,
-  onSignedOut,
-  onOpenTour,
   onPinDrag,
   onDraftPin,
+  onPendingChange,
 }: {
   session: StaffSession;
-  /** Closes the panel; the map underneath is never torn down. */
-  onSignedOut: () => void;
-  /** Replays the panel walkthrough (`STAFF_STEPS`). */
-  onOpenTour: () => void;
   /** Slot the map's pin-drag writes through, straight into the open form. */
   onPinDrag: React.MutableRefObject<((at: { lat: number; lng: number }) => void) | null>;
   /** Publishes the edited point's coordinates so the map can draw them. */
   onDraftPin: (at: { lat: number; lng: number } | null) => void;
+  /**
+   * How many items are waiting on someone. The header's staff button wears this as a
+   * badge, so a volunteer who closed the panel still sees that something arrived.
+   */
+  onPendingChange?: (n: number) => void;
 }) {
   const { t } = useI18n();
   const ago = useTimeAgo();
@@ -85,7 +84,6 @@ export default function AdminPanel({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const load = useCallback(async () => {
     const sb = getSupabase();
@@ -105,11 +103,12 @@ export default function AdminPanel({
       setAudit(log);
       setDonations(don);
       setMaintenanceState(settings.maintenance);
+      onPendingChange?.(sub.length + vol.length);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "load failed");
     }
-  }, [isAdmin]);
+  }, [isAdmin, onPendingChange]);
 
   useEffect(() => {
     // Fetch on mount. Every setState inside `load` happens after an await, so this
@@ -160,14 +159,6 @@ export default function AdminPanel({
       setMaintenanceState(!next);
       setError(t("admin.saveError"));
     }
-  }
-
-  async function signOut() {
-    const sb = getSupabase();
-    await sb?.auth.signOut();
-    // No navigation: the panel is a view over the live map, so signing out closes it and
-    // leaves the map exactly as it was.
-    onSignedOut();
   }
 
   async function review(fn: () => Promise<void>) {
@@ -286,11 +277,63 @@ export default function AdminPanel({
 
   return (
     <div className="admwrap-body">
+      {/* Icon rail, as in the original, and FIRST — flush under the overlay header, so
+          the header and the rail read as one control strip the way they do there.
+          The words were the port's idea and they cost more than they explained: five
+          labelled pills do not fit a 430px column, so the row wrapped to two lines and
+          pushed the feed below the fold on a phone. Icons hold one row at any width, and
+          the label survives as the tooltip and the accessible name — nothing is lost to a
+          screen reader. */}
+      <nav className="admtabs admtabs-icons" data-tour="admtabs">
+        <TabButton
+          id="activity"
+          tab={tab}
+          onClick={setTab}
+          label={t("admin.tab.activity")}
+          icon={<Icon.bell />}
+        />
+        <TabButton
+          id="centers"
+          tab={tab}
+          onClick={setTab}
+          label={t("admin.tab.centers")}
+          icon={<Icon.hospital />}
+        />
+        <TabButton
+          id="submissions"
+          tab={tab}
+          onClick={setTab}
+          label={t("admin.tab.submissions")}
+          icon={<Icon.mail />}
+          count={submissions.length}
+        />
+        {FEATURES.donations ? (
+          <TabButton
+            id="donations"
+            tab={tab}
+            onClick={setTab}
+            label={t("admin.tab.donations")}
+            icon={<Icon.heart />}
+          />
+        ) : null}
+        {isAdmin ? (
+          <TabButton
+            id="volunteers"
+            tab={tab}
+            onClick={setTab}
+            label={t("admin.tab.volunteers")}
+            icon={<Icon.volunteer />}
+            count={volunteers.length}
+          />
+        ) : null}
+      </nav>
+
       {/* No <h1> here: the overlay's own header already says "Panel del equipo" directly
           above this, so a second copy was pure repetition eating the top of a 430px
           column. What is left is the thing the title could not tell you — WHO you are
-          signed in as — and the account actions, folded behind one gear so they stop
-          competing with the tabs.
+          signed in as. The gear that used to float on the right of this row now sits in
+          the header with the other two session controls: three buttons for the same
+          session, on three different rows, was the arrangement worth fixing.
 
           No "back to map" link either: the map is on screen beside this panel and the
           overlay's ← closes it. The old link navigated to `/`, which tore the client tree
@@ -300,70 +343,11 @@ export default function AdminPanel({
           <b>{session.email}</b>
           <span className="admrole">{t(`admin.role.${session.role}` as DictKey)}</span>
         </span>
-        <div className="admsettings">
-          <button
-            type="button"
-            className={`amini${settingsOpen ? " amini-on" : ""}`}
-            aria-expanded={settingsOpen}
-            aria-label={t("admin.settings")}
-            title={t("admin.settings")}
-            onClick={() => setSettingsOpen((v) => !v)}
-          >
-            <Icon.gear />
-          </button>
-          {settingsOpen ? (
-            <>
-              <button
-                type="button"
-                className="layers-backdrop"
-                aria-label={t("common.close")}
-                onClick={() => setSettingsOpen(false)}
-              />
-              <div className="admmenu" role="group" aria-label={t("admin.settings")}>
-                <button type="button" className="admmenu-item" onClick={onOpenTour}>
-                  {t("admin.howItWorks")}
-                </button>
-                <PasswordChange />
-                <button
-                  type="button"
-                  className="admmenu-item admmenu-danger"
-                  onClick={() => void signOut()}
-                >
-                  {t("login.signOut")}
-                </button>
-              </div>
-            </>
-          ) : null}
-        </div>
       </div>
 
       <Notice tone="info">{t("admin.liveNote")}</Notice>
       {error ? <Notice tone="danger">{error}</Notice> : null}
       {notice ? <Notice tone="warn">{notice}</Notice> : null}
-
-      <nav className="admtabs" data-tour="admtabs">
-        <TabButton id="activity" tab={tab} onClick={setTab} label={t("admin.tab.activity")} />
-        <TabButton id="centers" tab={tab} onClick={setTab} label={t("admin.tab.centers")} />
-        <TabButton
-          id="submissions"
-          tab={tab}
-          onClick={setTab}
-          label={t("admin.tab.submissions")}
-          count={submissions.length}
-        />
-        {FEATURES.donations ? (
-          <TabButton id="donations" tab={tab} onClick={setTab} label={t("admin.tab.donations")} />
-        ) : null}
-        {isAdmin ? (
-          <TabButton
-            id="volunteers"
-            tab={tab}
-            onClick={setTab}
-            label={t("admin.tab.volunteers")}
-            count={volunteers.length}
-          />
-        ) : null}
-      </nav>
 
       {tab === "activity" ? (
         <div className="stack">
@@ -622,12 +606,14 @@ function TabButton({
   tab,
   onClick,
   label,
+  icon,
   count,
 }: {
   id: Tab;
   tab: Tab;
   onClick: (t: Tab) => void;
   label: string;
+  icon: React.ReactNode;
   count?: number;
 }) {
   return (
@@ -636,8 +622,10 @@ function TabButton({
       className={`atab ${tab === id ? "atab-on" : ""}`}
       onClick={() => onClick(id)}
       aria-current={tab === id}
+      aria-label={label}
+      title={label}
     >
-      {label}
+      <span className="atab-ic">{icon}</span>
       {count ? <span className="atab-badge">{count}</span> : null}
     </button>
   );

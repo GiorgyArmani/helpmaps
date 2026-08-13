@@ -42,6 +42,14 @@ const AdminPanel = dynamic(() => import("@/features/admin/AdminPanel"), {
   loading: () => null,
 });
 
+// Lives in the header now, next to the other two session controls — but it is still staff
+// code, so it is split out for the same reason the panel is: a visitor on one bar of
+// signal should not download a password form they can never open.
+const PasswordChange = dynamic(() => import("@/features/admin/PasswordChange"), {
+  ssr: false,
+  loading: () => null,
+});
+
 type View = "list" | "detail" | "needs" | "suggest" | "volunteer" | "donate" | "contact" | "admin";
 
 /**
@@ -133,6 +141,11 @@ export default function AppShell({
   // render matches the server, then the effect opens the tour on the next commit.
   const [tourOpen, setTourOpen] = useState(false);
   const [staffTourOpen, setStaffTourOpen] = useState(false);
+  // Reported by the panel every time it loads. It stays at 0 for a public visitor, who
+  // never opens the panel and so never fetches the queues — the lazy session check this
+  // sits behind is the whole point (see useStaffSession).
+  const [pending, setPending] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   useEffect(() => {
     // Someone who arrived with an intent ("I want to help", "register my initiative")
     // gets what they asked for, not a tour over it. The flag is left unset, so the tour
@@ -209,9 +222,24 @@ export default function AppShell({
   function back() {
     setView("list");
     setSelectedId(null);
+    // The menu is header state, not panel state, so it outlives the view that owns it —
+    // without this it would be hanging open the next time the panel is opened.
+    setSettingsOpen(false);
     // Leaving the panel takes the half-placed pin with it; otherwise it lingers over the
     // public map looking like a real point.
     setDraftPin(null);
+  }
+
+  /**
+   * Signing out closes the panel and leaves the map exactly as it was — no navigation.
+   * The map is the product; tearing the client tree down to re-render a page that is
+   * already on screen is a second of blank on a bad connection, for nothing.
+   */
+  async function signOutStaff() {
+    await getSupabase()?.auth.signOut();
+    staff.clear();
+    setPending(0);
+    back();
   }
 
   function closeTour() {
@@ -263,8 +291,12 @@ export default function AppShell({
 
   const overlayOpen = activeView !== "list" && activeView !== "needs";
 
+  // `fabbing` gets the two map controls out of the way while the Colaborar menu is open.
+  // They share the right-hand column with the FAB, and the menu grows upward straight
+  // through them — a layers button floating over "Sumarme al equipo" reads as a fourth
+  // option in the list.
   return (
-    <div className={`app${folded ? " sheetmin" : ""}`}>
+    <div className={`app${folded ? " sheetmin" : ""}${fabOpen ? " fabbing" : ""}`}>
       <MapCanvas
         centers={visible}
         selectedId={selectedId}
@@ -333,20 +365,24 @@ export default function AppShell({
               </button>
             ) : null}
 
-            {/* Staff sign-in. A PADLOCK, not a gear: a gear promises settings, and the
-                spoked one this used to draw read as a brightness toggle at 19px — people
-                pressed it expecting a theme switch. Ordered as in the original: the two
-                things a visitor might want (write to us, how it works) bracket it, and
-                the language button stays last where it is always in the same place. */}
+            {/* Two states for the same slot, as in the original.
+                Signed out: a PADLOCK, not a gear — a gear promises settings, and the
+                spoked one this used to draw read as a brightness toggle at 19px.
+                Signed in: the sliders, wearing the count of what is waiting. Signing in
+                is over by then; what the button means is "open the panel", and a
+                volunteer who closed it still needs to see that something arrived.
+                Ordered as in the original: the two things a visitor might want (write to
+                us, how it works) bracket it, and the language button stays last. */}
             <button
               type="button"
-              className="gear"
+              className={staff.session ? "gear gear-badged" : "gear"}
               data-tour="staffgear"
-              aria-label={t("login.title")}
-              title={t("login.title")}
+              aria-label={staff.session ? t("admin.title") : t("login.title")}
+              title={staff.session ? t("admin.title") : t("login.title")}
               onClick={() => setView("admin")}
             >
-              <Icon.lock />
+              {staff.session ? <Icon.sliders /> : <Icon.lock />}
+              {staff.session && pending > 0 ? <span className="gear-badge">{pending}</span> : null}
             </button>
 
             <button
@@ -578,6 +614,56 @@ export default function AppShell({
                         ? t(staff.session ? "admin.title" : "login.title")
                         : t("volunteer.title")}
             </span>
+            {/* Session actions belong to the header, next to the title that names the
+                session — not folded into a menu inside the body. Replaying the
+                walkthrough is the first thing someone reaches for when a field is
+                unclear, and a sign-out has to be visible on a machine that gets handed
+                around. */}
+            {activeView === "admin" && staff.session ? (
+              <>
+                <div className="admsettings">
+                  <button
+                    type="button"
+                    className={`staff-guide${settingsOpen ? " staff-guide-on" : ""}`}
+                    aria-expanded={settingsOpen}
+                    aria-label={t("admin.settings")}
+                    title={t("admin.settings")}
+                    onClick={() => setSettingsOpen((v) => !v)}
+                  >
+                    <Icon.gear />
+                  </button>
+                  {settingsOpen ? (
+                    <>
+                      <button
+                        type="button"
+                        className="layers-backdrop"
+                        aria-label={t("common.close")}
+                        onClick={() => setSettingsOpen(false)}
+                      />
+                      <div className="admmenu" role="group" aria-label={t("admin.settings")}>
+                        {/* Only the password lives here. The other two session actions
+                            are buttons in this same row — a menu for a single form is
+                            worth it because the form needs the room; a menu for a
+                            sign-out is just a sign-out you cannot find. */}
+                        <PasswordChange />
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  className="staff-guide"
+                  aria-label={t("admin.howItWorks")}
+                  title={t("admin.howItWorks")}
+                  onClick={() => setStaffTourOpen(true)}
+                >
+                  <Icon.question />
+                </button>
+                <button type="button" className="signout" onClick={() => void signOutStaff()}>
+                  {t("login.signOut")}
+                </button>
+              </>
+            ) : null}
           </div>
           <div className="ovbody">
             {activeView === "detail" && selected ? <CenterDetail center={selected} /> : null}
@@ -604,13 +690,9 @@ export default function AppShell({
               staff.session ? (
                 <AdminPanel
                   session={staff.session}
-                  onOpenTour={() => setStaffTourOpen(true)}
                   onDraftPin={setDraftPin}
                   onPinDrag={pinDragRef}
-                  onSignedOut={() => {
-                    staff.clear();
-                    back();
-                  }}
+                  onPendingChange={setPending}
                 />
               ) : staff.checked ? (
                 <LoginForm onSignedIn={staff.refresh} />

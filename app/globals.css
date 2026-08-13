@@ -732,12 +732,18 @@ a {
   height: 20px;
 }
 
+/* Right edge, on every width. These two used to sit on the left on a phone and jump to
+   the right on desktop, which put them on the opposite side of the screen from the two
+   controls that never move — zoom and "Colaborar" — and left the thumb crossing the map
+   to reach them. One column, one side. `row-reverse` because the stack is anchored by
+   its RIGHT edge: the locate error has to grow leftward into the map, not off-screen. */
 .locatectl {
   position: absolute;
-  left: 14px;
-  bottom: calc(248px + env(safe-area-inset-bottom));
+  right: 14px;
+  bottom: calc(302px + env(safe-area-inset-bottom));
   z-index: 605;
   display: flex;
+  flex-direction: row-reverse;
   align-items: center;
   gap: 8px;
 }
@@ -815,14 +821,32 @@ a {
 }
 
 /* ────────────────────  Seismic layers: control, legend, popups  ──────────────────
-   The control sits directly above the locate button in the same stack. Keep the
-   `bottom` values here in step with `.locatectl` — 248px + its 44px + a 10px gap. */
+   The control sits directly above the locate button in the same right-hand stack, which
+   on a phone is measured up from the "Colaborar" FAB: 248 + its ~44px + a 10px gap puts
+   locate at 302, and 302 + 44 + 10 puts this at 356. Desktop re-measures the same stack
+   from the zoom box in the media query below. Keep the three numbers in step if any
+   button changes size — they are the only thing keeping these off each other. */
 
 .layersctl {
   position: absolute;
-  left: 14px;
-  bottom: calc(302px + env(safe-area-inset-bottom));
+  right: 14px;
+  bottom: calc(356px + env(safe-area-inset-bottom));
   z-index: 606;
+}
+
+/* While the Colaborar menu is open it owns this column: it grows upward from the FAB
+   straight through both controls, and a layers button sitting over the third card reads
+   as part of the list. Faded rather than `display: none` so they do not pop back in — and
+   `pointer-events: none` so a tap aimed at a card cannot land on a button behind it. */
+.fabbing .locatectl,
+.fabbing .layersctl {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.locatectl,
+.layersctl {
+  transition: opacity 0.15s;
 }
 
 .layersbtn {
@@ -861,9 +885,11 @@ a {
   z-index: 0;
 }
 
+/* Hangs off the right edge of the button, so it opens INTO the map rather than off the
+   side of the window. `max-width` keeps it inside the viewport on the narrowest phone. */
 .layers-panel {
   position: absolute;
-  left: 0;
+  right: 0;
   bottom: 52px;
   z-index: 1;
   width: 268px;
@@ -2083,6 +2109,36 @@ textarea.finput {
   border-color: var(--accent);
 }
 
+/* Icon rail. The tabs share the row instead of sizing to their text, capped at 46px so
+   three tabs on a phone do not stretch into slabs. `position: relative` moves onto the
+   button because the badge is now pinned to its corner rather than sitting inline. */
+.admtabs-icons .atab {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 46px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+
+.atab-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.atab-ic svg {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+
+.admtabs-icons .atab-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+}
+
 .atab-badge {
   min-width: 16px;
   height: 16px;
@@ -2390,6 +2446,42 @@ textarea.finput {
 
 .switch-on .switch-knob {
   left: 22px;
+}
+
+/* The session controls at the right of `.ovhead` — gear, guide, sign-out. No
+   `margin-left: auto` on any of them: `.ohtitle` is `flex: 1`, so the title already
+   claims the free space and the group is pushed right by it. An auto margin here would
+   put the gap between the gear and the `?` instead of before both. */
+.staff-guide {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--mut);
+  flex: 0 0 auto;
+}
+
+.staff-guide svg {
+  width: 18px;
+  height: 18px;
+}
+
+.staff-guide:hover {
+  color: var(--ink);
+}
+
+/* Open state for the gear. The cog is muted grey at rest, which on the accent fill would
+   be grey-on-near-black, so the open state sets the colour outright. */
+.staff-guide-on,
+.staff-guide-on:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .signout {
@@ -3080,26 +3172,16 @@ a.hub-card:hover {
     bottom: 142px;
   }
 
-  /* Anchored by its right edge, so `row-reverse` grows the error message leftward into
-     the map instead of off the side of the window. */
+  /* Side and direction come from the base rules now — desktop only widens the inset to
+     match the FAB and lifts the two buttons over the taller zoom box. */
   .locatectl {
-    left: auto;
     right: 24px;
     bottom: 248px;
-    flex-direction: row-reverse;
   }
 
   .layersctl {
-    left: auto;
     right: 24px;
     bottom: 302px;
-  }
-
-  /* The panel hangs off the right edge of the stack on desktop, off the left on a
-     phone — either way it opens INTO the map rather than off the side of the window. */
-  .layers-panel {
-    left: auto;
-    right: 0;
   }
 
   /* Clear of the docked left panel, which starts at 12px and is 430px wide. */
@@ -3284,6 +3366,13 @@ a.hub-card:hover {
   color: #fff;
 }
 
+/* `.amini svg` pins the glyph to var(--ink), which outranks the `color: #fff` set on the
+   button — so on the accent fill the icon was ink-on-ink and the open state looked like
+   an empty black square. Hand it back to the button. */
+.amini-on svg {
+  color: inherit;
+}
+
 .admmenu {
   position: absolute;
   top: calc(100% + 6px);
@@ -3336,10 +3425,16 @@ a.hub-card:hover {
   font-weight: 600;
 }
 
-/* Already indented by the panel; a second indent just narrows the tab row further. */
+/* Already indented and already padded by the overlay body, which the rail is now the
+   first child of — a second copy of both just pushed it away from the header it belongs
+   to. `overflow: visible` because icon tabs shrink to fit and never need to scroll, and
+   the scroll container was clipping the corner badges. */
 .ovbody .admtabs {
-  padding-left: 0;
-  padding-right: 0;
+  padding: 0 0 2px;
+}
+
+.admtabs-icons {
+  overflow: visible;
 }
 
 .admwrap-body {
