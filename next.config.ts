@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
     // flat (the single-country app OOMed without this).
     preloadEntriesOnStart: false,
   },
+  // El manual de marca se sirve en /marca. El archivo vive en `public/marca/index.html`
+  // —copia de `docs/marca/manual-marca.html`, que es la fuente— y esta reescritura es lo
+  // que hace que la URL sin extensión funcione.
+  async rewrites() {
+    return [{ source: "/marca", destination: "/marca/index.html" }];
+  },
+
   async headers() {
     return [
       {

@@ -51,6 +51,9 @@ async function logoDataUri(): Promise<string | null> {
 export default async function Icon() {
   const src = await logoDataUri();
 
+  // Sin logo propio se dibuja el isotipo del manual de marca, no un emoji sobre un
+  // cuadro de color: el isotipo ES la marca, y el emoji era un relleno de cuando no
+  // había una.
   return new ImageResponse(
     (
       <div
@@ -60,22 +63,35 @@ export default async function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: BRAND.colors.accent,
-          color: "#ffffff",
-          fontSize: 300,
+          background: "#0F172A",
           overflow: "hidden",
         }}
       >
-        {/* Rendered by satori inside ImageResponse, not by a browser, so next/image
-            does not apply here. */}
         {src ? (
+          // Rendered by satori inside ImageResponse, not by a browser, so next/image
+          // does not apply here.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt="" width={size.width} height={size.height} style={{ objectFit: "cover" }} />
+          <img src={src} width={512} height={512} alt="" />
         ) : (
-          BRAND.emoji
+          // Monocromático Dark: estructura blanca sobre negro profundo, la versión con
+          // la que abre el manual de marca.
+          <svg viewBox="0 0 920 920" width={512} height={512}>
+            <rect fill="#0F172A" width="920" height="920" rx="253.78" />
+            <path
+              fill="#1E293B"
+              d="M460,190 L520,380 L730,460 L520,540 L460,730 L400,540 L190,460 L400,380 Z"
+            />
+            <rect x="442" y="190" width="36" height="540" rx="18" fill="#FFFFFF" />
+            <rect x="190" y="442" width="540" height="36" rx="18" fill="#FFFFFF" />
+            <circle cx="460" cy="460" r="115" fill="#FFFFFF" />
+            <circle cx="460" cy="190" r="54" fill="#FFFFFF" />
+            <circle cx="730" cy="460" r="54" fill="#FFFFFF" />
+            <circle cx="460" cy="730" r="54" fill="#FFFFFF" />
+            <circle cx="190" cy="460" r="54" fill="#FFFFFF" />
+          </svg>
         )}
       </div>
     ),
-    size,
+    { ...size },
   );
 }

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HelpMaps · Manual de Marca e Identidad Visual</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            brandBlack: '#0F172A',
+            brandDark: '#1E293B',
+            brandGray: '#64748B',
+            brandLight: '#F1F5F9',
+            brandBorder: '#E2E8F0',
+            brandWhite: '#FFFFFF',
+            accentYellow: '#FCF300',
+            accentBlue: '#072AC8',
+            accentRed: '#EF4444',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .shadow-agentos-sm {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    .shadow-agentos-md {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.01);
+    }
+    .ld-svg, .m-ld-svg {
+      width: 100px;
+      height: 100px;
+      display: block;
+    }
+    
+    /* Animación Loader en Sentido Anti-Horario (4 Puntas) */
+    .tip-c-dark {
+      stroke-width: 6px;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      animation: tipCycleDark 2.0s linear infinite;
+    }
+    @keyframes tipCycleDark {
+      0%, 20% { fill: #FFFFFF; stroke: #FFFFFF; filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); }
+      28% { fill: #334155; stroke: #334155; filter: none; }
+      100% { fill: #334155; stroke: #334155; filter: none; }
+    }
+
+    .tip-c-light {
+      stroke-width: 6px;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      animation: tipCycleLight 2.0s linear infinite;
+    }
+    @keyframes tipCycleLight {
+      0%, 20% { fill: #0F172A; stroke: #0F172A; filter: drop-shadow(0 0 6px rgba(15,23,42,0.4)); }
+      28% { fill: #CBD5E1; stroke: #CBD5E1; filter: none; }
+      100% { fill: #CBD5E1; stroke: #CBD5E1; filter: none; }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen pb-16 font-sans antialiased">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 py-8 px-6 md:px-12 shadow-agentos-sm">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-outfit font-black text-sm">
+            <svg class="w-4 h-4 text-white fill-current" viewBox="0 0 24 24">
+              <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"/>
+            </svg>
+          </span>
+          <h1 class="text-2xl font-black text-slate-900 font-outfit tracking-tight uppercase">HelpMaps</h1>
+        </div>
+        <p class="text-gray-500 text-[13px] font-medium mt-1">
+          Manual de Identidad Visual y Directrices de Marca · Ecosistema Humanitario
+        </p>
+      </div>
+      <a href="https://helpmaps.net" target="_blank" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[12.5px] font-bold px-4 py-2 rounded-xl transition-all shadow-agentos-sm hover:scale-[1.02] active:scale-95 w-fit">
+        Ir a HelpMaps.net <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+      </a>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 md:px-12 mt-10 space-y-12">
+    <!-- Intro -->
+    <section class="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-agentos-md">
+      <div class="flex items-center gap-2 text-slate-900 mb-3">
+        <i data-lucide="compass" class="w-5 h-5"></i>
+        <h2 class="text-[14px] font-extrabold uppercase tracking-wider font-outfit">Identidad y Simbología</h2>
+      </div>
+      <p class="text-[14px] text-gray-600 leading-relaxed">
+        El sistema de identidad de <strong>HelpMaps</strong> evoluciona directamente de la experiencia de respuesta humanitaria de AcopioVE, sintetizando la arquitectura de red en una <strong>estrella de 4 puntas en formato de cruz con núcleo central sólido</strong>. Este isotipo representa la orientación geográfica (los 4 puntos cardinales), la asistencia de emergencia (la cruz de auxilio) y la convergencia de datos humanitarios hacia un nodo central unificado.
+      </p>
+    </section>
+
+    <!-- Versiones del Isotipo para Descargar -->
+    <section class="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-agentos-md">
+      <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-gray-100 pb-4">
+        <div class="flex items-center gap-2 text-gray-800">
+          <i data-lucide="layers" class="w-5 h-5 text-slate-900"></i>
+          <h2 class="text-[14px] font-extrabold uppercase tracking-wider font-outfit">Versiones del Isotipo</h2>
+        </div>
+        <span class="text-[11.5px] text-gray-400">Haz clic en descargar para exportar a JPG de alta calidad (1200x1200px)</span>
+      </div>
+
+      <!-- GRUPO 1: MONOCROMÁTICAS -->
+      <div class="mb-8">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="h-2 w-2 rounded-full bg-slate-900"></span>
+          <h3 class="text-[12.5px] font-bold uppercase tracking-wider text-gray-700 font-outfit">1. Colección Monocromática (Escala de Grises)</h3>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- 1. Dark Monocromático -->
+          <div class="flex flex-col items-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-200/60 hover:border-gray-300 transition-colors">
+            <div class="shadow-agentos-md rounded-[28px] overflow-hidden bg-slate-900 w-32 h-32 flex items-center justify-center">
+              <svg id="logo-svg-mono-dark" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 920">
+                <rect fill="#0F172A" width="920" height="920" rx="253.78"/>
+                <!-- Estrella de 4 puntas de fondo sutil -->
+                <path fill="#1E293B" d="M460,190 L520,380 L730,460 L520,540 L460,730 L400,540 L190,460 L400,380 Z"/>
+                <!-- Conectores / Brazos de la cruz -->
+                <rect x="442" y="190" width="36" height="540" rx="18" fill="#FFFFFF"/>
+                <rect x="190" y="442" width="540" height="36" rx="18" fill="#FFFFFF"/>
+                <!-- Núcleo Central LLENO -->
+                <circle cx="460" cy="460" r="115" fill="#FFFFFF"/>
+                <!-- 4 Nodos Cardinales -->
+                <circle cx="460" cy="190" r="54" fill="#FFFFFF"/>
+                <circle cx="730" cy="460" r="54" fill="#FFFFFF"/>
+                <circle cx="460" cy="730" r="54" fill="#FFFFFF"/>
+                <circle cx="190" cy="460" r="54" fill="#FFFFFF"/>
+              </svg>
+            </div>
+            <div class="text-center w-full">
+              <span class="text-[13px] font-bold text-gray-800 block font-outfit">Monocromático Dark</span>
+              <span class="text-[10px] text-gray-400 block mt-0.5">Negro Profundo (#0F172A) / Blanco</span>
+            </div>
+            <button onclick="downloadJpg('logo-svg-mono-dark', 'helpmaps_mono_dark.jpg', '#0F172A')" class="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 active:scale-95 transition-all cursor-pointer">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar JPG
+            </button>
+          </div>
+
+          <!-- 2. Light Monocromático (Grafito) -->
+          <div class="flex flex-col items-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-200/60 hover:border-gray-300 transition-colors">
+            <div class="shadow-agentos-md rounded-[28px] overflow-hidden bg-white w-32 h-32 flex items-center justify-center border border-gray-200">
+              <svg id="logo-svg-mono-light" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 920">
+                <rect fill="#FFFFFF" width="920" height="920" rx="253.78"/>
+                <path fill="#F1F5F9" d="M460,190 L520,380 L730,460 L520,540 L460,730 L400,540 L190,460 L400,380 Z"/>
+                <rect x="442" y="190" width="36" height="540" rx="18" fill="#334155"/>
+                <rect x="190" y="442" width="540" height="36" rx="18" fill="#334155"/>
+                <!-- Núcleo Central LLENO -->
+                <circle cx="460" cy="460" r="115" fill="#334155"/>
+                <!-- 4 Nodos Cardinales -->
+                <circle cx="460" cy="190" r="54" fill="#334155"/>
+                <circle cx="730" cy="460" r="54" fill="#334155"/>
+                <circle cx="460" cy="730" r="54" fill="#334155"/>
+                <circle cx="190" cy="460" r="54" fill="#334155"/>
+              </svg>
+            </div>
+            <div class="text-center w-full">
+              <span class="text-[13px] font-bold text-gray-800 block font-outfit">Monocromático Light</span>
+              <span class="text-[10px] text-gray-400 block mt-0.5">Blanco Puro / Gris Grafito (#334155)</span>
+            </div>
+            <button onclick="downloadJpg('logo-svg-mono-light', 'helpmaps_mono_light.jpg', '#FFFFFF')" class="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 active:scale-95 transition-all cursor-pointer">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar JPG
+            </button>
+          </div>
+
+          <!-- 3. Grafito Monocromático -->
+          <div class="flex flex-col items-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-200/60 hover:border-gray-300 transition-colors">
+            <div class="shadow-agentos-md rounded-[28px] overflow-hidden bg-slate-700 w-32 h-32 flex items-center justify-center">
+              <svg id="logo-svg-mono-charcoal" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 920">
+                <rect fill="#334155" width="920" height="920" rx="253.78"/>
+                <path fill="#475569" d="M460,190 L520,380 L730,460 L520,540 L460,730 L400,540 L190,460 L400,380 Z"/>
+                <rect x="442" y="190" width="36" height="540" rx="18" fill="#F8FAFC"/>
+                <rect x="190" y="442" width="540" height="36" rx="18" fill="#F8FAFC"/>
+                <!-- Núcleo Central LLENO -->
+                <circle cx="460" cy="460" r="115" fill="#F8FAFC"/>
+                <!-- 4 Nodos Cardinales -->
+                <circle cx="460" cy="190" r="54" fill="#F8FAFC"/>
+                <circle cx="730" cy="460" r="54" fill="#F8FAFC"/>
+                <circle cx="460" cy="730" r="54" fill="#F8FAFC"/>
+                <circle cx="190" cy="460" r="54" fill="#F8FAFC"/>
+              </svg>
+            </div>
+            <div class="text-center w-full">
+              <span class="text-[13px] font-bold text-gray-800 block font-outfit">Monocromático Grafito</span>
+              <span class="text-[10px] text-gray-400 block mt-0.5">Gris Grafito (#334155) / Blanco</span>
+            </div>
+            <button onclick="downloadJpg('logo-svg-mono-charcoal', 'helpmaps_mono_grafito.jpg', '#334155')" class="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 active:scale-95 transition-all cursor-pointer">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar JPG
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRUPO 2: CON ACENTOS TRICOLOR (AMARILLO, AZUL, ROJO) -->
+      <div>
+        <div class="flex items-center gap-2 mb-4">
+          <span class="h-2 w-2 rounded-full bg-gradient-to-r from-yellow-400 via-blue-600 to-red-500"></span>
+          <h3 class="text-[12.5px] font-bold uppercase tracking-wider text-gray-700 font-outfit">2. Colección con Acentos Tricolor (Amarillo, Azul y Rojo)</h3>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- 4. Dark Tricolor -->
+          <div class="flex flex-col items-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-200/60 hover:border-gray-300 transition-colors">
+            <div class="shadow-agentos-md rounded-[28px] overflow-hidden bg-slate-900 w-32 h-32 flex items-center justify-center">
+              <svg id="logo-svg-tri-dark" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 920">
+                <rect fill="#0F172A" width="920" height="920" rx="253.78"/>
+                <path fill="#1E293B" d="M460,190 L520,380 L730,460 L520,540 L460,730 L400,540 L190,460 L400,380 Z"/>
+                <rect x="442" y="190" width="36" height="540" rx="18" fill="#FFFFFF"/>
+                <rect x="190" y="442" width="540" height="36" rx="18" fill="#FFFFFF"/>
+                <!-- Núcleo Central LLENO -->
+                <circle cx="460" cy="460" r="115" fill="#FFFFFF"/>
+                <!-- 3 Nodos Tricolor + 1 Blanco -->
+                <circle cx="460" cy="190" r="54" fill="#FCF300"/> <!-- Amarillo (Norte) -->
+                <circle cx="730" cy="460" r="54" fill="#072AC8"/> <!-- Azul (Este) -->
+                <circle cx="460" cy="730" r="54" fill="#EF4444"/> <!-- Rojo (Sur) -->
+                <circle cx="190" cy="460" r="54" fill="#FFFFFF"/> <!-- Blanco (Oeste) -->
+              </svg>
+            </div>
+            <div class="text-center w-full">
+              <span class="text-[13px] font-bold text-gray-800 block font-outfit">Dark Tricolor</span>
+              <span class="text-[10px] text-gray-400 block mt-0.5">Fondo Oscuro · Nodos Tricolor</span>
+            </div>
+            <button onclick="downloadJpg('logo-svg-tri-dark', 'helpmaps_tricolor_dark.jpg', '#0F172A')" class="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 active:scale-95 transition-all cursor-pointer">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar JPG
+            </button>
+          </div>
+
+          <!-- 5. Light Tricolor -->
+          <div class="flex flex-col items-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-200/60 hover:border-gray-300 transition-colors">
+            <div class="shadow-agentos-md rounded-[28px] overflow-hidden bg-white w-32 h-32 flex items-center justify-center border border-gray-200">
+              <svg id="logo-svg-tri-light" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 920">
+                <rect fill="#FFFFFF" width="920" height="920" rx="253.78"/>
+                <path fill="#F8FAFC" d="M460,190 L520,380 L730,460 L520,540 L460,730 L400,540 L190,460 L400,380 Z"/>
+                <rect x="442" y="190" width="36" height="540" rx="18" fill="#334155"/>
+                <rect x="190" y="442" width="540" height="36" rx="18" fill="#334155"/>
+                <!-- Núcleo Central LLENO -->
+                <circle cx="460" cy="460" r="115" fill="#334155"/>
+                <!-- 3 Nodos Tricolor + 1 Negro -->
+                <circle cx="460" cy="190" r="54" fill="#FCF300" stroke="#E2E8F0" stroke-width="4"/> <!-- Amarillo (Norte) -->
+                <circle cx="730" cy="460" r="54" fill="#072AC8"/> <!-- Azul (Este) -->
+                <circle cx="460" cy="730" r="54" fill="#EF4444"/> <!-- Rojo (Sur) -->
+                <circle cx="190" cy="460" r="54" fill="#334155"/> <!-- Negro (Oeste) -->
+              </svg>
+            </div>
+            <div class="text-center w-full">
+              <span class="text-[13px] font-bold text-gray-800 block font-outfit">Light Tricolor</span>
+              <span class="text-[10px] text-gray-400 block mt-0.5">Fondo Blanco · Grafito (#334155) + Nodos Tricolor</span>
+            </div>
+            <button onclick="downloadJpg('logo-svg-tri-light', 'helpmaps_tricolor_light.jpg', '#FFFFFF')" class="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 active:scale-95 transition-all cursor-pointer">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar JPG
+            </button>
+          </div>
+
+          <!-- 6. Grafito Tricolor -->
+          <div class="flex flex-col items-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-200/60 hover:border-gray-300 transition-colors">
+            <div class="shadow-agentos-md rounded-[28px] overflow-hidden bg-slate-700 w-32 h-32 flex items-center justify-center">
+              <svg id="logo-svg-tri-charcoal" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 920">
+                <rect fill="#334155" width="920" height="920" rx="253.78"/>
+                <path fill="#475569" d="M460,190 L520,380 L730,460 L520,540 L460,730 L400,540 L190,460 L400,380 Z"/>
+                <rect x="442" y="190" width="36" height="540" rx="18" fill="#F8FAFC"/>
+                <rect x="190" y="442" width="540" height="36" rx="18" fill="#F8FAFC"/>
+                <!-- Núcleo Central LLENO -->
+                <circle cx="460" cy="460" r="115" fill="#F8FAFC"/>
+                <!-- 3 Nodos Tricolor + 1 Blanco -->
+                <circle cx="460" cy="190" r="54" fill="#FCF300"/> <!-- Amarillo (Norte) -->
+                <circle cx="730" cy="460" r="54" fill="#072AC8"/> <!-- Azul (Este) -->
+                <circle cx="460" cy="730" r="54" fill="#EF4444"/> <!-- Rojo (Sur) -->
+                <circle cx="190" cy="460" r="54" fill="#F8FAFC"/> <!-- Blanco (Oeste) -->
+              </svg>
+            </div>
+            <div class="text-center w-full">
+              <span class="text-[13px] font-bold text-gray-800 block font-outfit">Grafito Tricolor</span>
+              <span class="text-[10px] text-gray-400 block mt-0.5">Fondo Grafito · Nodos Tricolor</span>
+            </div>
+            <button onclick="downloadJpg('logo-svg-tri-charcoal', 'helpmaps_tricolor_grafito.jpg', '#334155')" class="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 active:scale-95 transition-all cursor-pointer">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar JPG
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Loader Animado en Detalle (4 Puntas) -->
+    <section class="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-agentos-md">
+      <div class="flex items-center gap-2 text-gray-800 mb-4 border-b border-gray-100 pb-4">
+        <i data-lucide="loader" class="w-5 h-5 text-slate-900"></i>
+        <h3 class="text-[14px] font-extrabold uppercase tracking-wider font-outfit">Animación de Carga (Giro Anti-horario en Cruz de 4 Nodos)</h3>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- 1. Loader Fondo Oscuro -->
+        <div class="border border-gray-200 rounded-2xl p-6 bg-gray-50 flex flex-col justify-between">
+          <div>
+            <span class="text-[13px] font-extrabold text-gray-800 block font-outfit mb-1">Versión A: Fondo Oscuro (#0F172A)</span>
+            <p class="text-[12px] text-gray-500 leading-relaxed mb-6">
+              El núcleo central lleno y los brazos de la cruz permanecen estáticos. Los 4 nodos cardinales rotan su iluminación secuencialmente en <strong>sentido anti-horario</strong> (Derecha → Arriba → Izquierda → Abajo) mediante un pulso de luz blanca de alto contraste.
+            </p>
+          </div>
+          
+          <div class="flex items-center justify-center p-8 bg-slate-900 rounded-xl border border-gray-200/10 min-h-[180px]">
+            <svg class="m-ld-svg" viewBox="0 0 920 920" xmlns="http://www.w3.org/2000/svg">
+              <path fill="#1E293B" d="M460,190 L520,380 L730,460 L520,540 L460,730 L400,540 L190,460 L400,380 Z"/>
+              <rect x="442" y="190" width="36" height="540" rx="18" fill="#334155"/>
+              <rect x="190" y="442" width="540" height="36" rx="18" fill="#334155"/>
+              <circle cx="460" cy="460" r="115" fill="#334155"/>
+              
+              <!-- 4 Nodos con animación anti-horaria (Este, Norte, Oeste, Sur) -->
+              <circle cx="730" cy="460" r="54" fill="#334155" class="tip-c-dark" style="animation-delay: -0.0s;" />
+              <circle cx="460" cy="190" r="54" fill="#334155" class="tip-c-dark" style="animation-delay: -1.5s;" />
+              <circle cx="190" cy="460" r="54" fill="#334155" class="tip-c-dark" style="animation-delay: -1.0s;" />
+              <circle cx="460" cy="730" r="54" fill="#334155" class="tip-c-dark" style="animation-delay: -0.5s;" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- 2. Loader Fondo Blanco -->
+        <div class="border border-gray-200 rounded-2xl p-6 bg-gray-50 flex flex-col justify-between">
+          <div>
+            <span class="text-[13px] font-extrabold text-gray-800 block font-outfit mb-1">Versión B: Fondo Blanco (#FFFFFF)</span>
+            <p class="text-[12px] text-gray-500 leading-relaxed mb-6">
+              Sobre superficies claras, la estructura central se dibuja en gris pizarra y el nodo activo se oscurece a negro profundo (`#0F172A`) con giro continuo anti-horario para indicar procesos asíncronos.
+            </p>
+          </div>
+          
+          <div class="flex items-center justify-center p-8 bg-white rounded-xl border border-gray-200 min-h-[180px]">
+            <svg class="m-ld-svg" viewBox="0 0 920 920" xmlns="http://www.w3.org/2000/svg">
+              <path fill="#F8FAFC" d="M460,190 L520,380 L730,460 L520,540 L460,730 L400,540 L190,460 L400,380 Z"/>
+              <rect x="442" y="190" width="36" height="540" rx="18" fill="#CBD5E1"/>
+              <rect x="190" y="442" width="540" height="36" rx="18" fill="#CBD5E1"/>
+              <circle cx="460" cy="460" r="115" fill="#CBD5E1"/>
+              
+              <!-- 4 Nodos con animación anti-horaria (Este, Norte, Oeste, Sur) -->
+              <circle cx="730" cy="460" r="54" fill="#CBD5E1" class="tip-c-light" style="animation-delay: -0.0s;" />
+              <circle cx="460" cy="190" r="54" fill="#CBD5E1" class="tip-c-light" style="animation-delay: -1.5s;" />
+              <circle cx="190" cy="460" r="54" fill="#CBD5E1" class="tip-c-light" style="animation-delay: -1.0s;" />
+              <circle cx="460" cy="730" r="54" fill="#CBD5E1" class="tip-c-light" style="animation-delay: -0.5s;" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Muestrario de Colores -->
+    <section class="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-agentos-md">
+      <div class="flex items-center gap-2 text-gray-800 mb-6">
+        <i data-lucide="palette" class="w-5 h-5 text-slate-900"></i>
+        <h2 class="text-[14px] font-extrabold uppercase tracking-wider font-outfit">Paleta de Colores</h2>
+      </div>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Colores iterados -->
+        <script>
+          const colors = [
+            { name: 'Negro Profundo (Primario)', hex: '#0F172A', desc: 'Color institucional principal para fondos de logo, títulos y contraste fuerte.', contrast: 'white' },
+            { name: 'Gris Grafito Carbón', hex: '#334155', desc: 'Color secundario para elementos de interfaz, botones secundarios y acentos.', contrast: 'white' },
+            { name: 'Amarillo Destaque', hex: '#FCF300', desc: 'Acento tricolor (nodo norte) para máxima visibilidad y alertas.', contrast: 'black' },
+            { name: 'Azul Institucional', hex: '#072AC8', desc: 'Acento tricolor (nodo este) para enlaces, identidad y mapas.', contrast: 'white' },
+            { name: 'Rojo Emergencia', hex: '#EF4444', desc: 'Acento tricolor (nodo sur) para emergencias y puntos críticos.', contrast: 'white' },
+            { name: 'Gris Borde y Separador', hex: '#CBD5E1', desc: 'Tono claro para líneas divisorias, bordes sutiles y estados inactivos.', contrast: 'black' },
+            { name: 'Fondo del Sistema', hex: '#F8FAFC', desc: 'Fondo general del lienzo web y aplicaciones para reducir fatiga visual.', contrast: 'black' },
+            { name: 'Blanco Puro', hex: '#FFFFFF', desc: 'Superficies de tarjetas elevadas, modales y contraste para logos oscuros.', contrast: 'black' }
+          ];
+
+          document.write(colors.map(color => `
+            <div class="border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col justify-between bg-white">
+              <div class="h-24 w-full flex items-end justify-end p-3 border-b border-gray-100" style="background-color: ${color.hex}">
+                <button onclick="copyToClipboard('${color.hex}', this)" class="p-1.5 rounded-lg backdrop-blur-md border shadow-sm transition-all ${
+                  color.contrast === 'white'
+                    ? 'bg-white/20 text-white border-white/30 hover:bg-white/30'
+                    : 'bg-black/10 text-black border-black/20 hover:bg-black/20'
+                }">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <div class="p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <span class="font-bold text-[13px] text-gray-800 block leading-tight">${color.name}</span>
+                  <code class="text-[11px] font-bold text-gray-400 mt-1 block font-mono">${color.hex}</code>
+                </div>
+                <p class="text-[11px] text-gray-500 mt-2 leading-relaxed">
+                  ${color.desc}
+                </p>
+              </div>
+            </div>
+          `).join(''));
+        </script>
+      </div>
+    </section>
+
+    <!-- Tipografía -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Tipografía Outfit -->
+      <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-agentos-md flex flex-col justify-between">
+        <div>
+          <div class="flex items-center gap-2 text-gray-800 mb-4">
+            <i data-lucide="type" class="w-5 h-5 text-slate-900"></i>
+            <h3 class="text-[14px] font-extrabold uppercase tracking-wider font-outfit">Outfit (Títulos y Destaques)</h3>
+          </div>
+          <p class="text-[13px] text-gray-400 mb-4 leading-relaxed">
+            Outfit es una tipografía geométrica, contemporánea y de alto impacto visual. Se utiliza estrictamente en logotipos, cabeceras y métricas clave.
+          </p>
+        </div>
+        
+        <div class="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+          <div>
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Demos</span>
+            <span class="font-outfit text-2xl font-black text-gray-800 block leading-none">HELPMAPS · 2026</span>
+            <span class="font-outfit text-sm font-bold text-gray-600 block mt-1">Outfit Bold / Black</span>
+          </div>
+          <div class="pt-2 border-t border-gray-200">
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Muestra editable</span>
+            <input type="text" value="HelpMaps - Red Humanitaria Global" oninput="updateTextPreview(this.value)" class="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-[12.5px] font-outfit font-black text-gray-800 outline-none focus:border-slate-900" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Tipografía DM Sans -->
+      <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-agentos-md flex flex-col justify-between">
+        <div>
+          <div class="flex items-center gap-2 text-gray-800 mb-4">
+            <i data-lucide="type" class="w-5 h-5 text-slate-900"></i>
+            <h3 class="text-[14px] font-extrabold uppercase tracking-wider font-outfit">DM Sans (Cuerpo e Interfaz)</h3>
+          </div>
+          <p class="text-[13px] text-gray-400 mb-4 leading-relaxed">
+            DM Sans es una tipografía sumamente legible, neutral y optimizada para pantallas densas en datos y mapas de emergencia.
+          </p>
+        </div>
+        
+        <div class="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+          <div>
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Demos</span>
+            <span class="font-sans text-xl font-bold text-gray-800 block leading-none">Plataforma abierta de mapeo</span>
+            <span id="dmsans-preview" class="font-sans text-[13px] text-gray-600 block mt-1 leading-relaxed">
+              "Centralización y conciliación de centros de acopio, refugios y personas en tiempo real."
+            </span>
+          </div>
+          <div class="pt-2 border-t border-gray-200">
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Muestra editable</span>
+            <input type="text" value="HelpMaps - Red Humanitaria Global" oninput="updateTextPreview(this.value)" class="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-[12.5px] font-sans font-medium text-gray-800 outline-none focus:border-slate-900" />
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-6 md:px-12 mt-12 text-center text-[11px] text-gray-400">
+    &copy; 2026 HelpMaps.net · Diseñado bajo estándares de datos abiertos, alta accesibilidad y neutralidad humanitaria.
+  </footer>
+
+  <script>
+    // Inicializar Lucide
+    lucide.createIcons();
+
+    // Copiar Color
+    function copyToClipboard(hex, buttonEl) {
+      navigator.clipboard.writeText(hex);
+      const originalInner = buttonEl.innerHTML;
+      buttonEl.innerHTML = '<i data-lucide="check" class="text-emerald-500 w-4 h-4"></i>';
+      lucide.createIcons();
+      setTimeout(() => {
+        buttonEl.innerHTML = originalInner;
+        lucide.createIcons();
+      }, 2000);
+    }
+
+    // Actualizar Texto Editable
+    function updateTextPreview(text) {
+      const inputs = document.querySelectorAll('input');
+      inputs.forEach(input => input.value = text);
+      const outfitDemos = document.querySelectorAll('.font-outfit.text-2xl');
+      outfitDemos.forEach(demo => {
+        if (!demo.innerText.includes('A B C D') && !demo.innerText.includes('HELPMAPS')) {
+          demo.innerText = text;
+        }
+      });
+      document.getElementById('dmsans-preview').innerText = text;
+    }
+
+    // Descargar JPG
+    function downloadJpg(svgId, filename, bgColor) {
+      const svgEl = document.getElementById(svgId);
+      if (!svgEl) return;
+      
+      const svgString = new XMLSerializer().serializeToString(svgEl);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+      
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1200;
+        canvas.height = 1200;
+        const context = canvas.getContext('2d');
+        if (context) {
+          context.fillStyle = bgColor;
+          context.fillRect(0, 0, 1200, 1200);
+          context.drawImage(image, 0, 0, 1200, 1200);
+          
+          const jpegUrl = canvas.toDataURL('image/jpeg', 0.95);
+          const link = document.createElement('a');
+          link.href = jpegUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        URL.revokeObjectURL(blobURL);
+      };
+      image.src = blobURL;
+    }
+  </script>
+</body>
+</html>

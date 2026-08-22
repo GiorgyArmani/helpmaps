@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import { Icon } from "@/ui/icons";
+import Isotype from "@/ui/Isotype";
 
 // Thin wrappers over the ported design-system classes (see app/globals.css). They exist
 // so a component says "primary button" instead of remembering that it is `.btnp`, and so
@@ -187,6 +188,18 @@ export function Notice({
 }
 
 /** Inline busy indicator, used while a gate resolves. */
+/**
+ * The loading indicator: the brand mark, alive.
+ *
+ * Was a generic ring. It is the isotype now because the manual specifies the pulse as
+ * part of the identity, and because a mark someone already recognises reads as "this is
+ * working" faster than a spinner that could belong to any site.
+ */
 export function Spinner() {
-  return <span className="spinner" aria-hidden="true" />;
+  return (
+    <span className="spinner-wrap" role="status" aria-live="polite">
+      <Isotype size={34} loading />
+    </span>
+  );
 }
+
