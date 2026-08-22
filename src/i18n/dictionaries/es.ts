@@ -45,6 +45,10 @@ const es = {
   // ── Mapa y filtros ──────────────────────────────────────────────────────
   "map.searchPlaceholder": "Buscar por nombre o municipio",
   "map.allRegions": "Todos los {regions}",
+  // El sustantivo sale de la CONFIGURACIÓN del país, no del diccionario: "estado" en
+  // Venezuela, "departamento" en Colombia. Pasa por una clave para que un despliegue
+  // pueda darle su palabra en cada idioma desde `language.overrides`.
+  "map.regionOne": "{region}",
   "map.allCenters": "Todos los puntos",
   "map.centerSearch": "Buscar un punto",
   "map.help": "Cómo funciona",
@@ -433,6 +437,30 @@ const es = {
   "layers.stale": "Datos sísmicos de una carga anterior.",
   "layers.disclaimer":
     "Intensidad estimada por USGS a partir del modelo del sismo. Se corrige en las horas siguientes y no reemplaza el reporte oficial de daños.",
+
+  // El boletín. Estaba escrito a mano dentro del componente, así que la pestaña seguía
+  // diciendo "Noticias" con la interfaz en inglés.
+  "news.tab": "Noticias",
+  "news.title": "Qué se está reportando",
+  "news.error": "No se pudo cargar el boletín.",
+  "news.empty": "Todavía no se ha publicado ningún boletín.",
+  "news.srcAuto": "Resumen automático de {sources}.",
+  "news.srcHeadlines": "Titulares de {sources}.",
+  "news.autoWarn": "Puede contener errores: sigue el enlace al medio.",
+
+  // La escena 3D. Estaba escrita a mano de punta a punta: con la interfaz en inglés
+  // seguía diciendo "Volver al mapa" y "Altura = daño estimado".
+  "scene3d.back": "Volver al mapa",
+  "scene3d.tilt": "Ver inclinado",
+  "scene3d.flat": "Ver plano",
+  "scene3d.terrain": "Relieve del terreno",
+  "scene3d.legendTitle": "Altura = daño estimado",
+  "scene3d.legendBody":
+    "La altura de cada bloque representa el porcentaje de daño estimado, no la altura real del edificio.",
+  "scene3d.less": "menor",
+  "scene3d.more": "mayor",
+  "scene3d.layerError": "No se pudo cargar",
+  "scene3d.layersError": "No se pudieron cargar: {layers}.",
 
   "quake.magnitude": "Magnitud",
   "quake.depth": "Profundidad",

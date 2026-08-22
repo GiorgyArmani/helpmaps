@@ -6,6 +6,7 @@ import type { ExpressionSpecification, Map as MapLibreMap } from "maplibre-gl";
 import type { EmergencyLayer } from "@/domain/layers";
 import { Icon } from "@/ui/icons";
 import { Notice, Spinner } from "@/ui/primitives";
+import { useI18n } from "@/i18n/context";
 
 /**
  * The 3D scene.
@@ -39,6 +40,7 @@ export default function Scene3D({
   layers: EmergencyLayer[];
   fallbackCenter: [number, number];
 }) {
+  const { t } = useI18n();
   const holder = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -211,7 +213,7 @@ export default function Scene3D({
           className={`s3btn${!flat ? " s3btn-on" : ""}`}
           onClick={() => setFlat((v) => !v)}
           aria-pressed={!flat}
-          title={flat ? "Ver inclinado" : "Ver plano"}
+          title={flat ? t("scene3d.tilt") : t("scene3d.flat")}
         >
           <span className="s3btn-txt">{flat ? "3D" : "2D"}</span>
         </button>
@@ -221,7 +223,7 @@ export default function Scene3D({
           className={`s3btn${terrain ? " s3btn-on" : ""}`}
           onClick={() => setTerrain((v) => !v)}
           aria-pressed={terrain}
-          title="Relieve del terreno"
+          title={t("scene3d.terrain")}
         >
           <Icon.waves />
         </button>
@@ -234,16 +236,16 @@ export default function Scene3D({
               <button
                 type="button"
                 className="side-backdrop"
-                aria-label="Cerrar"
+                aria-label={t("common.close")}
                 onClick={() => setPanelOpen(false)}
               />
-              <div className="layers-panel" role="group" aria-label="Capas del mapa">
+              <div className="layers-panel" role="group" aria-label={t("layers.title")}>
                 <div className="layers-head">
-                  <b>Capas del mapa</b>
+                  <b>{t("layers.title")}</b>
                   <button
                     type="button"
                     className="layers-x"
-                    aria-label="Cerrar"
+                    aria-label={t("common.close")}
                     onClick={() => setPanelOpen(false)}
                   >
                     <Icon.close />
@@ -263,7 +265,7 @@ export default function Scene3D({
                     <span className="layers-opt-txt">
                       <b>{layer.label}</b>
                       {errors[layer.id] ? (
-                        <small className="layers-err">No se pudo cargar</small>
+                        <small className="layers-err">{t("scene3d.layerError")}</small>
                       ) : layer.hint ? (
                         <small>{layer.hint}</small>
                       ) : null}
@@ -285,11 +287,11 @@ export default function Scene3D({
               type="button"
               className={`sidetab${anyOn ? " sidetab-on" : ""}`}
               aria-expanded={false}
-              aria-label="Capas del mapa"
+              aria-label={t("layers.title")}
               onClick={() => setPanelOpen(true)}
             >
               <Icon.chevron className="sidetab-ch" />
-              <span className="sidetab-txt">Capas</span>
+              <span className="sidetab-txt">{t("layers.cta")}</span>
             </button>
           )}
         </div>
@@ -297,11 +299,8 @@ export default function Scene3D({
 
       {buildings.some((b) => on[b.id]) ? (
         <div className="scene3d-legend">
-          <b>Altura = daño estimado</b>
-          <span>
-            La altura de cada bloque representa el porcentaje de daño estimado, no la altura
-            real del edificio.
-          </span>
+          <b>{t("scene3d.legendTitle")}</b>
+          <span>{t("scene3d.legendBody")}</span>
           <div className="scene3d-ramp" aria-hidden="true">
             <i style={{ background: "#8fbf9f" }} />
             <i style={{ background: "#e8c46a" }} />
@@ -309,8 +308,8 @@ export default function Scene3D({
             <i style={{ background: "#b3261e" }} />
           </div>
           <div className="scene3d-ramp-lbl">
-            <span>menor</span>
-            <span>mayor</span>
+            <span>{t("scene3d.less")}</span>
+            <span>{t("scene3d.more")}</span>
           </div>
         </div>
       ) : null}
@@ -318,7 +317,12 @@ export default function Scene3D({
       {Object.keys(errors).length > 0 ? (
         <div className="scene3d-error">
           <Notice tone="warn">
-            No se pudieron cargar: {layers.filter((l) => errors[l.id]).map((l) => l.label).join(", ")}.
+            {t("scene3d.layersError", {
+              layers: layers
+                .filter((l) => errors[l.id])
+                .map((l) => l.label)
+                .join(", "),
+            })}
           </Notice>
         </div>
       ) : null}

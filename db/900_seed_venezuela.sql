@@ -78,7 +78,13 @@ insert into public.emergencies (
 
   '{"logo": null}'::jsonb,
   '{}'::jsonb,                -- sin overrides: hereda lo que ofrece la red
-  '{}'::jsonb,                -- "Refugio" es la palabra que usa Venezuela; no hay override
+  -- "Refugio" es la palabra que usa Venezuela, así que no hay override de vocabulario.
+  -- Lo que sí va acá es el sustantivo de región EN INGLÉS: `region_noun` es un dato del
+  -- país y tiene una sola forma, la del idioma en que se cargó la fila, de modo que con la
+  -- interfaz en inglés el filtro decía "All estados". El nombre de la división no se
+  -- traduce solo —"departamento" no es "department"— así que lo declara quien conoce el
+  -- país, por idioma, con el mismo mecanismo que renombra cualquier otra palabra.
+  '{"overrides":{"en":{"map.allRegions":"All states","map.regionOne":"State"}}}'::jsonb,
   '{}'::jsonb,                -- la sísmica se hereda de config/hazard.ts
   '[]'::jsonb                 -- las capas de AcopioVE entran en la fase 3
 )

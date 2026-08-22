@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import { currentEmergency, getSite } from "@/server/emergency";
 import { buildingLayers } from "@/domain/layers";
-import { Icon } from "@/ui/icons";
+import SceneBar from "@/features/map3d/SceneBar";
 
 const Scene3D = dynamic(() => import("@/features/map3d/Scene3D"));
 
@@ -45,13 +44,7 @@ export default async function Scene3DPage({
 
   return (
     <main className="scene3d-page">
-      <header className="scene3d-bar">
-        <Link href="/" className="scene3d-back">
-          <Icon.back />
-          <span>Volver al mapa</span>
-        </Link>
-        <span className="scene3d-title">{focus.label}</span>
-      </header>
+      <SceneBar title={focus.label} />
       <Scene3D layers={ordered} fallbackCenter={site.country.geo.center} />
     </main>
   );

@@ -37,6 +37,7 @@ const en: Partial<Dict> = {
 
   "map.searchPlaceholder": "Search by name or municipality",
   "map.allRegions": "All {regions}",
+  "map.regionOne": "{region}",
   "map.allCenters": "All points",
   "map.centerSearch": "Search a point",
   "map.help": "How it works",
@@ -390,6 +391,26 @@ const en: Partial<Dict> = {
   "layers.stale": "Seismic data from an earlier load.",
   "layers.disclaimer":
     "Intensity estimated by USGS from a model of the earthquake. It is revised over the following hours and does not replace the official damage report.",
+
+  "news.tab": "News",
+  "news.title": "What is being reported",
+  "news.error": "The bulletin could not be loaded.",
+  "news.empty": "No bulletin has been published yet.",
+  "news.srcAuto": "Automatic summary of {sources}.",
+  "news.srcHeadlines": "Headlines from {sources}.",
+  "news.autoWarn": "It may contain errors — follow the link to the outlet.",
+
+  "scene3d.back": "Back to the map",
+  "scene3d.tilt": "Tilted view",
+  "scene3d.flat": "Flat view",
+  "scene3d.terrain": "Terrain relief",
+  "scene3d.legendTitle": "Height = estimated damage",
+  "scene3d.legendBody":
+    "Each block's height represents the estimated damage percentage, not the building's real height.",
+  "scene3d.less": "lower",
+  "scene3d.more": "higher",
+  "scene3d.layerError": "Could not load",
+  "scene3d.layersError": "Could not load: {layers}.",
 
   "quake.magnitude": "Magnitude",
   "quake.depth": "Depth",

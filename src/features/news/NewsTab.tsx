@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "@/i18n/context";
 import { Icon } from "@/ui/icons";
 import { Spinner } from "@/ui/primitives";
 import { useEmergency } from "@/features/app/SiteProvider";
@@ -29,6 +30,7 @@ interface Bulletin {
 
 export default function NewsTab() {
   const emergency = useEmergency();
+  const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const [bulletin, setBulletin] = useState<Bulletin | null>(null);
     // "ready" y no volver a "idle": el efecto depende del estado, así que devolverlo a
@@ -79,15 +81,15 @@ export default function NewsTab() {
           type="button"
           className="sidetab"
           aria-expanded={false}
-          aria-label="Qué se está reportando"
-          title="Qué se está reportando"
+          aria-label={t("news.title")}
+          title={t("news.title")}
           onClick={() => {
             setOpen(true);
             setState("loading");
           }}
         >
           <Icon.chevron className="sidetab-ch" />
-          <span className="sidetab-txt">Noticias</span>
+          <span className="sidetab-txt">{t("news.tab")}</span>
         </button>
       </div>
     );
@@ -98,27 +100,32 @@ export default function NewsTab() {
       <button
         type="button"
         className="side-backdrop"
-        aria-label="Cerrar"
+        aria-label={t("common.close")}
         onClick={() => setOpen(false)}
       />
-      <div className="side-panel" role="group" aria-label="Qué se está reportando">
+      <div className="side-panel" role="group" aria-label={t("news.title")}>
         <div className="side-head">
-          <b>Qué se está reportando</b>
-          <button type="button" className="layers-x" aria-label="Cerrar" onClick={() => setOpen(false)}>
+          <b>{t("news.title")}</b>
+          <button
+            type="button"
+            className="layers-x"
+            aria-label={t("common.close")}
+            onClick={() => setOpen(false)}
+          >
             <Icon.close />
           </button>
         </div>
 
         {state === "loading" ? <Spinner /> : null}
-        {state === "error" ? <p className="layers-note">No se pudo cargar el boletín.</p> : null}
-        {state === "empty" ? (
-          <p className="layers-note">Todavía no se ha publicado ningún boletín.</p>
-        ) : null}
+        {state === "error" ? <p className="layers-note">{t("news.error")}</p> : null}
+        {state === "empty" ? <p className="layers-note">{t("news.empty")}</p> : null}
 
         {bulletin ? (
           <>
+            {/* La fecha en el idioma que se está leyendo: estaba fijada en "es", así que
+                un lector en inglés veía "22 sept, 14:05" en medio de texto en inglés. */}
             <time dateTime={bulletin.generated_at} className="side-when">
-              {new Date(bulletin.generated_at).toLocaleString("es", {
+              {new Date(bulletin.generated_at).toLocaleString(lang, {
                 day: "2-digit",
                 month: "short",
                 hour: "2-digit",
@@ -127,9 +134,13 @@ export default function NewsTab() {
             </time>
             <BulletinBody text={bulletin.summary} />
             <p className="layers-src">
-              {bulletin.model ? "Resumen automático de " : "Titulares de "}
-              {bulletin.sources.filter((s) => !s.error).map((s) => s.name).join(", ")}.
-              {bulletin.model ? " Puede contener errores: seguí el enlace al medio." : null}
+              {t(bulletin.model ? "news.srcAuto" : "news.srcHeadlines", {
+                sources: bulletin.sources
+                  .filter((s) => !s.error)
+                  .map((s) => s.name)
+                  .join(", "),
+              })}
+              {bulletin.model ? ` ${t("news.autoWarn")}` : null}
             </p>
           </>
         ) : null}

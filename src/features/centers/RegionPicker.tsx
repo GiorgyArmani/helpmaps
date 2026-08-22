@@ -43,7 +43,7 @@ export default function RegionPicker({
         type="button"
         className="cpick-btn"
         aria-expanded={open}
-        aria-label={site.country.regionNoun.one}
+        aria-label={t("map.regionOne", { region: site.country.regionNoun.one })}
         onClick={() => setOpen((o) => !o)}
       >
         <Icon.directions />
