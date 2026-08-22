@@ -742,18 +742,23 @@ a {
   height: 20px;
 }
 
-/* Right edge, on every width. These two used to sit on the left on a phone and jump to
-   the right on desktop, which put them on the opposite side of the screen from the two
-   controls that never move — zoom and "Colaborar" — and left the thumb crossing the map
-   to reach them. One column, one side. `row-reverse` because the stack is anchored by
-   its RIGHT edge: the locate error has to grow leftward into the map, not off-screen. */
+/* Ubicación y 3D: canto IZQUIERDO en teléfono, derecho en escritorio.
+   En escritorio cuelgan del mismo borde que el zoom y "Colaborar", que es lo correcto:
+   una sola columna, un solo lado. En teléfono ese borde ya lo ocupan las lengüetas de
+   capas y noticias, que van ancladas arriba y bajan; los botones van anclados abajo y
+   suben, y las dos columnas se cruzaban en el medio de la pantalla. Separarlas por lado
+   es lo único que las mantiene despejadas sin depender del alto de la pantalla.
+
+   La dirección del flex sigue al anclaje: el aviso de error tiene que crecer HACIA el
+   mapa, nunca hacia afuera de la pantalla. Anclado a la izquierda crece a la derecha
+   (`row`); anclado a la derecha, al revés (`row-reverse`, en la consulta de escritorio). */
 .locatectl {
   position: absolute;
-  right: 14px;
-  bottom: calc(348px + env(safe-area-inset-bottom));
+  left: 14px;
+  bottom: calc(298px + env(safe-area-inset-bottom));
   z-index: 605;
   display: flex;
-  flex-direction: row-reverse;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
 }
@@ -831,11 +836,11 @@ a {
 }
 
 /* ────────────────────  Seismic layers: control, legend, popups  ──────────────────
-   The control sits directly above the locate button in the same right-hand stack, which
-   on a phone is measured up from the "Colaborar" FAB: 248 + its ~44px + a 10px gap puts
-   locate at 302, and 302 + 44 + 10 puts this at 356. Desktop re-measures the same stack
-   from the zoom box in the media query below. Keep the three numbers in step if any
-   button changes size — they are the only thing keeping these off each other. */
+   Ya no cuelga de la escalera de abajo: es una lengüeta anclada arriba, al canto derecho,
+   y la de noticias cuelga debajo. Las dos alturas se miden con la lengüeta cerrada
+   (capas mide 86px, noticias 102px, y llevan un texto vertical que cambia de alto con el
+   idioma), así que si cambia el rótulo hay que volver a medir: `top` es lo único que las
+   mantiene separadas entre sí y despegadas del botón 3D, que sube desde abajo. */
 
 /* Anclado al BORDE derecho, no separado de él: una pestaña que sobresale del canto se
    lee como algo plegado que se puede tirar, y un botón flotante no. */
@@ -3194,8 +3199,10 @@ a.hub-card:hover {
   /* Side and direction come from the base rules now — desktop only widens the inset to
      match the FAB and lifts the two buttons over the taller zoom box. */
   .locatectl {
+    left: auto;
     right: 24px;
     bottom: 118px;
+    flex-direction: row-reverse;
   }
 
   /* La pestaña de capas se ancla al canto y no entra en la escalera de la derecha. */
@@ -3923,8 +3930,8 @@ fieldset.fieldset {
    alinean se leen como tres cosas distintas puestas ahí por casualidad. */
 .btn3d {
   position: absolute;
-  right: 14px;
-  bottom: calc(402px + env(safe-area-inset-bottom));
+  left: 14px;
+  bottom: calc(352px + env(safe-area-inset-bottom));
   z-index: 607;
   display: flex;
   align-items: center;
@@ -3947,6 +3954,7 @@ fieldset.fieldset {
    a 14px del borde mientras el de ubicación estaba a 24, desalineados por diez píxeles. */
 @media (min-width: 900px) {
   .btn3d {
+    left: auto;
     right: 24px;
     bottom: 172px;
   }
@@ -4102,12 +4110,15 @@ fieldset.fieldset {
 /* ── Pestaña de noticias ──────────────────────────────────────────────────
    Segundo escalón del canto derecho, debajo de capas. Comparte la lengüeta y sus
    estilos; lo que cambia es la altura a la que cuelga y el ancho del panel, que
-   acá es texto para leer y no una lista de interruptores. */
+   acá es texto para leer y no una lista de interruptores.
+
+   En teléfono: capas arranca en 214 y mide 86, así que 310 la deja con 10px de aire.
+   A 272 las dos lengüetas se pisaban 28px y el rótulo de capas quedaba tapado. */
 
 .newsctl {
   position: absolute;
   right: 0;
-  top: 272px;
+  top: 310px;
   z-index: 620;
 }
 
@@ -4497,6 +4508,15 @@ fieldset.fieldset {
   z-index: 620;
 }
 
+/* En teléfono la hoja sube desde abajo y se cruza con las lengüetas del canto derecho,
+   que estaban por encima (620 contra 610): al desplegar la lista, capas y noticias
+   quedaban pintadas sobre ella. Lo que se acaba de tocar va adelante, así que en teléfono
+   la hoja gana. En escritorio no se cambia: ahí el panel se acopla a la izquierda y las
+   lengüetas viven en el borde opuesto, sin nada que resolver. */
+@media (max-width: 899px) {
+  .sheet { z-index: 630; }
+}
+
 .sidetab-left {
   border-left: 0;
   border-right: 1px solid var(--line);
@@ -4623,7 +4643,7 @@ fieldset.fieldset {
    inferior y el final del boletín quedaba fuera, sin forma de llegar a él. */
 
 .layersctl .layers-panel { max-height: calc(100dvh - 200px); }
-.newsctl .side-panel { max-height: calc(100dvh - 300px); }
+.newsctl .side-panel { max-height: calc(100dvh - 340px); }
 
 @media (min-width: 900px) {
   .layersctl .layers-panel { max-height: calc(100dvh - 178px); }
@@ -4827,4 +4847,25 @@ fieldset.fieldset {
     overflow-y: auto;
     overscroll-behavior: contain;
   }
+}
+
+/* ── La fila de acciones entra en una línea en cualquier idioma ────────────
+   La barra reparte un ancho fijo entre la marca y las acciones, y el rótulo de
+   "Colaborar" es lo único que cambia de largo al traducir. En español la fila entraba
+   justo; en inglés ("Contribute") sobraban CINCO píxeles y el grupo entero saltaba a una
+   segunda línea: en un teléfono de 412 de ancho la barra pasaba de 144 a 190px de alto
+   sólo por cambiar de idioma.
+
+   Cinco píxeles de diferencia no se arreglan devolviendo cinco: se recuperan catorce
+   —dos de la separación de la barra, ocho de la que hay entre los iconos, cuatro del
+   relleno del botón— para que el próximo idioma con una palabra más larga siga entrando.
+   Nada de esto toca el tamaño de los botones: 36px de lado es lo mínimo que se acierta
+   con el pulgar, y achicarlos para ganar espacio arregla la barra rompiendo el uso.
+
+   Va acá abajo a propósito: las reglas base de `.macbar .fab` viven más arriba con la
+   misma especificidad y le ganarían por orden a una copia puesta junto al resto. */
+@media (max-width: 899px) {
+  .macbar { gap: 6px; }
+  .macbar .hright { gap: 4px; }
+  .macbar .fab { padding: 0 10px; }
 }
