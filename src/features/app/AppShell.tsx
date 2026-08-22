@@ -259,6 +259,14 @@ export default function AppShell({
   const openCenter = useCallback((id: string) => {
     setSelectedId(id);
     setView("detail");
+    // Abrir el panel si estaba plegado.
+    //
+    // Tocar un pin con el panel cerrado no hacía nada visible: la ficha se pintaba dentro
+    // de un panel que estaba oculto. Pedir ver un punto ES pedir que se abra donde se
+    // muestra — quien lo cerró antes lo cerró para ver el mapa, no para dejar de poder
+    // consultar un punto.
+    setFolded(false);
+    setOpen(true);
   }, []);
 
   function back() {

@@ -3188,20 +3188,20 @@ a.hub-card:hover {
   .zoomctl {
     display: flex;
     right: 24px;
-    bottom: 24px;
+    bottom: 16px;
   }
 
   /* Side and direction come from the base rules now — desktop only widens the inset to
      match the FAB and lifts the two buttons over the taller zoom box. */
   .locatectl {
     right: 24px;
-    bottom: 126px;
+    bottom: 118px;
   }
 
   /* La pestaña de capas se ancla al canto y no entra en la escalera de la derecha. */
   .layersctl {
     right: 0;
-    top: 236px;
+    top: 150px;
   }
 
 
@@ -3948,7 +3948,7 @@ fieldset.fieldset {
 @media (min-width: 900px) {
   .btn3d {
     right: 24px;
-    bottom: 180px;
+    bottom: 172px;
   }
 }
 
@@ -4107,7 +4107,7 @@ fieldset.fieldset {
 .newsctl {
   position: absolute;
   right: 0;
-  top: 322px;
+  top: 272px;
   z-index: 620;
 }
 
@@ -4160,7 +4160,7 @@ fieldset.fieldset {
 }
 
 @media (min-width: 900px) {
-  .newsctl { top: 340px; }
+  .newsctl { top: 254px; }
 }
 
 /* En el teléfono el panel ocupa el ancho útil: 340px sobre 360 de pantalla dejaba el
@@ -4493,7 +4493,7 @@ fieldset.fieldset {
   display: none;
   position: absolute;
   left: 0;
-  top: 214px;
+  top: 168px;
   z-index: 620;
 }
 
@@ -4622,12 +4622,12 @@ fieldset.fieldset {
    al bajar las lengüetas, un 62dvh medido desde arriba se iba por debajo del borde
    inferior y el final del boletín quedaba fuera, sin forma de llegar a él. */
 
-.layersctl .layers-panel { max-height: calc(100dvh - 238px); }
+.layersctl .layers-panel { max-height: calc(100dvh - 200px); }
 .newsctl .side-panel { max-height: calc(100dvh - 300px); }
 
 @media (min-width: 900px) {
-  .layersctl .layers-panel { max-height: calc(100dvh - 260px); }
-  .newsctl .side-panel { max-height: calc(100dvh - 364px); }
+  .layersctl .layers-panel { max-height: calc(100dvh - 178px); }
+  .newsctl .side-panel { max-height: calc(100dvh - 290px); }
 }
 
 /* La escena 3D ancla sus capas arriba del todo, así que ahí cabe casi toda la altura. */
@@ -4805,4 +4805,26 @@ fieldset.fieldset {
   .cdback { padding-right: 14px; }
   .sheet { overflow: visible; }
   .sheet .list { border-radius: 0 0 18px 0; }
+}
+
+/* ── El menú de Colaborar no se sale de la pantalla en el teléfono ─────────
+   Colgaba del botón con `right: 0`, así que se extendía 300px hacia la izquierda
+   desde donde estuviera el botón — y en 390px de ancho eso lo dejaba medio fuera.
+   En el teléfono se ancla a la BARRA y ocupa su ancho: no hay borde por el que
+   se pueda escapar. */
+
+.macbar { position: relative; }
+
+@media (max-width: 899px) {
+  .macbar .fabwrap { position: static; }
+
+  .macbar .fab-menu {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    top: calc(100% + 8px);
+    max-height: 68dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }

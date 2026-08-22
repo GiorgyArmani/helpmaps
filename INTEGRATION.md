@@ -293,18 +293,49 @@ Smaller than our first draft, because that one asked you to give up data isolati
    merge on every fix that lands here, and the files that conflict are exactly the ones it
    edited.
 
+One thing worth looking at regardless of this branch: `npm audit --omit=dev` reports nine
+high-severity advisories against the pinned `next` 16.2.9, and one of them is "Middleware /
+Proxy bypass in App Router applications using Turbopack" — which is your `proxy.ts` on
+Turbopack exactly. We did not bump it here: that is your call, not this branch's business.
+
 ---
 
 ## 10. Status
 
+Running at `help.acopiove.org` — a test deployment on our own VPS and Supabase, with the
+Venezuela emergency seeded and demonstration data.
+
 | Phase | What it covers | Status |
 |---|---|---|
-| 1 | Schema, host resolution, `SITE` hydrated from the row | Server side done and verified; client context pending |
-| 2 | Staff panel scoped to its emergency; registry console on the hub | Pending |
-| 3 | Map engine, per-emergency overlays, button to 3D | Pending |
-| 4 | News bulletin on the entry page | Pending |
+| 1 | Schema, host resolution, `SITE` hydrated from the row | Done |
+| 2 | Staff panel scoped to its emergency; registry console | Done |
+| 3 | Map engine, per-emergency overlays, 3D scene | Done |
+| 4 | News bulletin | Done |
 | 5 | Publishing configuration from the hub to a country | Pending |
 | 6 | Scoped public API and external sources | Pending |
 
 Every phase leaves the application deployable. None requires the previous one to have
 reached production.
+
+### What is deliberately not here
+
+- **The people feeds.** AcopioVE aggregates twelve of them, and its 3D view carries seven
+  as layers. They stay out until `patients`, `rescued` and `missingReports` are wired,
+  because your own `config/features.ts` has the argument: an empty list of people reads as
+  "nothing happened here", which is worse than not offering it. The PII gate lands before
+  those modules, not after.
+- **Rain, and the SAR damage layer.** Rain needs an OpenWeatherMap key. TerraVE returns its
+  own envelope rather than GeoJSON, so it needs an adapter — it is not declarable.
+- **Publishing config from the hub to a country** (phase 5). Until it exists, a country's
+  row is authored in its own database and nothing is blocked.
+
+### Known caveats
+
+- **No automated tests.** Neither codebase had any and this branch inherits that. Every
+  change here was checked with types, lint, a production build and a real browser, which
+  is not the same thing.
+- **`app/globals.css` is touched by most phases**, so the commits are grouped by theme and
+  an individual one may not build on its own. The branch does.
+- **`public/datos/` carries 2.7 MB** of the Catia La Mar damage snapshot. It lives in the
+  repository so the layer is same-origin: served from another domain, the browser blocked
+  it as a cross-origin request and the layer failed silently.
