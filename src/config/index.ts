@@ -5,7 +5,7 @@ import features from "~/config/features";
 import map from "~/config/map";
 import hazard from "~/config/hazard";
 import integrations from "~/config/integrations";
-import network, { HUB_HOST } from "~/config/network";
+import network from "~/config/network";
 import mode from "~/config/deployment";
 import type {
   Deployment,
@@ -14,15 +14,27 @@ import type {
   Region,
   SiteConfig,
 } from "@/config/types";
-import type { LocationType } from "@/domain/types";
 import { validateConfig } from "@/config/validate";
+import { createSiteHelpers } from "@/config/helpers";
 
 /**
- * The assembled configuration for this deployment.
+ * The assembled configuration for THIS BUILD — the compiled preset.
  *
  * Safe to import anywhere — server components, client components, route handlers, image
  * routes — because it is plain data resolved at build time, not a request-scoped lookup.
  * Frozen so a stray assignment fails loudly instead of drifting between renders.
+ *
+ * ── ON DEPLOYMENTS THAT SERVE MORE THAN ONE EMERGENCY ──────────────────────
+ *
+ * Since `db/007_emergencies.sql` a deployment can resolve its configuration from a row
+ * instead, chosen per request from the host. Where that happens this object is the
+ * FALLBACK: with no matching row the preset wins and the deployment behaves exactly as it
+ * did before that migration.
+ *
+ * Everything exported below is bound to this preset. Code that must honour the
+ * per-request emergency reads it from `getSite()` on the server or `useSite()` on the
+ * client instead; both hand back the same `SiteConfig` shape and the same helpers, so a
+ * call site migrates without changing what it says.
  */
 export const SITE: SiteConfig = Object.freeze({
   mode,
@@ -49,90 +61,25 @@ export const LANGUAGE = SITE.language;
 export const NETWORK = SITE.network;
 export const SEISMIC = SITE.hazard.seismic;
 
-/**
- * The box the seismic catalogue is queried over. Defaults to the country bounds: the
- * shaking that matters on this deployment is the shaking that reached this country.
- */
-export function seismicBounds(): [[number, number], [number, number]] {
-  return SEISMIC.bounds ?? COUNTRY.geo.bounds;
-}
-
-export type { SiteConfig, Region, Deployment, PointTypeStyle };
+// Los ayudantes ligados al preset. La implementación vive en `helpers.ts` para que la ruta
+// de base de datos use exactamente la misma y no queden dos copias que se separen.
+const H = createSiteHelpers(SITE);
 
 /** True on helpmaps.net itself (the network hub), false on a country deployment. */
-export const IS_HUB = SITE.mode === "hub";
+export const IS_HUB = H.isHub;
 
-export function hasFeature(name: keyof FeatureConfig): boolean {
-  return SITE.features[name];
-}
+export const seismicBounds = H.seismicBounds;
+export const hasFeature = H.hasFeature;
+export const regionByCode = H.regionByCode;
+export const regionLabel = H.regionLabel;
+export const isKnownRegion = H.isKnownRegion;
+export const typeStyle = H.typeStyle;
+export const isTypeEnabled = H.isTypeEnabled;
+export const enabledTypes = H.enabledTypes;
+export const siteUrl = H.siteUrl;
+export const absoluteUrl = H.absoluteUrl;
+export const storageKey = H.storageKey;
 
-// ---------------------------------------------------------------------------
-// Regions
-// ---------------------------------------------------------------------------
-
-const REGION_BY_CODE = new Map(COUNTRY.regions.map((r) => [r.code, r]));
-
-export function regionByCode(code: string | null | undefined): Region | null {
-  return code ? REGION_BY_CODE.get(code) ?? null : null;
-}
-
-/** Display name for a region code, falling back to the raw code rather than blank. */
-export function regionLabel(code: string | null | undefined): string {
-  if (!code) return "";
-  return REGION_BY_CODE.get(code)?.name ?? code;
-}
-
-/**
- * Regions are stored as free text (no per-country enum, deliberately — see db/001).
- * The trade-off is that a hand-written SQL insert can carry a code the app doesn't
- * know; this is how the admin panel finds those rows instead of silently dropping them
- * from the region filter.
- */
-export function isKnownRegion(code: string | null | undefined): boolean {
-  return Boolean(code && REGION_BY_CODE.has(code));
-}
-
-// ---------------------------------------------------------------------------
-// Point types
-// ---------------------------------------------------------------------------
-
-export function typeStyle(type: LocationType): PointTypeStyle {
-  return SITE.map.types[type];
-}
-
-export function isTypeEnabled(type: LocationType): boolean {
-  return SITE.map.types[type]?.enabled ?? false;
-}
-
-/** Enabled point types in display order — drives chips, legends and grouped selects. */
-export function enabledTypes(): LocationType[] {
-  return (Object.keys(SITE.map.types) as LocationType[])
-    .filter((t) => SITE.map.types[t].enabled)
-    .sort((a, b) => SITE.map.types[a].order - SITE.map.types[b].order);
-}
-
-// ---------------------------------------------------------------------------
-// URLs and storage
-// ---------------------------------------------------------------------------
-
-/**
- * Canonical absolute origin. NEXT_PUBLIC_SITE_URL wins (previews, local dev), otherwise
- * the configured host — so share links and OG images are right with no extra setup.
- *
- * The hub has no country, so it uses HUB_HOST. Falling back to the default country's host
- * here published helpmaps.net's sitemap and canonicals as co.helpmaps.net.
- */
-export function siteUrl(): string {
-  const env = process.env.NEXT_PUBLIC_SITE_URL;
-  if (env) return env.replace(/\/$/, "");
-  return `https://${IS_HUB ? HUB_HOST : COUNTRY.host}`;
-}
-
-export function absoluteUrl(path: string): string {
-  return `${siteUrl()}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-/** Namespaced so two country clones never collide in one browser's storage. */
-export function storageKey(name: string): string {
-  return `helpmaps:${COUNTRY.slug}:${name}`;
-}
+export { createSiteHelpers };
+export type { SiteHelpers } from "@/config/helpers";
+export type { SiteConfig, Region, Deployment, PointTypeStyle, FeatureConfig };

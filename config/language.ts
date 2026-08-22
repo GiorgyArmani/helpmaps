@@ -9,9 +9,9 @@
 // otro país "punto de acopio" es "centro de acopio". Cambiar la palabra que la gente
 // realmente usa vale más que cualquier rediseño.
 
-import type { CopyOverrides, LanguageConfig } from "@/config/types";
-import type { Lang } from "@/i18n/types";
+import type { LanguageConfig } from "@/config/types";
 import country from "~/config/country";
+import { mergeLanguage } from "@/config/assemble";
 
 const base: LanguageConfig = {
   default: "es",
@@ -33,20 +33,11 @@ const base: LanguageConfig = {
 // La fusión es por idioma Y por clave, no por idioma entero: un país que renombra
 // "refugio" a "albergue" conserva el resto de overrides que trae la base, y los sigue
 // heredando cuando la base añada más.
-const o = country.language ?? {};
+/** El vocabulario de la RED, antes de los overrides del país. Lo usa la ruta de base de datos. */
+export const BASE_LANGUAGE = base;
 
-const mergedOverrides: CopyOverrides = {};
-for (const lang of new Set([
-  ...(Object.keys(base.overrides) as Lang[]),
-  ...(Object.keys(o.overrides ?? {}) as Lang[]),
-])) {
-  mergedOverrides[lang] = { ...base.overrides[lang], ...o.overrides?.[lang] };
-}
-
-const language: LanguageConfig = {
-  default: o.default ?? base.default,
-  available: o.available ?? base.available,
-  overrides: mergedOverrides,
-};
+// La fusión vive en `@/config/assemble` porque la ruta de base de datos necesita la misma
+// contra un país que no es el compilado. Una segunda copia se separaría de esta.
+const language: LanguageConfig = mergeLanguage(base, country.language ?? {});
 
 export default language;

@@ -25,6 +25,7 @@
 
 import type { BrandConfig, BrandOverrides } from "@/config/types";
 import country from "~/config/country";
+import { mergeBrand } from "@/config/assemble";
 import mode from "~/config/deployment";
 
 /**
@@ -108,13 +109,9 @@ const HUB: BrandOverrides = {
 // los enlaces sin obligar al preset a repetir los otros diez colores.
 const o: BrandOverrides = mode === "hub" ? HUB : country.brand ?? {};
 
-const brand: BrandConfig = {
-  ...base,
-  ...o,
-  colors: { ...base.colors, ...o.colors },
-  radius: { ...base.radius, ...o.radius },
-  font: { ...base.font, ...o.font },
-  contact: { ...base.contact, ...o.contact },
-};
+/** La marca de la RED, antes de los overrides del país. La usa la ruta de base de datos. */
+export const BASE_BRAND = base;
+
+const brand: BrandConfig = mergeBrand(base, o);
 
 export default brand;
