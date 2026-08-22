@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { SEISMIC } from "@/config";
+import { useSite } from "@/features/app/SiteProvider";
 import { INTENSITY_BANDS } from "@/domain/hazard";
 import type { QuakeState } from "@/features/hazard/useQuakes";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
 import type { DictKey } from "@/i18n";
+import type { EmergencyLayer } from "@/domain/layers";
 
 export interface HazardLayers {
   epicenters: boolean;
@@ -30,17 +31,30 @@ export default function LayersPanel({
   layers,
   onChange,
   state,
+  extra,
+  extraOn,
+  onExtraChange,
 }: {
   layers: HazardLayers;
   onChange: (next: HazardLayers) => void;
   state: QuakeState;
+  /** Overlays declared by this emergency (see `src/domain/layers.ts`). */
+  extra: EmergencyLayer[];
+  extraOn: Record<string, boolean>;
+  onExtraChange: (next: Record<string, boolean>) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const SEISMIC = useSite().hazard.seismic;
   const [open, setOpen] = useState(false);
 
-  if (!SEISMIC.enabled) return null;
+  // El control desaparece solo si no hay NADA que ofrecer. Antes bastaba con que la capa
+  // sísmica estuviera apagada, lo que habría escondido también las capas propias de una
+  // emergencia que no es un terremoto — que son justo las que esa emergencia tiene.
+  const anyExtra = extra.length > 0;
+  if (!SEISMIC.enabled && !anyExtra) return null;
 
-  const active = layers.epicenters || layers.intensity;
+  const active =
+    layers.epicenters || layers.intensity || Object.values(extraOn).some(Boolean);
   // Only the bands this event actually reached. A legend running to "X — very heavy" on
   // a map whose worst contour is VI reads as a forecast of what is still coming.
   const reached = state.contours.length > 0 ? Math.max(...state.contours.map((c) => c.mmi)) : 0;
@@ -69,35 +83,66 @@ export default function LayersPanel({
               </button>
             </div>
 
-            <label className="layers-opt">
-              <input
-                type="checkbox"
-                checked={layers.intensity}
-                onChange={(e) => onChange({ ...layers, intensity: e.target.checked })}
-              />
-              <span className="layers-opt-ic">
-                <Icon.waves />
-              </span>
-              <span className="layers-opt-txt">
-                <b>{t("layers.intensity")}</b>
-                <small>{t("layers.intensityHint")}</small>
-              </span>
-            </label>
+            {SEISMIC.enabled ? (
+              <>
+                <label className="layers-opt">
+                  <input
+                    type="checkbox"
+                    checked={layers.intensity}
+                    onChange={(e) => onChange({ ...layers, intensity: e.target.checked })}
+                  />
+                  <span className="layers-opt-ic">
+                    <Icon.waves />
+                  </span>
+                  <span className="layers-opt-txt">
+                    <b>{t("layers.intensity")}</b>
+                    <small>{t("layers.intensityHint")}</small>
+                  </span>
+                </label>
 
-            <label className="layers-opt">
-              <input
-                type="checkbox"
-                checked={layers.epicenters}
-                onChange={(e) => onChange({ ...layers, epicenters: e.target.checked })}
-              />
-              <span className="layers-opt-ic">
-                <Icon.target />
-              </span>
-              <span className="layers-opt-txt">
-                <b>{t("layers.epicenters")}</b>
-                <small>{t("layers.epicentersHint")}</small>
-              </span>
-            </label>
+                <label className="layers-opt">
+                  <input
+                    type="checkbox"
+                    checked={layers.epicenters}
+                    onChange={(e) => onChange({ ...layers, epicenters: e.target.checked })}
+                  />
+                  <span className="layers-opt-ic">
+                    <Icon.target />
+                  </span>
+                  <span className="layers-opt-txt">
+                    <b>{t("layers.epicenters")}</b>
+                    <small>{t("layers.epicentersHint")}</small>
+                  </span>
+                </label>
+              </>
+            ) : null}
+
+            {extra.map((layer) => (
+              <label key={layer.id} className="layers-opt">
+                <input
+                  type="checkbox"
+                  checked={extraOn[layer.id] ?? false}
+                  onChange={(e) => onExtraChange({ ...extraOn, [layer.id]: e.target.checked })}
+                />
+                <span className="layers-opt-ic">
+                  <Icon.layers />
+                </span>
+                <span className="layers-opt-txt">
+                  <b>{layer.label}</b>
+                  {layer.hint ? <small>{layer.hint}</small> : null}
+                </span>
+              </label>
+            ))}
+
+            {/* La atribución es condición de licencia de casi toda fuente que valga la
+                pena, no cortesía. Se muestra mientras la capa esté encendida. */}
+            {extra
+              .filter((l) => extraOn[l.id] && l.attribution)
+              .map((l) => (
+                <p key={`src-${l.id}`} className="layers-src">
+                  {l.attribution}
+                </p>
+            ))}
 
             {layers.intensity && bands.length > 0 ? (
               <div className="layers-legend">
@@ -122,21 +167,56 @@ export default function LayersPanel({
               <p className="layers-note">{t("layers.none", { n: SEISMIC.windowDays })}</p>
             ) : null}
 
+            {/* Los últimos sismos del catálogo, al final del panel.
+                La leyenda de arriba dice qué SIGNIFICAN los colores; esto dice qué PASÓ,
+                que es la otra mitad de la pregunta y estaba solo en AcopioVE. Se listan
+                los más fuertes primero: en una lista de treinta réplicas, el orden
+                cronológico entierra justamente el que importa. */}
+            {state.quakes.length > 0 ? (
+              <div className="layers-quakes">
+                <span className="layers-legend-h">{t("layers.recent")}</span>
+                {[...state.quakes]
+                  .sort((a, b) => b.magnitude - a.magnitude)
+                  .slice(0, 6)
+                  .map((q) => (
+                    <span key={`${q.lat},${q.lng},${q.time}`} className="layers-quake">
+                      <b>{q.magnitude.toFixed(1)}</b>
+                      <span className="layers-quake-p">{q.place}</span>
+                      <time dateTime={new Date(q.time).toISOString()}>
+                        {new Date(q.time).toLocaleDateString(lang, {
+                          day: "2-digit",
+                          month: "short",
+                        })}
+                      </time>
+                    </span>
+                  ))}
+              </div>
+            ) : null}
+
             <p className="layers-src">{t("quake.source")}</p>
           </div>
         </>
       ) : null}
 
-      <button
-        type="button"
-        className={`layersbtn${active ? " layersbtn-on" : ""}`}
-        aria-expanded={open}
-        aria-label={t("layers.cta")}
-        title={t("layers.cta")}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <Icon.layers />
-      </button>
+      {/* Pestaña pegada al borde, no un botón flotante.
+          Es el gesto de AcopioVE y resuelve algo que el botón redondo no: dice QUÉ hay
+          detrás sin abrirlo. Un icono de capas sobre un mapa no distingue "capas del
+          mapa" de "cambiar el mapa base", y quien no lo abre nunca se entera de que hay
+          una capa sísmica encendida. */}
+      {!open ? (
+        <button
+          type="button"
+          className={`sidetab${active ? " sidetab-on" : ""}`}
+          aria-expanded={false}
+          aria-label={t("layers.cta")}
+          title={t("layers.cta")}
+          onClick={() => setOpen(true)}
+        >
+          <Icon.chevron className="sidetab-ch" />
+          {/* El rótulo corto: "Capas del mapa" estiraba la lengüeta a media pantalla. */}
+          <span className="sidetab-txt">{t("layers.cta")}</span>
+        </button>
+      ) : null}
     </div>
   );
 }

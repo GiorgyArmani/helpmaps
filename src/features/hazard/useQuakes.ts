@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FEATURES, SEISMIC, storageKey } from "@/config";
+
+import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 import type { IntensityContour, Quake } from "@/domain/hazard";
 import { principalQuake } from "@/domain/hazard";
 import { fetchIntensityContours, fetchQuakes } from "@/features/hazard/usgs";
-
-const CACHE_KEY = storageKey("quakes:v1");
 
 interface Cached {
   at: number;
@@ -44,6 +43,14 @@ const EMPTY: QuakeState = {
  * the layer exists to answer is about the main shock.
  */
 export function useQuakes(): QuakeState {
+  // De la fila, no del preset: una emergencia puede declarar su propia ventana de
+  // tiempo, su magnitud mínima y qué capas arrancan encendidas.
+  const site = useSite();
+  const { storageKey } = useSiteHelpers();
+  const SEISMIC = site.hazard.seismic;
+  // Namespaceada por la emergencia resuelta: dos emergencias en el mismo navegador no
+  // pueden compartir el catálogo de sismos de la otra.
+  const CACHE_KEY = storageKey("quakes:v1");
   const [state, setState] = useState<QuakeState>(() =>
     SEISMIC.enabled ? { ...EMPTY, loading: true } : EMPTY,
   );
@@ -52,7 +59,7 @@ export function useQuakes(): QuakeState {
   // localStorage does not exist during the server render, and seeding from it would make
   // the hydration markup disagree with the HTML.
   useEffect(() => {
-    if (!SEISMIC.enabled || !FEATURES.offline) return;
+    if (!SEISMIC.enabled || !site.features.offline) return;
     try {
       const raw = window.localStorage.getItem(CACHE_KEY);
       if (!raw) return;
@@ -77,7 +84,7 @@ export function useQuakes(): QuakeState {
 
     async function load() {
       try {
-        const quakes = await fetchQuakes(ac.signal);
+        const quakes = await fetchQuakes(SEISMIC, site, ac.signal);
         if (ac.signal.aborted) return;
         const principal = principalQuake(quakes);
 
@@ -96,7 +103,7 @@ export function useQuakes(): QuakeState {
           if (contours.length > 0) setState((s) => ({ ...s, contours }));
         }
 
-        if (!FEATURES.offline) return;
+        if (!site.features.offline) return;
         try {
           const payload: Cached = {
             at: Date.now(),

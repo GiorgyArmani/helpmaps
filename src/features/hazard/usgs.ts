@@ -1,4 +1,17 @@
-import { SEISMIC, seismicBounds } from "@/config";
+import { SEISMIC } from "@/config";
+import type { SeismicConfig, SiteConfig } from "@/config/types";
+
+/**
+ * La configuración sísmica de ESTE request, no la compilada.
+ *
+ * Se pasa por parámetro porque la emergencia puede declarar la suya en su fila —otra
+ * ventana de tiempo, otra magnitud mínima, otros interruptores por defecto— y leyendo
+ * `SEISMIC` directamente este módulo servía siempre la del preset. Se veía como que la
+ * configuración del registro no hacía nada.
+ */
+function bounds(seismic: SeismicConfig, site?: SiteConfig): [[number, number], [number, number]] {
+  return seismic.bounds ?? site?.country.geo.bounds ?? SEISMIC.bounds ?? [[-90, -180], [90, 180]];
+}
 import {
   byImpact,
   toQuakeAlert,
@@ -99,16 +112,20 @@ function toQuake(f: CatalogueFeature): Quake | null {
 // ---------------------------------------------------------------------------
 
 /** Events in the configured window and box, strongest first, capped at `maxEvents`. */
-export async function fetchQuakes(signal?: AbortSignal): Promise<Quake[]> {
-  const [[south, west], [north, east]] = seismicBounds();
-  const start = new Date(Date.now() - SEISMIC.windowDays * 86_400_000);
+export async function fetchQuakes(
+  seismic: SeismicConfig,
+  site: SiteConfig,
+  signal?: AbortSignal,
+): Promise<Quake[]> {
+  const [[south, west], [north, east]] = bounds(seismic, site);
+  const start = new Date(Date.now() - seismic.windowDays * 86_400_000);
 
   const qs = new URLSearchParams({
     format: "geojson",
     // Date only: a whole-day boundary is far more cacheable on their edge than a
     // timestamp that changes every poll, and the window is measured in days anyway.
     starttime: start.toISOString().slice(0, 10),
-    minmagnitude: String(SEISMIC.minMagnitude),
+    minmagnitude: String(seismic.minMagnitude),
     minlatitude: String(south),
     maxlatitude: String(north),
     minlongitude: String(west),
@@ -116,10 +133,10 @@ export async function fetchQuakes(signal?: AbortSignal): Promise<Quake[]> {
     orderby: "magnitude",
     // Ask for a little headroom over the cap so the client-side sort has something to
     // choose from rather than just echoing the server's ordering.
-    limit: String(Math.min(500, SEISMIC.maxEvents * 3)),
+    limit: String(Math.min(500, seismic.maxEvents * 3)),
   });
 
-  const res = await fetch(`${SEISMIC.api}?${qs}`, { signal });
+  const res = await fetch(`${seismic.api}?${qs}`, { signal });
   if (!res.ok) throw new Error(`USGS ${res.status}`);
   const body = (await res.json()) as { features?: unknown };
   if (!Array.isArray(body.features)) return [];
@@ -128,7 +145,7 @@ export async function fetchQuakes(signal?: AbortSignal): Promise<Quake[]> {
     .map((f) => toQuake(f as CatalogueFeature))
     .filter((q): q is Quake => q !== null)
     .sort(byImpact)
-    .slice(0, SEISMIC.maxEvents);
+    .slice(0, seismic.maxEvents);
 }
 
 // ---------------------------------------------------------------------------
