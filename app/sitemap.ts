@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { FEATURES, IS_HUB, siteUrl } from "@/config";
 import { supabasePublic } from "@/lib/supabase/server";
 import { fetchCenters } from "@/data/centers";
+import { currentEmergencyId } from "@/server/emergency";
 
 export const revalidate = 3600;
 
@@ -32,7 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!sb) return staticPages;
 
   try {
-    const centers = await fetchCenters(sb);
+    const centers = await fetchCenters(sb, await currentEmergencyId());
     return [
       ...staticPages,
       ...centers.map((c) => ({

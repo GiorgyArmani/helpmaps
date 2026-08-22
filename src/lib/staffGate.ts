@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseServer } from "@/lib/supabase/server";
+import { isAdminRole, type StaffRole } from "@/domain/types";
 
 /**
  * "Is the caller staff, and who are they?"
@@ -18,7 +19,7 @@ export interface StaffGate {
   sb: SupabaseClient;
   uid: string;
   email: string | null;
-  role: "admin" | "volunteer";
+  role: StaffRole;
 }
 
 export function isGate(value: StaffGate | NextResponse): value is StaffGate {
@@ -39,11 +40,15 @@ async function gate(required: "admin" | "staff"): Promise<StaffGate | NextRespon
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const role = data?.role;
-  if (role !== "admin" && role !== "volunteer") {
+  const raw = data?.role;
+  if (raw !== "superadmin" && raw !== "admin" && raw !== "volunteer") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  if (required === "admin" && role !== "admin") {
+  const role: StaffRole = raw;
+  // A superadmin satisfies an admin requirement, exactly as `is_admin()` does in the
+  // database. Leaving this stricter than RLS locked the superadmin out of every staff
+  // route with a 403 the moment the role was introduced.
+  if (required === "admin" && !isAdminRole(role)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

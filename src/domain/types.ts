@@ -157,7 +157,21 @@ export interface AppSettings {
   notice: string | null;
 }
 
-export type StaffRole = "admin" | "volunteer";
+/**
+ * `superadmin` administers the network registry (see `db/007_emergencies.sql`); `admin`
+ * runs one emergency; `volunteer` publishes inside it.
+ *
+ * A superadmin is ALSO an admin everywhere this type is compared, matching `is_admin()` in
+ * the database, which returns true for both. The two layers have to agree: if the UI were
+ * stricter than RLS it would hide actions the database would have allowed, and a
+ * superadmin would be locked out of the panel of the emergency they just created.
+ */
+export type StaffRole = "superadmin" | "admin" | "volunteer";
+
+/** True for the roles that may delete and manage a team. */
+export function isAdminRole(role: StaffRole | null | undefined): boolean {
+  return role === "admin" || role === "superadmin";
+}
 
 export interface StaffSession {
   userId: string;

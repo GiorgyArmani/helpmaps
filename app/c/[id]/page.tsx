@@ -8,6 +8,7 @@ import { BRAND, COUNTRY, MAPCFG, regionLabel } from "@/config";
 import { translator, resolveLang } from "@/i18n";
 import { telHref, whatsappHref } from "@/features/share/share";
 import type { DictKey } from "@/i18n";
+import { currentEmergencyId } from "@/server/emergency";
 
 /**
  * The shareable card for one point.
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const sb = supabasePublic();
   if (!sb) return { title: BRAND.name };
-  const center = await fetchCenter(sb, id).catch(() => null);
+  const center = await fetchCenter(sb, id, await currentEmergencyId()).catch(() => null);
   if (!center) return { title: BRAND.name };
 
   const place = [center.municipality, regionLabel(center.region)].filter(Boolean).join(", ");
@@ -50,7 +51,7 @@ export default async function CenterPage({ params, searchParams }: Params) {
 
   const sb = supabasePublic();
   if (!sb) notFound();
-  const center = await fetchCenter(sb, id).catch(() => null);
+  const center = await fetchCenter(sb, id, await currentEmergencyId()).catch(() => null);
   if (!center) notFound();
 
   const status = statusOf(center);

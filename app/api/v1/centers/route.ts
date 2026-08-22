@@ -1,5 +1,6 @@
 import { supabasePublic } from "@/lib/supabase/server";
 import { fetchCenters } from "@/data/centers";
+import { currentEmergencyId } from "@/server/emergency";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { COUNTRY, hasFeature, isKnownRegion, isTypeEnabled } from "@/config";
 import { hasNeed, isOpenPoint, lastTouched, statusOf } from "@/domain/center";
@@ -64,7 +65,7 @@ export async function GET(req: Request) {
 
   let centers;
   try {
-    centers = await fetchCenters(sb);
+    centers = await fetchCenters(sb, await currentEmergencyId());
   } catch {
     return json({ error: "upstream_error" }, 502);
   }
