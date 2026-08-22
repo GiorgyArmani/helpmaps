@@ -350,11 +350,39 @@ reached production.
 - **Publishing config from the hub to a country** (phase 5). Until it exists, a country's
   row is authored in its own database and nothing is blocked.
 
+### One shared component you will want to know about
+
+`src/ui/SideTab.tsx` is the lug-on-the-edge that unfolds into a panel — map layers, the
+news bulletin, and the layers of the 3D scene all mount it. It was written three times
+before that, with the same classes and the same gesture, and the cost showed up
+immediately: the map's layers panel was translated to English and the 3D scene's stayed in
+Spanish, because they were two components that merely looked alike. If you add a fourth
+edge panel, mount this rather than copying one.
+
+The pair of tabs on the map is a flex column (`.sidetabs`), not two absolute positions.
+Their heights depend on the length of their label — that is, on the language: `LAYERS` is
+92px against `CAPAS` at 86 — so hand-kept `top` values drifted the moment anything was
+translated. One custom property, `--tabs-top`, decides where the column starts; everything
+below follows from it.
+
 ### Known caveats
 
 - **No automated tests.** Neither codebase had any and this branch inherits that. Every
   change here was checked with types, lint, a production build and a real browser, which
   is not the same thing.
+- **`app/globals.css` resolves by ORDER in places.** It is a long file, and some base
+  rules sit *below* the media queries that mean to override them; with equal specificity
+  the last one wins, so a phone tweak written where it belongs simply does not apply. We
+  removed the three cases where a value was silently shadowed from far away, and the
+  remaining deliberate late overrides carry the reason next to them. If you add a rule for
+  `.macbar .fab` or for either side panel, it goes at the end of the file.
+- **Dead rules that were already dead in your base were left alone** — `.hfresh`,
+  `.admmenu-item`, `.admmenu-danger`, `.fld-sec`, `.amini-on`. Removing them is your call,
+  and doing it here would only add noise to the diff you have to read.
+- **`.frow2` names two different things.** A flex row on the map in your base, and a
+  two-column grid in our registry form, declared three thousand lines apart. The grid wins
+  everywhere, and nothing on the map uses the name any more, so today it is harmless — but
+  the collision is still there for whoever adds the next `frow2`.
 - **`app/globals.css` is touched by most phases**, so the commits are grouped by theme and
   an individual one may not build on its own. The branch does.
 - **`public/datos/` carries 2.7 MB** of the Catia La Mar damage snapshot. It lives in the
