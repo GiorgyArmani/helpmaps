@@ -275,6 +275,13 @@ Against a real Supabase project, not in principle:
   whoever deploys it; that reasoning does not carry to a row, which is edited at runtime with
   no build to break. A stale country is recoverable; a blank screen for someone looking for a
   shelter is not.
+- **The interface holds in English at every phone width we could find.** Measured, not eyeballed:
+  the map chrome at 360, 375, 390, 412, 414 and desktop, in both languages, reading back the
+  real bounding boxes. Two things came out of it that no amount of reading the CSS would have
+  shown, and both are fixed — the right edge carried two control columns anchored to opposite
+  ends that crossed in the middle of a short screen, and the header wrapped to a second row in
+  English (and only in English) between 412 and 414 px, because `Contribute` is five pixels
+  wider than `Colaborar`.
 
 ---
 
@@ -293,7 +300,21 @@ Smaller than our first draft, because that one asked you to give up data isolati
    merge on every fix that lands here, and the files that conflict are exactly the ones it
    edited.
 
-One thing worth looking at regardless of this branch: `npm audit --omit=dev` reports nine
+Two things worth taking regardless of what you decide about this branch, both in
+`src/i18n/context.tsx` as it stands in your base repo:
+
+- **`?lang=` never applied.** A layout in the App Router does not receive `searchParams` —
+  only pages do — so `initial` is always the deployment's default language. The client effect
+  read the parameter and, seeing it, deliberately did *nothing*, on the assumption that the
+  server had already resolved it. The result is that a link shared in English opens in Spanish,
+  which is the one case where the parameter exists at all.
+- **`<html lang>` stayed on the default.** A saved language was applied to the React tree but
+  never to the document, so a screen reader announced English copy in a Spanish voice.
+
+Both are a few lines and are fixed on this branch; they are worth cherry-picking into `main`
+whether or not the rest lands.
+
+One more, unrelated to i18n: `npm audit --omit=dev` reports nine
 high-severity advisories against the pinned `next` 16.2.9, and one of them is "Middleware /
 Proxy bypass in App Router applications using Turbopack" — which is your `proxy.ts` on
 Turbopack exactly. We did not bump it here: that is your call, not this branch's business.
@@ -339,3 +360,30 @@ reached production.
 - **`public/datos/` carries 2.7 MB** of the Catia La Mar damage snapshot. It lives in the
   repository so the layer is same-origin: served from another domain, the browser blocked
   it as a cross-origin request and the layer failed silently.
+
+### Translation coverage, and where a country's own words go
+
+Every string the interface itself owns is in `src/i18n/dictionaries/`, and the English
+dictionary is complete against the Spanish base. Two surfaces we wrote were not — the news
+tab and the whole 3D scene were hardcoded in Spanish and kept saying `Volver al mapa` with
+the rest of the page in English. Both now go through the dictionary. Worth knowing if you
+add a surface: the dictionary is the contract, and a literal in JSX is invisible until
+somebody switches language.
+
+What is deliberately **not** in the dictionary is anything a country declares about itself:
+layer labels and hints, point names, phone numbers, press headlines. Those are that
+emergency's content, not interface copy, and translating them centrally would be guessing.
+
+`region_noun` sits exactly on that line and is worth calling out, because every country
+after Venezuela will hit it. It is one value — `estado`, `departamento`, `provincia` — so the
+region filter read `All estados` in English. The division's name does not translate on its
+own (`departamento` is not `department`), so it is declared per language by whoever knows the
+country, through the copy-override mechanism that already exists for renaming any other word:
+
+```jsonc
+// emergencies.language, or `language` in the preset
+{ "overrides": { "en": { "map.allRegions": "All states", "map.regionOne": "State" } } }
+```
+
+`db/900_seed_venezuela.sql` carries this filled in, as the worked example. A country that
+leaves it empty gets its own noun in every language, which is wrong but never broken.
