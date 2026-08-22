@@ -7,6 +7,7 @@ import type { Lang } from "@/i18n/types";
 import type { LocationType } from "@/domain/types";
 import { Icon } from "@/ui/icons";
 import { fetchCoverage } from "./coverage";
+import NewsSection from "@/features/news/NewsSection";
 import "./entry.css";
 
 /**
@@ -138,6 +139,12 @@ export default async function EntryPage({
             <p className="entry-note">{t("entry.statsNote")}</p>
           </section>
         ) : null}
+
+        {/* Lo que se está reportando. Va después de las cifras y antes de la llamada a
+            colaborar: quien abre esto sin buscar un refugio suele estar entendiendo qué
+            pasó, y esa es la respuesta. Se renderiza en el servidor y no aparece si no
+            hay boletín. */}
+        <NewsSection />
 
         {/* The open call. This is the ask, not a statistic — there are usually none on the
             map yet, which is precisely why it is here and not in the strip above. */}
