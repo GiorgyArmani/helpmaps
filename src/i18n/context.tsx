@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Lang } from "@/i18n/types";
 import { getDict, makeT, resolveLang, type Translate } from "@/i18n";
-import { LANGUAGE, storageKey } from "@/config";
+import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 
 interface I18nValue {
   lang: Lang;
@@ -14,7 +14,6 @@ interface I18nValue {
 
 const Ctx = createContext<I18nValue | null>(null);
 
-const LANG_KEY = storageKey("lang");
 
 /**
  * Language state for the client tree.
@@ -33,6 +32,13 @@ export function I18nProvider({
   initial: Lang;
   children: React.ReactNode;
 }) {
+  // Idioma y clave de almacenamiento salen de la emergencia RESUELTA: un país puede
+  // declarar otro idioma por defecto y otra lista de idiomas ofrecidos, y con el preset
+  // compilado esa declaración no llegaba a la interfaz. El proveedor vive dentro de
+  // `SiteProvider` (ver `app/layout.tsx`), así que estos hooks están disponibles.
+  const site = useSite();
+  const { storageKey } = useSiteHelpers();
+  const LANG_KEY = storageKey("lang");
   const [lang, setLangState] = useState<Lang>(initial);
 
   // Same reason as the data cache: localStorage is not readable during server render, so
@@ -62,7 +68,7 @@ export function I18nProvider({
   }, []);
 
   const value = useMemo<I18nValue>(
-    () => ({ lang, t: makeT(getDict(lang)), setLang, available: LANGUAGE.available }),
+    () => ({ lang, t: makeT(getDict(lang)), setLang, available: site.language.available }),
     [lang, setLang],
   );
 

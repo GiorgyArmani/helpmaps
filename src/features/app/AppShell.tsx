@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Center, Donation, SubmissionKind } from "@/domain/types";
 import { EMPTY_FILTER, filterCenters, pointsNeedingHelp, type CenterFilter } from "@/domain/center";
-import { COUNTRY, FEATURES, SEISMIC, storageKey } from "@/config";
 import { Icon } from "@/ui/icons";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import { useCenters } from "@/features/app/useCenters";
+import { useEmergency, useSite } from "@/features/app/SiteProvider";
+import NewsTab from "@/features/news/NewsTab";
+import { buildingLayers, defaultLayerState, mapLayers } from "@/domain/layers";
 import { useStaffSession } from "@/features/admin/useStaffSession";
 import LoginForm from "@/features/admin/LoginForm";
 import { fetchDonations } from "@/data/donations";
@@ -18,6 +20,7 @@ import LayersPanel, { type HazardLayers } from "@/features/hazard/LayersPanel";
 import Brand from "@/features/app/Brand";
 import LangSwitcher from "@/features/app/LangSwitcher";
 import Filters from "@/features/centers/Filters";
+import TypeChips from "@/features/centers/TypeChips";
 import CenterCard from "@/features/centers/CenterCard";
 import CenterDetail from "@/features/centers/CenterDetail";
 import SuggestForm from "@/features/suggest/SuggestForm";
@@ -27,6 +30,7 @@ import VolunteerForm from "@/features/volunteer/VolunteerForm";
 import GuidedTour from "@/features/tour/GuidedTour";
 import { PUBLIC_STEPS, STAFF_STEPS } from "@/features/tour/tourSteps";
 import { watchConnection } from "@/features/suggest/offlineQueue";
+import { useSiteHelpers } from "@/features/app/SiteProvider";
 
 // Leaflet touches `window` at import time, so the map never renders on the server.
 const MapCanvas = dynamic(() => import("@/features/map/MapCanvas"), {
@@ -59,11 +63,6 @@ type View = "list" | "detail" | "needs" | "suggest" | "volunteer" | "donate" | "
  */
 export type EntryAction = "needs" | "suggest" | "initiative" | "volunteer" | "donate";
 
-const TOUR_KEY = storageKey("tour:v1");
-// Separate from the public one: a volunteer who already dismissed the visitor tour
-// still has to be walked through the panel the first time they open it.
-const STAFF_TOUR_KEY = storageKey("stafftour:v1");
-
 /**
  * The country app.
  *
@@ -89,13 +88,43 @@ export default function AppShell({
   /** Opens straight into the staff panel — how `/admin` and `/login` land here now. */
   initialPanel?: boolean;
 }) {
+  const helpers = useSiteHelpers();
+  // Las banderas de los tours se namespacean por la emergencia RESUELTA. Eran constantes
+  // de módulo ligadas al preset, así que dos emergencias abiertas en el mismo navegador
+  // compartían la marca de "ya vi el tour" — y la segunda nunca lo mostraba.
+  const TOUR_KEY = helpers.storageKey("tour:v1");
+  // Aparte de la pública: un voluntario que ya descartó el tour de visitante igual tiene
+  // que ver el del panel la primera vez que lo abre.
+  const STAFF_TOUR_KEY = helpers.storageKey("stafftour:v1");
   const { t, lang } = useI18n();
   const ago = useTimeAgo();
   const { centers, settings, loading, stale, cachedAt, configured } = useCenters();
   const seismic = useQuakes();
 
+  const site = useSite();
+
+
   const [filter, setFilter] = useState<CenterFilter>(EMPTY_FILTER);
-  const [layers, setLayers] = useState<HazardLayers>(() => ({ ...SEISMIC.defaultOn }));
+  // Los interruptores sísmicos arrancan como diga la FILA: leerlos del preset compilado
+  // hacía que configurar "solo epicentros" en el registro no cambiara nada.
+  const [layers, setLayers] = useState<HazardLayers>(() => ({
+    ...site.hazard.seismic.defaultOn,
+  }));
+  // Las capas que declara ESTA emergencia. Vacío en un despliegue que todavía no adoptó la
+  // tabla, y entonces el panel muestra solo los interruptores sísmicos de siempre.
+  const emergency = useEmergency();
+  const declaredLayers = useMemo(() => emergency?.layers ?? [], [emergency]);
+  // El mapa principal dibuja las capas 2D; las de edificios 3D no se dibujan acá porque
+  // son otro renderizador entero, y solo alimentan el botón que lleva a su vista.
+  const extraLayers = useMemo(() => mapLayers(declaredLayers), [declaredLayers]);
+  const scenes3d = useMemo(() => buildingLayers(declaredLayers), [declaredLayers]);
+  // Se siembra una vez, desde lo que cada capa declara para sí. La emergencia la resuelve
+  // el servidor por request y no cambia mientras la pestaña está abierta, así que no hay
+  // nada que sincronizar después: un efecto acá solo podría pisar lo que alguien acaba de
+  // encender.
+  const [extraOn, setExtraOn] = useState<Record<string, boolean>>(() =>
+    defaultLayerState(extraLayers),
+  );
   /**
    * Where the point currently being edited sits, mirrored out of the staff form so the
    * map can draw it. This is the whole reason the panel moved onto the map: placing a
@@ -118,6 +147,19 @@ export default function AppShell({
     if (!initialAction) return "list";
     return initialAction === "initiative" ? "suggest" : initialAction;
   });
+
+  /**
+   * Cambiar un filtro devuelve a la lista.
+   *
+   * Con la ficha de un punto abierta, tocar un chip de tipo cambiaba el filtro pero la
+   * vista seguía siendo la ficha: la persona filtraba y no pasaba nada visible. Filtrar
+   * es preguntar "qué hay", y la respuesta es la lista, no el punto que se estaba
+   * mirando antes de preguntar.
+   */
+  const changeFilter = useCallback((next: CenterFilter) => {
+    setFilter(next);
+    setView((current) => (current === "detail" ? "list" : current));
+  }, []);
 
   // Resolved only once the panel is actually open — see useStaffSession.
   const staff = useStaffSession(view === "admin");
@@ -289,14 +331,25 @@ export default function AppShell({
     [openCenter],
   );
 
-  const overlayOpen = activeView !== "list" && activeView !== "needs";
+  // Ver el bloque del aviso más abajo para el orden de precedencia.
+  const inMaintenance = settings.maintenance || emergency?.maintenance === true;
+  const bannerText =
+    emergency?.notice ??
+    (inMaintenance ? settings.notice ?? t("maintenance.default") : null);
 
-  // `fabbing` gets the two map controls out of the way while the Colaborar menu is open.
-  // They share the right-hand column with the FAB, and the menu grows upward straight
-  // through them — a layers button floating over "Sumarme al equipo" reads as a fourth
-  // option in the list.
+  // La ficha de un punto NO es una capa aparte: se muestra dentro del panel de puntos,
+  // en lugar de su lista. Como capa superpuesta duplicaba la superficie —dos paneles del
+  // mismo ancho, uno encima del otro— y al tocar un pin aparecía tapando el panel que ya
+  // estaba abierto. Los formularios y el panel del equipo sí siguen siendo capa: ahí se
+  // viene a hacer una sola cosa y el mapa no hace falta detrás.
+  const overlayOpen =
+    activeView !== "list" && activeView !== "needs" && activeView !== "detail";
+  const showingDetail = activeView === "detail" && selected !== null;
+
+  // El menú de Colaborar ya no comparte columna con los controles del mapa: se despliega
+  // desde la barra de arriba y no los cruza, así que no hace falta apartarlos.
   return (
-    <div className={`app${folded ? " sheetmin" : ""}${fabOpen ? " fabbing" : ""}`}>
+    <div className={`app${folded ? " sheetmin" : ""}`}>
       <MapCanvas
         centers={visible}
         selectedId={selectedId}
@@ -305,24 +358,67 @@ export default function AppShell({
         quakes={seismic.quakes}
         contours={seismic.contours}
         layers={layers}
+        extra={extraLayers}
+        extraOn={extraOn}
         draftPin={draftPin}
         onDraftPinMove={moveDraftPin}
       />
 
-      <LayersPanel layers={layers} onChange={setLayers} state={seismic} />
+      {/* Solo aparece si esta emergencia declara un conjunto de edificios. Un botón que
+          lleva a una escena vacía de una zona de desastre se lee como "no pasó nada". */}
+      {scenes3d.length > 0 ? (
+        <Link
+          href={`/3d?l=${encodeURIComponent(scenes3d[0]!.id)}`}
+          className="btn3d"
+          title={scenes3d[0]!.label}
+        >
+          <span className="btn3d-txt">3D</span>
+        </Link>
+      ) : null}
+
+      <NewsTab />
+
+      <LayersPanel
+        layers={layers}
+        onChange={setLayers}
+        state={seismic}
+        extra={extraLayers}
+        extraOn={extraOn}
+        onExtraChange={setExtraOn}
+      />
 
       <header className="topbar">
-        {settings.maintenance ? (
+        {/* El aviso sobre el mapa.
+            Dos orígenes, y el más específico manda: `app_settings` es el interruptor de
+            toda la INSTALACIÓN, y `emergencies.notice` es el de UNA emergencia. Un aviso
+            de la emergencia gana porque es quien sabe qué le pasa a su propio mapa.
+            Y se muestra con o sin modo mantenimiento: un aviso sin mantenimiento es el
+            caso corriente —"estos datos son de prueba", "el equipo está reverificando"—
+            y antes no había forma de decirlo sin apagar el mapa entero. */}
+        {bannerText ? (
           <div className="maint-banner" role="status">
             <Icon.alert />
-            {settings.notice ?? t("maintenance.default")}
+            {bannerText}
           </div>
         ) : null}
 
-        <div className="hrow">
+        {/* Barra unificada, al modo de la de macOS: marca, buscador, filtros y acciones en
+            un solo bloque translúcido en vez de tres bandas apiladas sobre el mapa. Antes
+            el buscador y los desplegables vivían en su propia fila debajo de esta, y entre
+            las dos se comían el tercio superior del mapa antes de mostrar un solo pin. */}
+        <div className="macbar">
           <Brand />
+
+          <Filters
+            filter={filter}
+            onChange={changeFilter}
+            centers={visible}
+            selectedId={selectedId}
+            onPickCenter={(id) => (id ? openCenter(id) : setSelectedId(null))}
+          />
+
           <div className="hright">
-            {FEATURES.suggestions ? (
+            {site.features.suggestions ? (
               <button
                 type="button"
                 className="gear"
@@ -338,31 +434,94 @@ export default function AppShell({
             {/* The two ways to give, promoted out of the FAB menu and into the header,
                 where the original has them. Someone who came to help should not have to
                 open a "+" menu to find out that helping is possible. */}
-            {FEATURES.volunteerSignup ? (
-              <button
-                type="button"
-                className="gear"
-                data-tour="volunteer"
-                aria-label={t("volunteer.cta")}
-                title={t("volunteer.cta")}
-                onClick={() => setView("volunteer")}
-              >
-                <Icon.volunteer />
-              </button>
-            ) : null}
+            {/* "Sumarme al equipo" salió de la barra: sigue estando, dentro de Colaborar,
+                que es donde viven las tres formas de aportar. Como icono suelto competía
+                con ellas por el mismo sitio y duplicaba una de las tres. */}
 
-            {FEATURES.donations ? (
-              <button
-                type="button"
-                className="donate-btn"
-                data-tour="donate"
-                aria-label={t("donate.cta")}
-                title={t("donate.cta")}
-                onClick={() => setView("donate")}
-              >
-                <Icon.heart />
-                <span className="donate-label">{t("donate.cta")}</span>
-              </button>
+            {/* Colaborar ocupa el lugar que tenía Donar.
+                Donar era UNA de las tres formas de colaborar y estaba promovida por
+                encima de las otras dos, mientras el botón que las contenía a las tres
+                flotaba en la esquina opuesta. Ahora hay un solo punto de entrada para
+                quien viene a aportar algo, y donar es una opción dentro de él. */}
+            {/* Colaborar: the way in for someone who wants to add something rather than find
+                something. Two clearly-named options — one unlabelled button was ambiguous. */}
+            {site.features.suggestions || site.features.volunteerSignup || site.features.donations ? (
+              <div className="fabwrap" data-tour="fab">
+                {fabOpen ? (
+                  <>
+                    <button
+                      type="button"
+                      className="fab-backdrop"
+                      aria-label={t("common.close")}
+                      onClick={() => setFabOpen(false)}
+                    />
+                    <div className="fab-menu">
+                      {site.features.suggestions ? (
+                        <button
+                          type="button"
+                          className="fab-opt"
+                          onClick={() => {
+                            setFabOpen(false);
+                            setView("suggest");
+                          }}
+                        >
+                          <span className="fab-opt-ic">
+                            <Icon.spark />
+                          </span>
+                          <span className="fab-opt-txt">
+                            <b>{t("suggest.cta")}</b>
+                            <small>{t("suggest.ctaHint")}</small>
+                          </span>
+                        </button>
+                      ) : null}
+                      {site.features.donations ? (
+                        <button
+                          type="button"
+                          className="fab-opt"
+                          onClick={() => {
+                            setFabOpen(false);
+                            setView("donate");
+                          }}
+                        >
+                          <span className="fab-opt-ic">
+                            <Icon.heart />
+                          </span>
+                          <span className="fab-opt-txt">
+                            <b>{t("donate.cta")}</b>
+                            <small>{t("donate.ctaHint")}</small>
+                          </span>
+                        </button>
+                      ) : null}
+                      {site.features.volunteerSignup ? (
+                        <button
+                          type="button"
+                          className="fab-opt"
+                          onClick={() => {
+                            setFabOpen(false);
+                            setView("volunteer");
+                          }}
+                        >
+                          <span className="fab-opt-ic">
+                            <Icon.hand />
+                          </span>
+                          <span className="fab-opt-txt">
+                            <b>{t("volunteer.cta")}</b>
+                            <small>{t("volunteer.ctaHint")}</small>
+                          </span>
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  className={`fab${fabOpen ? " fab-open" : ""}`}
+                  onClick={() => setFabOpen((v) => !v)}
+                >
+                  <Icon.plus />
+                  {t("fab.cta")}
+                </button>
+              </div>
             ) : null}
 
             {/* Two states for the same slot, as in the original.
@@ -400,14 +559,6 @@ export default function AppShell({
           </div>
         </div>
 
-        <Filters
-          filter={filter}
-          onChange={setFilter}
-          centers={visible}
-          selectedId={selectedId}
-          onPickCenter={(id) => (id ? openCenter(id) : setSelectedId(null))}
-        />
-
         {stale && centers.length > 0 ? (
           <div className="stale" role="status">
             <Icon.alert />
@@ -421,83 +572,22 @@ export default function AppShell({
         ) : null}
       </header>
 
-      {/* Colaborar: the way in for someone who wants to add something rather than find
-          something. Two clearly-named options — one unlabelled button was ambiguous. */}
-      {FEATURES.suggestions || FEATURES.volunteerSignup || FEATURES.donations ? (
-        <div className="fabwrap" data-tour="fab">
-          {fabOpen ? (
-            <>
-              <button
-                type="button"
-                className="fab-backdrop"
-                aria-label={t("common.close")}
-                onClick={() => setFabOpen(false)}
-              />
-              <div className="fab-menu">
-                {FEATURES.suggestions ? (
-                  <button
-                    type="button"
-                    className="fab-opt"
-                    onClick={() => {
-                      setFabOpen(false);
-                      setView("suggest");
-                    }}
-                  >
-                    <span className="fab-opt-ic">
-                      <Icon.spark />
-                    </span>
-                    <span className="fab-opt-txt">
-                      <b>{t("suggest.cta")}</b>
-                      <small>{t("suggest.ctaHint")}</small>
-                    </span>
-                  </button>
-                ) : null}
-                {FEATURES.donations ? (
-                  <button
-                    type="button"
-                    className="fab-opt"
-                    onClick={() => {
-                      setFabOpen(false);
-                      setView("donate");
-                    }}
-                  >
-                    <span className="fab-opt-ic">
-                      <Icon.heart />
-                    </span>
-                    <span className="fab-opt-txt">
-                      <b>{t("donate.cta")}</b>
-                      <small>{t("donate.ctaHint")}</small>
-                    </span>
-                  </button>
-                ) : null}
-                {FEATURES.volunteerSignup ? (
-                  <button
-                    type="button"
-                    className="fab-opt"
-                    onClick={() => {
-                      setFabOpen(false);
-                      setView("volunteer");
-                    }}
-                  >
-                    <span className="fab-opt-ic">
-                      <Icon.hand />
-                    </span>
-                    <span className="fab-opt-txt">
-                      <b>{t("volunteer.cta")}</b>
-                      <small>{t("volunteer.ctaHint")}</small>
-                    </span>
-                  </button>
-                ) : null}
-              </div>
-            </>
-          ) : null}
+      {/* Lengüeta del panel de puntos, espejo de las de capas y noticias en el otro canto.
+          Sin ella el panel se leía como una tarjeta flotante y no como algo plegado que se
+          puede tirar del borde. En teléfono no aparece: ahí el panel es una hoja que sube
+          desde abajo y se pliega a una tira, que es la forma correcta para el pulgar. */}
+      {folded ? (
+        <div className="pointsctl">
           <button
             type="button"
-            className={`fab${fabOpen ? " fab-open" : ""}`}
-            onClick={() => setFabOpen((v) => !v)}
+            className="sidetab sidetab-left"
+            aria-expanded={false}
+            aria-label={t("map.unfold")}
+            title={t("map.unfold")}
+            onClick={() => setFolded(false)}
           >
-            <Icon.plus />
-            {t("fab.cta")}
+            <Icon.chevron className="sidetab-ch" />
+            <span className="sidetab-txt">{t("map.points")}</span>
           </button>
         </div>
       ) : null}
@@ -513,7 +603,10 @@ export default function AppShell({
           title={folded ? t("map.unfold") : t("map.fold")}
           onClick={() => setFolded((v) => !v)}
         >
-          <Icon.chevron style={{ transform: folded ? "rotate(-90deg)" : "rotate(90deg)" }} />
+          {/* La dirección la pone el CSS: el panel se pliega hacia ABAJO en el teléfono
+              y hacia el CANTO IZQUIERDO en escritorio, así que un ángulo fijo apuntaba
+              al lado equivocado en uno de los dos. */}
+          <Icon.chevron />
         </button>
 
         <button
@@ -526,35 +619,57 @@ export default function AppShell({
           aria-expanded={open}
         >
           <span className="hbar" />
-          <span className="hrow2">
-            <span className="hcount">
-              <b>{visible.length}</b> {visible.length === 1 ? t("sheet.point") : t("sheet.points")}
-            </span>
-            {filter.region ? (
+          {filter.region ? (
+            <span className="hrow2">
               <span className="hctx">
-                <span>{COUNTRY.regions.find((r) => r.code === filter.region)?.name}</span>
+                <span>{site.country.regions.find((r) => r.code === filter.region)?.name}</span>
               </span>
-            ) : null}
-          </span>
+            </span>
+          ) : null}
         </button>
 
-        <div className="list">
-          {FEATURES.needs && needing.length > 0 && activeView === "list" ? (
-            <button
-              type="button"
-              className="needbar"
-              data-tour="refbar"
-              onClick={() => {
-                setOpen(true);
-                setView("needs");
-              }}
-            >
-              <Icon.heart />
-              {needing.length === 1
-                ? t("needs.barCountOne")
-                : t("needs.barCount", { n: needing.length })}
-              <Icon.chevron className="chev" />
+        {/* Los filtros por tipo viven DENTRO del panel de puntos, no sobre el mapa.
+            Acotan exactamente lo que ese panel lista, y tenerlos flotando aparte obligaba
+            a mirar a dos sitios para entender por qué la lista mostraba lo que mostraba. */}
+        <TypeChips filter={filter} onChange={changeFilter} />
+
+        {showingDetail && selected ? (
+          <div className="list">
+            <button type="button" className="cdback" onClick={back}>
+              <Icon.back />
+              <span>{t("common.back")}</span>
             </button>
+            <CenterDetail center={selected} />
+          </div>
+        ) : (
+        <div className="list">
+          {/* Los dos contadores en una fila: cuántos puntos se están viendo y cuántos de
+              ellos piden algo. Son la misma pregunta a dos niveles de detalle y estaban
+              separados por toda la cabecera y la rejilla de filtros. */}
+          {activeView === "list" ? (
+            <div className="counters">
+              <span className="hcount">
+                <b>{visible.length}</b>{" "}
+                {visible.length === 1 ? t("sheet.point") : t("sheet.points")}
+              </span>
+              {site.features.needs && needing.length > 0 ? (
+                <button
+                  type="button"
+                  className="needbar"
+                  data-tour="refbar"
+                  onClick={() => {
+                    setOpen(true);
+                    setView("needs");
+                  }}
+                >
+                  <Icon.heart />
+                  {needing.length === 1
+                    ? t("needs.barCountOne")
+                    : t("needs.barCount", { n: needing.length })}
+                  <Icon.chevron className="chev" />
+                </button>
+              ) : null}
+            </div>
           ) : null}
 
           {!configured ? <p className="empty">{t("error.notConfigured")}</p> : null}
@@ -578,7 +693,7 @@ export default function AppShell({
             <Link className="small mut" href="/docs/terminos">
               {t("footer.terms")}
             </Link>
-            {FEATURES.publicApi ? (
+            {site.features.publicApi ? (
               <Link className="small mut" href="/docs/api">
                 {t("footer.api")}
               </Link>
@@ -593,8 +708,11 @@ export default function AppShell({
             </a>
           </nav>
         </div>
+        )}
       </section>
 
+      {/* La capa: formularios y panel del equipo, a altura completa. La ficha de un punto
+          ya NO pasa por acá — vive dentro del panel de puntos, en lugar de su lista. */}
       {overlayOpen ? (
         <div className="overlay" data-tour="ficha">
           <div className="ovhead">
@@ -602,9 +720,7 @@ export default function AppShell({
               <Icon.back />
             </button>
             <span className="ohtitle">
-              {activeView === "detail" && selected
-                ? selected.name
-                : activeView === "suggest"
+              {activeView === "suggest"
                   ? t("suggest.title")
                   : activeView === "donate"
                     ? t("donate.title")
@@ -666,7 +782,6 @@ export default function AppShell({
             ) : null}
           </div>
           <div className="ovbody">
-            {activeView === "detail" && selected ? <CenterDetail center={selected} /> : null}
             {activeView === "suggest" ? (
               <SuggestForm
                 defaultKind={suggestKind}

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { COUNTRY } from "@/config";
 import { Button, Field, Input, Notice, Select, TextArea } from "@/ui/primitives";
 import { useI18n } from "@/i18n/context";
 import PrivacyNotice from "@/features/suggest/PrivacyNotice";
+import { useSite } from "@/features/app/SiteProvider";
 
 /**
  * "Join the team".
@@ -14,6 +14,7 @@ import PrivacyNotice from "@/features/suggest/PrivacyNotice";
  * panel, by a route that checks the caller is an admin first.
  */
 export default function VolunteerForm({ onDone }: { onDone: () => void }) {
+  const site = useSite();
   const { t } = useI18n();
   const [form, setForm] = useState({
     name: "",
@@ -88,7 +89,7 @@ export default function VolunteerForm({ onDone }: { onDone: () => void }) {
       <Field label={t("volunteer.region")} optional optionalLabel={t("common.optional")}>
         <Select value={form.region} onChange={set("region")}>
           <option value="">—</option>
-          {COUNTRY.regions.map((r) => (
+          {site.country.regions.map((r) => (
             <option key={r.code} value={r.code}>
               {r.name}
             </option>

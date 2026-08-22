@@ -50,6 +50,7 @@ const es = {
   "map.help": "Cómo funciona",
   "map.fold": "Plegar la lista",
   "map.unfold": "Ver la lista",
+  "map.points": "Puntos",
   "map.region": "{region}",
   "map.myLocation": "Mi ubicación",
   "map.locating": "Buscando tu ubicación…",
@@ -422,11 +423,12 @@ const es = {
   "password.done": "Contraseña actualizada. Úsala la próxima vez que entres.",
 
   "layers.title": "Capas del mapa",
+  "layers.recent": "Últimos sismos",
   "layers.cta": "Capas",
   "layers.epicenters": "Epicentros",
   "layers.epicentersHint": "Dónde se originó cada sismo",
   "layers.intensity": "Zona afectada",
-  "layers.intensityHint": "Hasta dónde llegó el sacudón",
+  "layers.intensityHint": "Hasta dónde llegó el movimiento del terreno",
   "layers.none": "Sin sismos registrados en los últimos {n} días.",
   "layers.stale": "Datos sísmicos de una carga anterior.",
   "layers.disclaimer":

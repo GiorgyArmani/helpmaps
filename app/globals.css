@@ -20,6 +20,13 @@ body {
   background: #fff;
 }
 
+/* La tipografía va en el CUERPO, no en `.app`.
+   La tenía `.app`, que es el contenedor del mapa, así que la escena 3D, el registro y el
+   manual de marca —que no usan esa clase— salían con el serif por defecto del navegador. */
+body {
+  font-family: var(--font-sans);
+}
+
 .app {
   position: relative;
   width: 100%;
@@ -238,6 +245,7 @@ a {
 }
 
 .hrow,
+.macbar,
 .searchbar,
 .chips,
 .frow2,
@@ -470,6 +478,8 @@ a {
   gap: 8px;
 }
 
+
+
 .fdrop {
   flex: 1;
   display: flex;
@@ -697,7 +707,7 @@ a {
   display: none;
   position: absolute;
   right: 14px;
-  bottom: calc(316px + env(safe-area-inset-bottom));
+  bottom: calc(246px + env(safe-area-inset-bottom));
   z-index: 605;
   flex-direction: column;
   background: #fff;
@@ -740,7 +750,7 @@ a {
 .locatectl {
   position: absolute;
   right: 14px;
-  bottom: calc(302px + env(safe-area-inset-bottom));
+  bottom: calc(348px + env(safe-area-inset-bottom));
   z-index: 605;
   display: flex;
   flex-direction: row-reverse;
@@ -827,11 +837,16 @@ a {
    from the zoom box in the media query below. Keep the three numbers in step if any
    button changes size — they are the only thing keeping these off each other. */
 
+/* Anclado al BORDE derecho, no separado de él: una pestaña que sobresale del canto se
+   lee como algo plegado que se puede tirar, y un botón flotante no. */
 .layersctl {
   position: absolute;
-  right: 14px;
-  bottom: calc(356px + env(safe-area-inset-bottom));
-  z-index: 606;
+  right: 0;
+  top: 214px;
+  /* Por encima de la escalera de controles (607): con el panel abierto, el botón 3D se
+     pintaba encima del texto de las noticias. Detrás del panel es lo correcto — lo que
+     está tapado está tapado, y lo que asoma al costado sigue siendo usable. */
+  z-index: 620;
 }
 
 /* While the Colaborar menu is open it owns this column: it grows upward from the FAB
@@ -839,13 +854,15 @@ a {
    as part of the list. Faded rather than `display: none` so they do not pop back in — and
    `pointer-events: none` so a tap aimed at a card cannot land on a button behind it. */
 .fabbing .locatectl,
-.fabbing .layersctl {
+.fabbing .layersctl,
+.fabbing .btn3d {
   opacity: 0;
   pointer-events: none;
 }
 
 .locatectl,
-.layersctl {
+.layersctl,
+.btn3d {
   transition: opacity 0.15s;
 }
 
@@ -890,7 +907,7 @@ a {
 .layers-panel {
   position: absolute;
   right: 0;
-  bottom: 52px;
+  top: 0;
   z-index: 1;
   width: 268px;
   max-width: calc(100vw - 28px);
@@ -898,7 +915,9 @@ a {
   overflow-y: auto;
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: 15px;
+  /* Sin borde ni radio del lado que toca el canto de la pantalla. */
+  border-right: 0;
+  border-radius: 15px 0 0 15px;
   box-shadow: 0 14px 44px rgba(16, 20, 28, 0.22);
   padding: 12px;
   display: flex;
@@ -3169,20 +3188,22 @@ a.hub-card:hover {
   .zoomctl {
     display: flex;
     right: 24px;
-    bottom: 142px;
+    bottom: 24px;
   }
 
   /* Side and direction come from the base rules now — desktop only widens the inset to
      match the FAB and lifts the two buttons over the taller zoom box. */
   .locatectl {
     right: 24px;
-    bottom: 248px;
+    bottom: 126px;
   }
 
+  /* La pestaña de capas se ancla al canto y no entra en la escalera de la derecha. */
   .layersctl {
-    right: 24px;
-    bottom: 302px;
+    right: 0;
+    top: 236px;
   }
+
 
   /* Clear of the docked left panel, which starts at 12px and is 430px wide. */
   .toast {
@@ -3841,4 +3862,947 @@ fieldset.fieldset {
 
 .upload:hover {
   color: var(--ink);
+}
+
+/* ── Registro de emergencias ──────────────────────────────────────────────
+   Consola de configuración de la red (app/emergencias). Densa y de lectura,
+   no una superficie pública: prioriza escanear una lista y editar un formulario
+   largo sobre cualquier otra cosa. */
+
+.regpage { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+.regpage-h { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+.regpage-h h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; margin: 0; }
+.regpage-h p { color: var(--mut); font-size: .94rem; margin: 0; max-width: 62ch; }
+
+.regwrap { display: flex; flex-direction: column; gap: 18px; }
+.reghead { font-size: 1.15rem; font-weight: 600; margin: 0; }
+.reghead-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.regauth { display: flex; flex-direction: column; gap: 16px; max-width: 380px; }
+.regintro { color: var(--mut); font-size: .94rem; margin: 0; }
+
+.reggroup { display: flex; flex-direction: column; gap: 10px; }
+.reggroup-h {
+  font-size: .74rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--mut); font-weight: 600; margin: 0;
+}
+
+.reglist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.regrow {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 12px 14px; background: #fff;
+}
+.regrow-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.regname { font-weight: 600; font-size: .97rem; }
+.regmeta { color: var(--mut); font-size: .84rem; }
+.regrow-side { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.regcount { color: var(--mut); font-size: .84rem; font-variant-numeric: tabular-nums; }
+
+.stackf { display: flex; flex-direction: column; gap: 14px; }
+.frow2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fcheck { display: flex; align-items: center; gap: 8px; font-size: .93rem; }
+.linkish {
+  align-self: flex-start; background: none; border: 0; padding: 0;
+  color: var(--brand); font: inherit; font-size: .9rem; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+  .frow2 { grid-template-columns: 1fr; }
+  .regrow { flex-direction: column; align-items: flex-start; }
+}
+
+/* ── Acceso al 3D y escena de edificios ───────────────────────────────────
+   El botón vive en la misma columna que capas y ubicación, y comparte su forma:
+   son los tres controles del mapa y tienen que leerse como un grupo. */
+
+/* Tercer escalón de la columna, contando desde abajo: zoom, ubicación, 3D.
+   Los tres comparten ancho (44px), inset y separación (10px): antes medían 44, 44 y 48 y
+   colgaban a alturas sin relación entre sí, y tres controles del mismo tipo que no se
+   alinean se leen como tres cosas distintas puestas ahí por casualidad. */
+.btn3d {
+  position: absolute;
+  right: 14px;
+  bottom: calc(402px + env(safe-area-inset-bottom));
+  z-index: 607;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 5px 18px rgba(16, 20, 28, 0.18);
+  text-decoration: none;
+}
+
+.btn3d-txt { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.02em; }
+
+/* Esta media query va DESPUÉS de la regla base a propósito.
+   Estaba antes, junto a las de los otros controles, y como tiene la misma especificidad
+   la regla base —que vive al final del archivo— le ganaba por orden: el botón se quedaba
+   a 14px del borde mientras el de ubicación estaba a 24, desalineados por diez píxeles. */
+@media (min-width: 900px) {
+  .btn3d {
+    right: 24px;
+    bottom: 180px;
+  }
+}
+
+.scene3d-page { position: fixed; inset: 0; display: flex; flex-direction: column; }
+
+.scene3d-bar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 14px; background: #fff;
+  border-bottom: 1px solid var(--line); z-index: 2;
+}
+.scene3d-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ink); text-decoration: none; font-size: 0.92rem; font-weight: 500;
+}
+.scene3d-back svg { width: 17px; height: 17px; }
+.scene3d-title { color: var(--mut); font-size: 0.9rem; }
+
+.scene3d { position: relative; flex: 1; min-height: 0; }
+
+/* Selector de dos clases a propósito.
+   MapLibre le pone `.maplibregl-map` al contenedor, y su hoja se importa DENTRO del
+   componente, así que Next la inyecta después de esta y su `position: relative` le ganaba
+   por orden en la cascada. Sin posicionamiento absoluto el `inset: 0` no aplica y el div
+   colapsaba a cero de alto: la escena se dibujaba entera pero recortada a una franja.
+   La altura explícita hace que aguante aunque alguien vuelva a cambiar el `position`. */
+.scene3d > .scene3d-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* El indicador de carga NO intercepta ni tapa: cubría la escena entera por encima de la
+   lengüeta de capas y del conmutador, así que mientras no terminara de cargar —y si el
+   evento de listo no llegaba, nunca— parecía que esos controles no existían. */
+.scene3d-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.scene3d-error {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(92vw, 460px);
+  z-index: 3;
+}
+
+/* La leyenda no se pliega: sin ella la escena se lee como un skyline y un edificio intacto
+   parecería la peor noticia del mapa. */
+.scene3d-legend {
+  position: absolute; left: 12px; bottom: 12px; z-index: 2;
+  max-width: 290px; display: flex; flex-direction: column; gap: 5px;
+  background: #fff; border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 11px 13px; box-shadow: 0 5px 18px rgba(16, 20, 28, 0.18);
+  font-size: 0.84rem;
+}
+.scene3d-legend span { color: var(--mut); line-height: 1.45; }
+.scene3d-legend small { color: var(--mut); font-size: 0.76rem; }
+.scene3d-ramp { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 3px; }
+.scene3d-ramp i { flex: 1; }
+.scene3d-ramp-lbl { display: flex; justify-content: space-between; color: var(--mut); font-size: 0.74rem; }
+
+@media (max-width: 560px) {
+  .scene3d-legend { left: 10px; right: 10px; max-width: none; bottom: 10px; }
+}
+
+/* ── Boletín de prensa en la portada ──────────────────────────────────────
+   Lectura, no navegación: medida corta, interlineado holgado y los enlaces al
+   medio bien visibles, porque seguirlos es lo que separa un titular de un dato. */
+
+.entry-news {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 15px 16px;
+  background: var(--soft);
+}
+
+.entry-news-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.entry-news-h { font-size: 0.98rem; font-weight: 600; margin: 0; }
+.entry-news-when { color: var(--mut); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+
+.bul-body { display: flex; flex-direction: column; gap: 9px; }
+.bul-h { font-size: 0.84rem; font-weight: 600; color: var(--mut); margin: 4px 0 0; }
+.bul-p { font-size: 0.9rem; line-height: 1.58; margin: 0; }
+.bul-list { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 6px; }
+.bul-list li { font-size: 0.88rem; line-height: 1.45; }
+.bul-list a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.bul-when { color: var(--mut); font-size: 0.8rem; }
+
+/* La advertencia sobre el resumen automático no es letra chica que se pueda achicar más:
+   es lo que separa "esto lo dijo un medio" de "esto lo escribió un modelo". */
+.entry-news-src { color: var(--mut); font-size: 0.78rem; line-height: 1.45; margin: 0; }
+
+
+/* ── Pestañas laterales ───────────────────────────────────────────────────
+   El patrón de AcopioVE: una lengüeta pegada al canto derecho, con el texto en
+   vertical, que se despliega en panel. Ocupa 26px cuando está cerrada y dice qué
+   guarda, que es lo que un botón de icono no hace. */
+
+.sidetab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 13px 6px;
+  border: 1px solid var(--line);
+  border-right: 0;
+  border-radius: 13px 0 0 13px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: -3px 4px 16px rgba(16, 20, 28, 0.14);
+  cursor: pointer;
+}
+
+.sidetab-txt {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+}
+
+.sidetab-ch {
+  width: 14px;
+  height: 14px;
+  color: var(--mut);
+  transform: rotate(180deg);
+}
+
+/* Una capa encendida se ve con la pestaña cerrada: si no, la única forma de enterarse de
+   que el mapa está mostrando datos modelados es abrirla. */
+.sidetab-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.sidetab-on .sidetab-ch { color: rgba(255, 255, 255, 0.75); }
+
+/* ── Pestaña de noticias ──────────────────────────────────────────────────
+   Segundo escalón del canto derecho, debajo de capas. Comparte la lengüeta y sus
+   estilos; lo que cambia es la altura a la que cuelga y el ancho del panel, que
+   acá es texto para leer y no una lista de interruptores. */
+
+.newsctl {
+  position: absolute;
+  right: 0;
+  top: 322px;
+  z-index: 620;
+}
+
+/* El panel abierto NO sube a la altura de capas: subía, y se abría justo encima de esa
+   pestaña, tapándola. Cuelga desde donde está la lengüeta, que además es de donde el
+   gesto dice que va a salir. */
+
+.side-backdrop {
+  position: fixed;
+  inset: 0;
+  border: none;
+  background: transparent;
+  cursor: default;
+  z-index: 0;
+}
+
+.side-panel {
+  position: relative;
+  z-index: 1;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  /* Lo que quede entre la lengüeta y el borde inferior: un 68dvh fijo desde este anclaje
+     se salía de la pantalla por abajo. */
+  max-height: calc(100dvh - 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-right: 0;
+  border-radius: 15px 0 0 15px;
+  box-shadow: -6px 14px 44px rgba(16, 20, 28, 0.22);
+  padding: 13px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.92rem;
+}
+
+.side-when {
+  color: var(--mut);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 900px) {
+  .newsctl { top: 340px; }
+}
+
+/* En el teléfono el panel ocupa el ancho útil: 340px sobre 360 de pantalla dejaba el
+   texto en una columna de dos palabras. */
+@media (max-width: 560px) {
+  .side-panel { width: calc(100vw - 20px); }
+}
+
+/* ── Ficha de un punto: tarjeta, no panel ────────────────────────────────
+   La capa que muestra la ficha ocupaba de arriba a abajo y tapaba el mapa justo
+   después de tocar un pin, que es lo que la persona estaba mirando para ubicarse.
+   Se queda abajo a la izquierda, con tope de altura y desplazamiento interno.
+   Los formularios y el panel del equipo siguen a altura completa: ahí sí se viene
+   a hacer una sola cosa y el mapa no hace falta detrás. */
+
+.overlay.overlay-card {
+  top: auto;
+  max-height: 64dvh;
+  border-radius: 18px 18px 0 0;
+}
+
+@media (min-width: 900px) {
+  .overlay.overlay-card {
+    top: auto;
+    bottom: 12px;
+    max-height: 62dvh;
+    border-radius: 18px;
+  }
+}
+
+/* ── Barra unificada ──────────────────────────────────────────────────────
+   Al modo de la barra de herramientas de macOS: UNA superficie translúcida que
+   contiene marca, buscador, filtros y acciones. Antes cada uno era su propia
+   tarjeta blanca con su sombra, repartidas en tres bandas apiladas — mucha
+   presencia de interfaz para un mapa que es lo que la persona vino a mirar.
+
+   La regla de fondo: la barra es la superficie; lo que va dentro no lleva la suya. */
+
+.macbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  background: rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  border: 1px solid rgba(16, 20, 28, 0.09);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 30px rgba(16, 20, 28, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+/* Los elementos de dentro pierden su tarjeta: si cada uno conserva borde y sombra, la
+   barra se lee como cinco cosas juntas y no como una. */
+.macbar .brand,
+.macbar .gear,
+.macbar .searchbar,
+.macbar .fdrop,
+.macbar .cpick > button {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+}
+
+/* El buscador y los desplegables sí necesitan leerse como campos: un hundido apenas
+   perceptible, no una tarjeta. */
+.macbar .searchbar,
+.macbar .fdrop,
+.macbar .cpick > button {
+  background: rgba(16, 20, 28, 0.045);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  height: 38px;
+}
+
+.macbar .searchbar:focus-within,
+.macbar .fdrop:focus-within {
+  background: #fff;
+  border-color: rgba(16, 20, 28, 0.14);
+}
+
+/* La marca no se comprime ni parte en dos líneas: al hacerlo estiraba la barra entera
+   diez píxeles para acomodar un salto de línea que no hacía falta. */
+.macbar .brand {
+  padding: 4px 8px 4px 4px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.macbar .sinput { font-size: 0.9375rem; }
+
+/* Un filo entre los filtros y las acciones: separa "acotar lo que veo" de "hacer algo",
+   que son dos gestos distintos y estaban pegados. */
+.macbar .hright::before {
+  content: "";
+  width: 1px;
+  height: 22px;
+  background: rgba(16, 20, 28, 0.12);
+  margin-right: 3px;
+  flex: 0 0 auto;
+}
+
+/* Teléfono: marca y acciones en la primera línea, el campo entero debajo.
+   Las reglas apuntaban a `.mbfilters`, un envoltorio que dejó de existir cuando los
+   selectores entraron dentro del campo — y sin él la marca terminaba DEBAJO del buscador
+   y el icono de lupa en una línea aparte. El orden se declara sobre los hijos reales. */
+@media (max-width: 899px) {
+  .macbar { flex-wrap: wrap; gap: 8px; }
+  .macbar .brand { order: 1; }
+  .macbar .hright { order: 2; margin-left: auto; }
+  .macbar > .searchbar { order: 3; flex: 1 1 100%; }
+  .macbar .hright::before { display: none; }
+}
+
+/* ── Buscador con los selectores dentro ──────────────────────────────────
+   Los dos selectores dejan de ser cajas sueltas al lado del buscador y pasan a ser
+   segmentos del mismo campo. La regla es la misma que en la barra: el campo es la
+   superficie, y lo de dentro solo se separa con un filo. */
+
+.macbar > .searchbar {
+  /* Se queda con todo el ancho sobrante de la barra.
+     La regla vivía en `.mbfilters .searchbar`, un envoltorio que dejó de existir cuando
+     los selectores pasaron a estar DENTRO del campo: sin ella el campo no crecía y el
+     placeholder salía cortado a media palabra con media barra vacía al lado. */
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Sin el tope de 600px que rige cuando el buscador flota centrado sobre el mapa
+     (media query de 1200px): dentro de la barra el campo tiene que llenar lo que sobra,
+     y ese tope lo dejaba a media asta con la barra vacía a los lados. */
+  max-width: none;
+  gap: 0;
+  padding: 0 4px 0 11px;
+}
+
+/* El buscador manda dentro del campo; los selectores toman lo suyo y no más. */
+.macbar .searchbar .sinput { flex: 1 1 auto; min-width: 120px; }
+
+
+
+.sbdiv {
+  width: 1px;
+  align-self: stretch;
+  margin: 7px 2px;
+  background: rgba(16, 20, 28, 0.13);
+  flex: 0 0 auto;
+}
+
+/* Segmentos: sin fondo ni caja propia, y sin la altura que tenían como controles
+   independientes — la altura la pone el campo que los contiene. */
+.macbar .searchbar .fdrop,
+.macbar .searchbar .cpick > button {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  height: 32px;
+  border-radius: 8px;
+  padding: 0 8px;
+}
+
+.macbar .searchbar .fdrop:hover,
+.macbar .searchbar .cpick > button:hover {
+  background: rgba(16, 20, 28, 0.05);
+}
+
+.macbar .searchbar .fdrop { width: 160px; flex: 0 0 auto; }
+.macbar .searchbar .cpick { flex: 0 0 auto; width: 190px; }
+
+/* Dentro del campo, en el teléfono: lupa y texto en la primera línea, los dos selectores
+   compartiendo la segunda. El `min-width` del input es lo que empuja a los selectores
+   abajo — sin él caben apretados los tres y no se puede escribir en ninguno. */
+@media (max-width: 899px) {
+  .macbar > .searchbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 5px 8px;
+    row-gap: 4px;
+    column-gap: 6px;
+  }
+
+  .macbar .searchbar .si { order: 0; }
+  .macbar .searchbar .sinput { order: 1; flex: 1 1 auto; min-width: 62%; height: 32px; }
+  .macbar .searchbar .sx { order: 2; }
+
+  /* Los filos sobran cuando los segmentos ya están en su propia línea. */
+  .macbar .searchbar .sbdiv { display: none; }
+
+  .macbar .searchbar .fdrop,
+  .macbar .searchbar .cpick {
+    order: 3;
+    flex: 1 1 44%;
+    min-width: 0;
+    width: auto;
+    background: rgba(16, 20, 28, 0.05);
+  }
+}
+
+/* ── Colaborar en la barra ───────────────────────────────────────────────
+   Ocupa el lugar del antiguo botón de Donar, con la forma de aquel. El menú deja de
+   crecer hacia arriba desde la esquina inferior y cae desde el botón, que es de donde
+   el gesto dice que va a salir. */
+
+.macbar .fabwrap {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  flex: 0 0 auto;
+}
+
+.macbar .fab {
+  gap: 6px;
+  border-radius: 11px;
+  padding: 0 12px;
+  height: 38px;
+  font-size: 0.7813rem;
+  font-weight: 700;
+}
+
+.macbar .fab svg { width: 15px; height: 15px; }
+
+.macbar .fab-menu {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  width: min(88vw, 300px);
+  z-index: 2;
+}
+
+/* El fondo que cierra el menú al tocar fuera cubre la pantalla entera, no solo la barra. */
+.macbar .fab-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+/* ── Controles del mapa: una sola columna ─────────────────────────────────
+   Zoom, ubicación y 3D miden lo mismo y cuelgan de la misma vertical, con la misma
+   separación. La caja de zoom era 48px de ancho contra los 44 de los otros dos: cuatro
+   píxeles bastan para que la columna se lea torcida. */
+
+.zoomctl { width: 44px; }
+.zbtn { width: 44px; height: 44px; }
+
+/* ── Panel de puntos: acoplado al lateral izquierdo ───────────────────────
+   Era una hoja que subía desde abajo, la forma correcta en un teléfono y una rareza en
+   escritorio: cubría el borde inferior entero para listar algo que se lee en columna.
+   Acá se acopla al canto izquierdo, de arriba abajo, como las pestañas de la derecha.
+   En teléfono sigue subiendo desde abajo, que es donde llega el pulgar. */
+
+@media (min-width: 900px) {
+  .sheet {
+    left: 0;
+    right: auto;
+    top: 118px;
+    bottom: 12px;
+    height: auto;
+    border-radius: 0 18px 18px 0;
+    border-left: 0;
+    box-shadow: 6px 14px 44px rgba(16, 20, 28, 0.18);
+  }
+
+  /* La altura la fijan `top` y `bottom`: los dos estados de la hoja la declaraban en
+     píxeles y peleaban con el anclaje. */
+  .sheet:not(.sheet-open),
+  .sheet.sheet-open {
+    height: auto;
+  }
+
+  /* Plegada se queda solo con su cabecera, pegada arriba. */
+  .sheet.sheet-min {
+    bottom: auto;
+    height: auto;
+  }
+
+  .handle { border-radius: 0 18px 0 0; }
+
+  /* La ficha de un punto cuelga del mismo canto. */
+  .overlay.overlay-card {
+    left: 0;
+    border-radius: 0 18px 18px 0;
+  }
+}
+
+/* ── Filtros por tipo dentro del panel ────────────────────────────────────
+   Ya no flotan centrados sobre el mapa: son la cabecera de la lista que acotan.
+
+   Cinco columnas iguales, icono arriba y nombre debajo, al modo de una fila de
+   aplicaciones. En línea con el texto al lado se partían en dos filas desparejas —tres
+   arriba y dos abajo— y una rejilla dice mejor que son cinco opciones del mismo rango. */
+
+.sheet .chips {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 10px 10px;
+  overflow: visible;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet .chips .chip {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 6px;
+  box-shadow: none;
+  border-radius: 13px;
+  padding: 9px 3px 8px;
+  font-size: 0.64rem;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.sheet .chips .tico { width: 24px; height: 24px; }
+.sheet .chips .tico svg { width: 21px; height: 21px; }
+
+/* Plegado el panel, los filtros se van con la lista: acotar algo que no se ve no
+   significa nada. */
+.sheet.sheet-min .chips { display: none; }
+
+/* ── Lengüeta del panel de puntos ─────────────────────────────────────────
+   Espejo de las del canto derecho. Solo en escritorio: en teléfono el panel es una
+   hoja que sube desde abajo y se pliega a una tira, que es lo que alcanza el pulgar. */
+
+.pointsctl {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 214px;
+  z-index: 620;
+}
+
+.sidetab-left {
+  border-left: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0 13px 13px 0;
+  box-shadow: 3px 4px 16px rgba(16, 20, 28, 0.14);
+}
+
+/* El galón apunta hacia el mapa, o sea al revés que en las del otro canto. */
+.sidetab-left .sidetab-ch { transform: none; }
+
+@media (min-width: 900px) {
+  .pointsctl { display: block; top: 236px; }
+
+  /* Plegado, el panel se va del todo y deja la lengüeta: media hoja pegada al borde no
+     es un estado, es un panel a medio cerrar. */
+  .sheet.sheet-min { display: none; }
+}
+
+/* ── Isotipo y su animación de carga ──────────────────────────────────────
+   El pulso recorre los cuatro nodos cardinales en dos segundos, medio segundo entre
+   uno y otro. Es la animación que especifica el manual de marca, y usa el mismo
+   dibujo que el logo: en una conexión lenta la marca suele ser lo primero que pinta,
+   y verla moverse dice "esto está funcionando" con algo que ya se reconoce. */
+
+.iso-node {
+  animation: isoPulse 2s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes isoPulse {
+  0%,
+  18% {
+    opacity: 1;
+    r: 62;
+  }
+  30%,
+  100% {
+    opacity: 0.32;
+    r: 48;
+  }
+}
+
+/* Quien pidió menos movimiento no necesita ver latir un logo para saber que carga. */
+@media (prefers-reduced-motion: reduce) {
+  .iso-node {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+.spinner-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 0;
+}
+
+/* ── Los dos contadores en una fila ───────────────────────────────────────
+   "N puntos" salió de la cabecera del panel para ponerse al lado de "N necesitan
+   ayuda": son la misma pregunta a dos niveles de detalle y estaban separados por
+   toda la cabecera y la rejilla de filtros. */
+
+.counters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.counters .hcount { flex: 0 0 auto; }
+
+/* Dentro de la fila deja de ser una banda de ancho completo. */
+.counters .needbar {
+  width: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  border-bottom: 0;
+  border-radius: 999px;
+  padding: 6px 11px;
+  font-size: 0.75rem;
+  gap: 6px;
+}
+
+.counters .needbar .chev { flex: 0 0 auto; }
+
+/* ── El galón del panel ───────────────────────────────────────────────────
+   Apunta hacia donde el panel se va a plegar, y eso cambia con el tamaño de
+   pantalla: hacia abajo en el teléfono, hacia el canto izquierdo en escritorio.
+   Con un ángulo fijo en el marcado apuntaba al lado equivocado en uno de los dos. */
+
+.hfold svg { transform: rotate(90deg); transition: transform 0.18s ease; }
+.sheet-min .hfold svg { transform: rotate(-90deg); }
+
+@media (min-width: 900px) {
+  .hfold svg { transform: rotate(180deg); }
+  .sheet-min .hfold svg { transform: rotate(0deg); }
+}
+
+/* ── Controles de la escena 3D ────────────────────────────────────────────
+   Reusan la lengüeta y el panel del mapa 2D: es el mismo gesto en las dos vistas y
+   aprender dos habría sido gratuito solo para quien escribe el código. */
+
+.scene3d-layers { position: absolute; right: 0; top: 24px; z-index: 620; }
+.scene3d-layers .layers-panel { position: relative; top: auto; right: auto; }
+
+/* El conmutador plano/3D, en la misma forma que el botón que trae hasta acá. */
+.scene3d-flat { position: absolute; right: 14px; top: 24px; z-index: 615; }
+.scene3d-layers.is-open ~ .scene3d-flat { opacity: 0; pointer-events: none; }
+
+.btn3d-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.layers-err { color: var(--danger); }
+
+@media (min-width: 900px) {
+  .scene3d-flat { right: 78px; top: 24px; }
+}
+
+/* ── Los paneles laterales no se salen de la pantalla ─────────────────────
+   Su alto se calcula desde donde cuelga cada lengüeta, no con un porcentaje fijo:
+   al bajar las lengüetas, un 62dvh medido desde arriba se iba por debajo del borde
+   inferior y el final del boletín quedaba fuera, sin forma de llegar a él. */
+
+.layersctl .layers-panel { max-height: calc(100dvh - 238px); }
+.newsctl .side-panel { max-height: calc(100dvh - 300px); }
+
+@media (min-width: 900px) {
+  .layersctl .layers-panel { max-height: calc(100dvh - 260px); }
+  .newsctl .side-panel { max-height: calc(100dvh - 364px); }
+}
+
+/* La escena 3D ancla sus capas arriba del todo, así que ahí cabe casi toda la altura. */
+.scene3d-layers .layers-panel { max-height: calc(100dvh - 130px); }
+
+/* Volver a la lista desde la ficha, dentro del propio panel. */
+.cdback {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  padding: 11px 14px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.cdback svg { width: 17px; height: 17px; color: var(--mut); }
+
+/* ── Barra de la escena 3D ────────────────────────────────────────────────
+   Estaba sin estilo: una franja blanca con dos textos sueltos que no se parecía ni a
+   esta aplicación ni a AcopioVE. Toma la misma forma que la barra del mapa: superficie
+   translúcida con desenfoque, flotando sobre la escena en vez de partirla en dos. */
+
+.scene3d-page { position: fixed; inset: 0; }
+
+.scene3d-bar {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 14px 7px 9px;
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  border: 1px solid rgba(16, 20, 28, 0.09);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(16, 20, 28, 0.14);
+}
+
+.scene3d-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.scene3d-back svg { width: 16px; height: 16px; color: var(--mut); }
+
+.scene3d-title {
+  color: var(--mut);
+  font-size: 0.8125rem;
+  padding-left: 12px;
+  border-left: 1px solid rgba(16, 20, 28, 0.12);
+}
+
+.scene3d { position: absolute; inset: 0; }
+
+/* ── Controles de vista, a la izquierda ───────────────────────────────────
+   Cambian cómo se MIRA la escena; las capas de la derecha cambian QUÉ se muestra.
+   Separarlos es lo que hace AcopioVE y la razón es esa: son dos preguntas distintas. */
+
+.scene3d-tools {
+  position: absolute;
+  left: 14px;
+  /* Debajo de la barra flotante y NO abajo del todo: ahí caían justo encima de la
+     leyenda, que es lo único de esta pantalla que no se puede tapar — sin ella la altura
+     de los bloques se lee como altura de edificio. */
+  top: 84px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.s3btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 5px 18px rgba(16, 20, 28, 0.18);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.s3btn svg { width: 19px; height: 19px; }
+.s3btn-txt { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.02em; }
+.s3btn-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* La lengüeta de capas baja para no chocar con la barra flotante. */
+.scene3d-layers { top: 96px; }
+
+/* ── La ficha dentro del panel no pisa el galón de plegar ─────────────────
+   El galón flota sobre la esquina superior derecha del panel y caía justo encima del
+   botón de volver. Se le reserva su sitio, igual que hace la cabecera de la lista. */
+
+.cdback { padding-right: calc(var(--fold-size) + var(--fold-inset) + 8px); }
+
+/* ── Selector de región ───────────────────────────────────────────────────
+   Reusa las clases del selector de puntos para que el par se lea como un control.
+   Lo único propio: el estado seleccionado y el fondo que cierra al tocar fuera. */
+
+.cpick-back {
+  position: fixed;
+  inset: 0;
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+.cpick-opt-on { background: var(--soft2); font-weight: 600; }
+
+/* ── Últimos sismos, al final del panel de capas ──────────────────────────
+   La leyenda dice qué significan los colores; esto dice qué pasó. */
+
+.layers-quakes { display: flex; flex-direction: column; gap: 5px; padding-top: 4px; }
+
+.layers-quake {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: var(--mut);
+}
+
+.layers-quake b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.layers-quake-p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Plegar el panel: pestaña exterior ────────────────────────────────────
+   El galón flotaba sobre la esquina del panel y caía encima de su contenido. Ahora es
+   una lengüeta que sobresale del canto exterior, con la flecha hacia adentro: dice
+   hacia dónde se va el panel, que es lo que un galón suelto no decía. */
+
+@media (min-width: 900px) {
+  .sheet .hfold {
+    position: absolute;
+    top: 50%;
+    right: -24px;
+    left: auto;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 54px;
+    border-radius: 0 12px 12px 0;
+    border: 1px solid var(--line);
+    border-left: 0;
+    background: #fff;
+    box-shadow: 3px 4px 16px rgba(16, 20, 28, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .sheet .hfold svg { transform: rotate(180deg); width: 14px; height: 14px; }
+
+  /* Con la lengüeta fuera del panel, su contenido recupera el ancho completo. */
+  .cdback { padding-right: 14px; }
+  .sheet { overflow: visible; }
+  .sheet .list { border-radius: 0 0 18px 0; }
 }

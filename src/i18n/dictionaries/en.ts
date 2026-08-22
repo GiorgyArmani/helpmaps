@@ -42,6 +42,7 @@ const en: Partial<Dict> = {
   "map.help": "How it works",
   "map.fold": "Collapse the list",
   "map.unfold": "Show the list",
+  "map.points": "Points",
   "map.myLocation": "My location",
   "map.locating": "Finding your location…",
   "map.locationDenied": "We couldn't get your location. Check permissions.",
@@ -379,11 +380,12 @@ const en: Partial<Dict> = {
   "password.done": "Password updated. Use it next time you sign in.",
 
   "layers.title": "Map layers",
+  "layers.recent": "Recent earthquakes",
   "layers.cta": "Layers",
   "layers.epicenters": "Epicentres",
   "layers.epicentersHint": "Where each earthquake originated",
   "layers.intensity": "Affected area",
-  "layers.intensityHint": "How far the shaking reached",
+  "layers.intensityHint": "How far the ground shaking reached",
   "layers.none": "No earthquakes recorded in the last {n} days.",
   "layers.stale": "Seismic data from an earlier load.",
   "layers.disclaimer":

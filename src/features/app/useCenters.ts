@@ -5,9 +5,8 @@ import type { AppSettings, Center } from "@/domain/types";
 import { fetchCenters } from "@/data/centers";
 import { fetchSettings } from "@/data/staff";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
-import { FEATURES, storageKey } from "@/config";
 
-const CACHE_KEY = storageKey("centers:v1");
+import { useEmergencyId, useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 
 interface Cached {
   at: number;
@@ -37,6 +36,14 @@ export interface CentersState {
  * shelter list still gets someone to a door, while an empty screen gets them nothing.
  */
 export function useCenters(): CentersState {
+  const emergencyId = useEmergencyId();
+  const helpers = useSiteHelpers();
+  // Namespaced by the RESOLVED slug, not the compiled one: two emergencies opened in the
+  // same browser must not read each other's cached points, and the cache outlives the tab.
+  const cacheKey = helpers.storageKey("centers:v1");
+  // El modo sin señal lo decide la EMERGENCIA, no el preset: un país puede apagarlo.
+  const offline = useSite().features.offline;
+
   const [centers, setCenters] = useState<Center[]>([]);
   const [settings, setSettings] = useState<AppSettings>({ maintenance: false, notice: null });
   // Starts false when there is nothing to load, so the effect below never has to
@@ -55,9 +62,9 @@ export function useCenters(): CentersState {
   // does not exist while the page is rendered on the server, so seeding state from it
   // during the first render would make the server and client markup disagree.
   useEffect(() => {
-    if (!FEATURES.offline) return;
+    if (!offline) return;
     try {
-      const raw = window.localStorage.getItem(CACHE_KEY);
+      const raw = window.localStorage.getItem(cacheKey);
       if (!raw) return;
       const parsed = JSON.parse(raw) as Cached;
       if (Array.isArray(parsed.centers) && parsed.centers.length > 0) {
@@ -69,7 +76,7 @@ export function useCenters(): CentersState {
     } catch {
       // A corrupt cache is not worth a crash; the network load below replaces it.
     }
-  }, []);
+  }, [cacheKey]);
 
   // 2. Revalidate.
   useEffect(() => {
@@ -79,17 +86,20 @@ export function useCenters(): CentersState {
 
     (async () => {
       try {
-        const [fresh, appSettings] = await Promise.all([fetchCenters(sb), fetchSettings(sb)]);
+        const [fresh, appSettings] = await Promise.all([
+          fetchCenters(sb, emergencyId),
+          fetchSettings(sb),
+        ]);
         if (cancelled) return;
         setCenters(fresh);
         setSettings(appSettings);
         setStale(false);
         setError(null);
         setCachedAt(Date.now());
-        if (!FEATURES.offline) return;
+        if (!offline) return;
         try {
           const payload: Cached = { at: Date.now(), centers: fresh, settings: appSettings };
-          window.localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+          window.localStorage.setItem(cacheKey, JSON.stringify(payload));
         } catch {
           // Quota exceeded on a very full phone: not fatal, we just lose offline mode.
         }
@@ -106,7 +116,7 @@ export function useCenters(): CentersState {
     return () => {
       cancelled = true;
     };
-  }, [tick]);
+  }, [tick, emergencyId, cacheKey]);
 
   const reload = useCallback(() => {
     setLoading(true);
