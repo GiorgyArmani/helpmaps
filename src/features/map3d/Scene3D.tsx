@@ -7,6 +7,7 @@ import type { EmergencyLayer } from "@/domain/layers";
 import { Icon } from "@/ui/icons";
 import { Notice, Spinner } from "@/ui/primitives";
 import { useI18n } from "@/i18n/context";
+import SideTab from "@/ui/SideTab";
 
 /**
  * The 3D scene.
@@ -230,71 +231,45 @@ export default function Scene3D({
       </div>
 
       {layers.length > 0 ? (
-        <div className={`layersctl scene3d-layers${panelOpen ? " is-open" : ""}`}>
-          {panelOpen ? (
-            <>
-              <button
-                type="button"
-                className="side-backdrop"
-                aria-label={t("common.close")}
-                onClick={() => setPanelOpen(false)}
+        <SideTab
+          className={`layersctl scene3d-layers${panelOpen ? " is-open" : ""}`}
+          panelClassName="layers-panel"
+          headClassName="layers-head"
+          label={t("layers.cta")}
+          title={t("layers.title")}
+          active={anyOn}
+          open={panelOpen}
+          onOpenChange={setPanelOpen}
+        >
+          {layers.map((layer) => (
+            <label key={layer.id} className="layers-opt">
+              <input
+                type="checkbox"
+                checked={on[layer.id] ?? false}
+                onChange={(e) => setOn((s) => ({ ...s, [layer.id]: e.target.checked }))}
               />
-              <div className="layers-panel" role="group" aria-label={t("layers.title")}>
-                <div className="layers-head">
-                  <b>{t("layers.title")}</b>
-                  <button
-                    type="button"
-                    className="layers-x"
-                    aria-label={t("common.close")}
-                    onClick={() => setPanelOpen(false)}
-                  >
-                    <Icon.close />
-                  </button>
-                </div>
+              <span className="layers-opt-ic">
+                <Icon.layers />
+              </span>
+              <span className="layers-opt-txt">
+                <b>{layer.label}</b>
+                {errors[layer.id] ? (
+                  <small className="layers-err">{t("scene3d.layerError")}</small>
+                ) : layer.hint ? (
+                  <small>{layer.hint}</small>
+                ) : null}
+              </span>
+            </label>
+          ))}
 
-                {layers.map((layer) => (
-                  <label key={layer.id} className="layers-opt">
-                    <input
-                      type="checkbox"
-                      checked={on[layer.id] ?? false}
-                      onChange={(e) => setOn((s) => ({ ...s, [layer.id]: e.target.checked }))}
-                    />
-                    <span className="layers-opt-ic">
-                      <Icon.layers />
-                    </span>
-                    <span className="layers-opt-txt">
-                      <b>{layer.label}</b>
-                      {errors[layer.id] ? (
-                        <small className="layers-err">{t("scene3d.layerError")}</small>
-                      ) : layer.hint ? (
-                        <small>{layer.hint}</small>
-                      ) : null}
-                    </span>
-                  </label>
-                ))}
-
-                {layers
-                  .filter((l) => on[l.id] && l.attribution)
-                  .map((l) => (
-                    <p key={`src-${l.id}`} className="layers-src">
-                      {l.attribution}
-                    </p>
-                  ))}
-              </div>
-            </>
-          ) : (
-            <button
-              type="button"
-              className={`sidetab${anyOn ? " sidetab-on" : ""}`}
-              aria-expanded={false}
-              aria-label={t("layers.title")}
-              onClick={() => setPanelOpen(true)}
-            >
-              <Icon.chevron className="sidetab-ch" />
-              <span className="sidetab-txt">{t("layers.cta")}</span>
-            </button>
-          )}
-        </div>
+          {layers
+            .filter((l) => on[l.id] && l.attribution)
+            .map((l) => (
+              <p key={`src-${l.id}`} className="layers-src">
+                {l.attribution}
+              </p>
+            ))}
+        </SideTab>
       ) : null}
 
       {buildings.some((b) => on[b.id]) ? (

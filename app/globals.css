@@ -248,7 +248,6 @@ a {
 .macbar,
 .searchbar,
 .chips,
-.frow2,
 .maint-banner,
 .stale {
   pointer-events: auto;
@@ -347,32 +346,6 @@ a {
   margin-left: auto;
 }
 
-/* "Donar" carries a word as well as a heart, and the only coloured text in the header —
-   it is the one action the map cannot perform for you, so it does not get to look like
-   another grey icon button. Red on white, not a filled red button: this sits over an
-   emergency map and should not shout louder than the map does. */
-.donate-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  box-shadow: 0 3px 12px rgba(16, 20, 28, 0.12);
-  height: 38px;
-  padding: 0 12px;
-  font-size: 0.7813rem;
-  font-weight: 700;
-  color: #c0392b;
-  cursor: pointer;
-  font-family: inherit;
-  flex: 0 0 auto;
-}
-
-.donate-btn svg {
-  width: 16px;
-  height: 16px;
-}
 
 .gear {
   position: relative;
@@ -472,12 +445,6 @@ a {
   cursor: pointer;
   flex: 0 0 auto;
 }
-
-.frow2 {
-  display: flex;
-  gap: 8px;
-}
-
 
 
 .fdrop {
@@ -717,9 +684,12 @@ a {
   overflow: hidden;
 }
 
+/* 44px, los mismos que ubicación y 3D: los tres controles cuelgan de la misma vertical y
+   cuatro píxeles de diferencia bastan para que la columna se lea torcida. Estaba en 46 acá
+   y corregido a 44 tres mil líneas más abajo, donde no lo veía quien tocara este bloque. */
 .zbtn {
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: #fff;
   color: var(--ink);
@@ -835,78 +805,52 @@ a {
   cursor: pointer;
 }
 
-/* ────────────────────  Seismic layers: control, legend, popups  ──────────────────
-   Ya no cuelga de la escalera de abajo: es una lengüeta anclada arriba, al canto derecho,
-   y la de noticias cuelga debajo. Las dos alturas se miden con la lengüeta cerrada
-   (capas mide 86px, noticias 102px, y llevan un texto vertical que cambia de alto con el
-   idioma), así que si cambia el rótulo hay que volver a medir: `top` es lo único que las
-   mantiene separadas entre sí y despegadas del botón 3D, que sube desde abajo. */
+/* ────────────────────  Capas sísmicas: control, leyenda, globos  ──────────────────
 
-/* Anclado al BORDE derecho, no separado de él: una pestaña que sobresale del canto se
-   lee como algo plegado que se puede tirar, y un botón flotante no. */
-.layersctl {
+   La COLUMNA de lengüetas del canto derecho: capas arriba, noticias debajo.
+
+   Antes cada una llevaba su propio `top` en píxeles y había que mantenerlos en sincronía
+   a mano, con un comentario que lo pedía. No funcionaba: el alto de una lengüeta lo fija
+   su rótulo vertical, o sea el IDIOMA —"LAYERS" mide 92px contra los 86 de "CAPAS"— así
+   que el margen entre ambas encogía al traducir, y con una palabra más larga volvían a
+   solaparse. Un flex en columna con `gap` hace esa aritmética sola.
+
+   Queda un solo número, `--tabs-top`, y ese sí es una decisión: a qué altura arranca la
+   columna por debajo de la barra. Los paneles miden su alto disponible a partir de él.
+
+   Anclada al BORDE, no separada de él: una pestaña que sobresale del canto se lee como
+   algo plegado que se puede tirar, y un botón flotante no. */
+.sidetabs {
+  --tabs-top: 214px;
   position: absolute;
   right: 0;
-  top: 214px;
-  /* Por encima de la escalera de controles (607): con el panel abierto, el botón 3D se
-     pintaba encima del texto de las noticias. Detrás del panel es lo correcto — lo que
-     está tapado está tapado, y lo que asoma al costado sigue siendo usable. */
+  top: var(--tabs-top);
+  /* Por encima de la escalera de controles (607) y por debajo de la hoja de puntos (630):
+     lo que está tapado está tapado, y lo que asoma al costado sigue siendo usable. */
   z-index: 620;
-}
-
-/* While the Colaborar menu is open it owns this column: it grows upward from the FAB
-   straight through both controls, and a layers button sitting over the third card reads
-   as part of the list. Faded rather than `display: none` so they do not pop back in — and
-   `pointer-events: none` so a tap aimed at a card cannot land on a button behind it. */
-.fabbing .locatectl,
-.fabbing .layersctl,
-.fabbing .btn3d {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.locatectl,
-.layersctl,
-.btn3d {
-  transition: opacity 0.15s;
-}
-
-.layersbtn {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 13px;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--ink);
-  box-shadow: 0 5px 18px rgba(16, 20, 28, 0.18);
-  cursor: pointer;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
 }
 
-.layersbtn svg {
-  width: 19px;
-  height: 19px;
+/* Dentro de la columna las coloca el flex. Siguen posicionadas —no `static`— para que el
+   panel absoluto de capas se ancle a SU lengüeta y no a la columna entera. */
+.sidetabs > .layersctl,
+.sidetabs > .newsctl {
+  position: relative;
+  right: auto;
+  top: auto;
+  z-index: auto;
 }
 
-/* An overlay is on: say so on the closed button, or the only way to find out that the
-   map is showing modelled data is to open the panel. */
-.layersbtn-on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
 
-.layers-backdrop {
-  position: fixed;
-  inset: 0;
-  border: none;
-  background: transparent;
-  cursor: default;
-  z-index: 0;
-}
 
+/* Cierra al tocar fuera. Sin fondo visible a propósito: oscurecer el mapa detrás de un
+   panel que se abre para MIRAR el mapa es trabajar en contra. Los dos nombres son el
+   mismo fondo —uno lo usan las lengüetas del canto, el otro un desplegable de la barra—
+   y estaban declarados dos veces, idénticos, a tres mil líneas de distancia. */
+.layers-backdrop,
 /* Hangs off the right edge of the button, so it opens INTO the map rather than off the
    side of the window. `max-width` keeps it inside the viewport on the narrowest phone. */
 .layers-panel {
@@ -2080,15 +2024,6 @@ textarea.finput {
 
 /* ─────────────────────────────  Staff panel  ───────────────────────────── */
 
-.admwrap {
-  min-height: 100dvh;
-  background: #fff;
-  color: var(--ink);
-  font-family: var(--font-sans);
-  display: flex;
-  flex-direction: column;
-}
-
 .admtabs {
   display: flex;
   gap: 6px;
@@ -3205,10 +3140,9 @@ a.hub-card:hover {
     flex-direction: row-reverse;
   }
 
-  /* La pestaña de capas se ancla al canto y no entra en la escalera de la derecha. */
-  .layersctl {
-    right: 0;
-    top: 150px;
+  /* Lo único que cambia en escritorio: la columna arranca más arriba. */
+  .sidetabs {
+    --tabs-top: 150px;
   }
 
 
@@ -3288,10 +3222,6 @@ a.hub-card:hover {
     gap: 5px;
   }
 
-  .donate-btn {
-    padding: 0 10px;
-    gap: 5px;
-  }
 }
 
 /* Smallest phones: the language button drops to just its flag — no code, no chevron. The
@@ -3316,15 +3246,6 @@ a.hub-card:hover {
     display: none;
   }
 
-  /* "Donar" drops to its heart. The button stays — losing the action entirely on a small
-     phone would be the wrong economy — but the word is what it can afford to lose. */
-  .donate-btn {
-    padding: 0 9px;
-  }
-
-  .donate-label {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3960,21 +3881,13 @@ fieldset.fieldset {
   }
 }
 
-.scene3d-page { position: fixed; inset: 0; display: flex; flex-direction: column; }
-
-.scene3d-bar {
-  display: flex; align-items: center; gap: 14px;
-  padding: 10px 14px; background: #fff;
-  border-bottom: 1px solid var(--line); z-index: 2;
-}
-.scene3d-back {
-  display: inline-flex; align-items: center; gap: 6px;
-  color: var(--ink); text-decoration: none; font-size: 0.92rem; font-weight: 500;
-}
-.scene3d-back svg { width: 17px; height: 17px; }
-.scene3d-title { color: var(--mut); font-size: 0.9rem; }
-
-.scene3d { position: relative; flex: 1; min-height: 0; }
+/* La caja de la escena y su barra se declaran UNA sola vez, más abajo, en el bloque
+   "Barra de la escena 3D". Acá había una primera versión —la barra como franja sólida
+   que partía la pantalla en dos, con la escena de por medio en una columna flex— que
+   quedó viva a medias cuando la barra pasó a flotar: la segunda redefinía `position` y
+   los tamaños, pero no reseteaba el `display: flex` ni el `flex: 1`, así que seguían
+   aplicando restos de un layout abandonado. Leyendo el archivo no había forma de saber
+   qué mitad mandaba, y es exactamente el mecanismo que dejó el canvas en 1100×0. */
 
 /* Selector de dos clases a propósito.
    MapLibre le pone `.maplibregl-map` al contenedor, y su hoja se importa DENTRO del
@@ -4108,19 +4021,9 @@ fieldset.fieldset {
 .sidetab-on .sidetab-ch { color: rgba(255, 255, 255, 0.75); }
 
 /* ── Pestaña de noticias ──────────────────────────────────────────────────
-   Segundo escalón del canto derecho, debajo de capas. Comparte la lengüeta y sus
-   estilos; lo que cambia es la altura a la que cuelga y el ancho del panel, que
-   acá es texto para leer y no una lista de interruptores.
-
-   En teléfono: capas arranca en 214 y mide 86, así que 310 la deja con 10px de aire.
-   A 272 las dos lengüetas se pisaban 28px y el rótulo de capas quedaba tapado. */
-
-.newsctl {
-  position: absolute;
-  right: 0;
-  top: 310px;
-  z-index: 620;
-}
+   Segundo escalón de la columna. Comparte la lengüeta y sus estilos con capas; lo único
+   que cambia es el ancho del panel, que acá es texto para leer y no una lista de
+   interruptores. Dónde cuelga ya no lo decide ella: lo decide `.sidetabs`. */
 
 /* El panel abierto NO sube a la altura de capas: subía, y se abría justo encima de esa
    pestaña, tapándola. Cuelga desde donde está la lengüeta, que además es de donde el
@@ -4170,37 +4073,17 @@ fieldset.fieldset {
   font-variant-numeric: tabular-nums;
 }
 
-@media (min-width: 900px) {
-  .newsctl { top: 254px; }
-}
-
 /* En el teléfono el panel ocupa el ancho útil: 340px sobre 360 de pantalla dejaba el
    texto en una columna de dos palabras. */
 @media (max-width: 560px) {
   .side-panel { width: calc(100vw - 20px); }
 }
 
-/* ── Ficha de un punto: tarjeta, no panel ────────────────────────────────
-   La capa que muestra la ficha ocupaba de arriba a abajo y tapaba el mapa justo
-   después de tocar un pin, que es lo que la persona estaba mirando para ubicarse.
-   Se queda abajo a la izquierda, con tope de altura y desplazamiento interno.
-   Los formularios y el panel del equipo siguen a altura completa: ahí sí se viene
-   a hacer una sola cosa y el mapa no hace falta detrás. */
-
-.overlay.overlay-card {
-  top: auto;
-  max-height: 64dvh;
-  border-radius: 18px 18px 0 0;
-}
-
-@media (min-width: 900px) {
-  .overlay.overlay-card {
-    top: auto;
-    bottom: 12px;
-    max-height: 62dvh;
-    border-radius: 18px;
-  }
-}
+/* La ficha de un punto ya no pasa por la capa: vive dentro del panel de puntos, en lugar
+   de su lista (ver `AppShell`). Con ella se fue `.overlay-card`, que le daba forma de
+   tarjeta abajo a la izquierda y llevaba tiempo sin aplicarse a nada. La capa se queda
+   con lo que de verdad la necesita —formularios y panel del equipo—, donde se viene a
+   hacer una sola cosa y el mapa no hace falta detrás. */
 
 /* ── Barra unificada ──────────────────────────────────────────────────────
    Al modo de la barra de herramientas de macOS: UNA superficie translúcida que
@@ -4410,13 +4293,8 @@ fieldset.fieldset {
   z-index: 1;
 }
 
-/* ── Controles del mapa: una sola columna ─────────────────────────────────
-   Zoom, ubicación y 3D miden lo mismo y cuelgan de la misma vertical, con la misma
-   separación. La caja de zoom era 48px de ancho contra los 44 de los otros dos: cuatro
-   píxeles bastan para que la columna se lea torcida. */
-
+/* La caja que envuelve los dos botones de zoom, al ancho de ellos. */
 .zoomctl { width: 44px; }
-.zbtn { width: 44px; height: 44px; }
 
 /* ── Panel de puntos: acoplado al lateral izquierdo ───────────────────────
    Era una hoja que subía desde abajo, la forma correcta en un teléfono y una rareza en
@@ -4450,12 +4328,6 @@ fieldset.fieldset {
   }
 
   .handle { border-radius: 0 18px 0 0; }
-
-  /* La ficha de un punto cuelga del mismo canto. */
-  .overlay.overlay-card {
-    left: 0;
-    border-radius: 0 18px 18px 0;
-  }
 }
 
 /* ── Filtros por tipo dentro del panel ────────────────────────────────────
@@ -4622,33 +4494,24 @@ fieldset.fieldset {
    Reusan la lengüeta y el panel del mapa 2D: es el mismo gesto en las dos vistas y
    aprender dos habría sido gratuito solo para quien escribe el código. */
 
-.scene3d-layers { position: absolute; right: 0; top: 24px; z-index: 620; }
+/* Fuera de `.sidetabs`: la escena tiene una sola lengüeta y su propia barra flotante,
+   así que se ancla ella misma. El 96 la deja por debajo de esa barra. */
+.scene3d-layers { position: absolute; right: 0; top: 96px; z-index: 620; }
 .scene3d-layers .layers-panel { position: relative; top: auto; right: auto; }
-
-/* El conmutador plano/3D, en la misma forma que el botón que trae hasta acá. */
-.scene3d-flat { position: absolute; right: 14px; top: 24px; z-index: 615; }
-.scene3d-layers.is-open ~ .scene3d-flat { opacity: 0; pointer-events: none; }
-
-.btn3d-on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 .layers-err { color: var(--danger); }
 
-@media (min-width: 900px) {
-  .scene3d-flat { right: 78px; top: 24px; }
-}
-
 /* ── Los paneles laterales no se salen de la pantalla ─────────────────────
-   Su alto se calcula desde donde cuelga cada lengüeta, no con un porcentaje fijo:
-   al bajar las lengüetas, un 62dvh medido desde arriba se iba por debajo del borde
-   inferior y el final del boletín quedaba fuera, sin forma de llegar a él. */
+   El alto disponible se mide desde donde arranca la COLUMNA, no con un porcentaje fijo:
+   un 62dvh contado desde arriba se iba por debajo del borde inferior y el final del
+   boletín quedaba fuera, sin forma de llegar a él. Al salir de `--tabs-top`, las dos
+   siguen a la columna cuando cambia de altura, sin números que sincronizar.
 
-.layersctl .layers-panel { max-height: calc(100dvh - 200px); }
-.newsctl .side-panel { max-height: calc(100dvh - 340px); }
+   Noticias resta más porque abre desde el segundo escalón, y ese desplazamiento es lo
+   único que CSS no puede calcular: se reserva sitio para una lengüeta y su separación. */
 
-@media (min-width: 900px) {
-  .layersctl .layers-panel { max-height: calc(100dvh - 178px); }
-  .newsctl .side-panel { max-height: calc(100dvh - 290px); }
-}
+.sidetabs .layers-panel { max-height: calc(100dvh - var(--tabs-top) - 24px); }
+.sidetabs .side-panel { max-height: calc(100dvh - var(--tabs-top) - 140px); }
 
 /* La escena 3D ancla sus capas arriba del todo, así que ahí cabe casi toda la altura. */
 .scene3d-layers .layers-panel { max-height: calc(100dvh - 130px); }
@@ -4753,9 +4616,6 @@ fieldset.fieldset {
 .s3btn svg { width: 19px; height: 19px; }
 .s3btn-txt { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.02em; }
 .s3btn-on { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-/* La lengüeta de capas baja para no chocar con la barra flotante. */
-.scene3d-layers { top: 96px; }
 
 /* ── La ficha dentro del panel no pisa el galón de plegar ─────────────────
    El galón flota sobre la esquina superior derecha del panel y caía justo encima del

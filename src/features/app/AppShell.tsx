@@ -384,16 +384,22 @@ export default function AppShell({
         </Link>
       ) : null}
 
-      <NewsTab />
-
-      <LayersPanel
-        layers={layers}
-        onChange={setLayers}
-        state={seismic}
-        extra={extraLayers}
-        extraOn={extraOn}
-        onExtraChange={setExtraOn}
-      />
+      {/* Las dos lengüetas del canto, en UNA columna.
+          Cada una traía su propio `top` en píxeles y había que mantenerlos en sincronía a
+          mano. El alto de una lengüeta depende del largo de su rótulo —o sea del idioma—
+          así que el margen entre ambas cambiaba al traducir y con una palabra más larga
+          volvían a solaparse. Acá el orden lo da el DOM y la separación la da el `gap`. */}
+      <div className="sidetabs">
+        <LayersPanel
+          layers={layers}
+          onChange={setLayers}
+          state={seismic}
+          extra={extraLayers}
+          extraOn={extraOn}
+          onExtraChange={setExtraOn}
+        />
+        <NewsTab />
+      </div>
 
       <header className="topbar">
         {/* El aviso sobre el mapa.

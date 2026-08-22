@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/context";
-import { Icon } from "@/ui/icons";
 import { Spinner } from "@/ui/primitives";
 import { useEmergency } from "@/features/app/SiteProvider";
 import { newsEnabled } from "@/domain/news";
 import BulletinBody from "@/features/news/BulletinBody";
+import SideTab from "@/ui/SideTab";
 
 /**
  * The bulletin, as a tab on the map.
@@ -74,77 +74,50 @@ export default function NewsTab() {
   // que ninguna pestaña.
   if (!emergency || !newsEnabled(emergency.news)) return null;
 
-  if (!open) {
-    return (
-      <div className="newsctl">
-        <button
-          type="button"
-          className="sidetab"
-          aria-expanded={false}
-          aria-label={t("news.title")}
-          title={t("news.title")}
-          onClick={() => {
-            setOpen(true);
-            setState("loading");
-          }}
-        >
-          <Icon.chevron className="sidetab-ch" />
-          <span className="sidetab-txt">{t("news.tab")}</span>
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="newsctl newsctl-open">
-      <button
-        type="button"
-        className="side-backdrop"
-        aria-label={t("common.close")}
-        onClick={() => setOpen(false)}
-      />
-      <div className="side-panel" role="group" aria-label={t("news.title")}>
-        <div className="side-head">
-          <b>{t("news.title")}</b>
-          <button
-            type="button"
-            className="layers-x"
-            aria-label={t("common.close")}
-            onClick={() => setOpen(false)}
-          >
-            <Icon.close />
-          </button>
-        </div>
+    <SideTab
+      className={`newsctl${open ? " newsctl-open" : ""}`}
+      panelClassName="side-panel"
+      headClassName="side-head"
+      label={t("news.tab")}
+      title={t("news.title")}
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        // El indicador de carga lo enciende el CLIC, no el efecto. Ponerlo dentro del
+        // efecto lo hacía depender de `state`, y su propia limpieza cancelaba la
+        // petición en vuelo: el panel se quedaba girando para siempre.
+        if (next) setState("loading");
+      }}
+    >
+      {state === "loading" ? <Spinner /> : null}
+      {state === "error" ? <p className="layers-note">{t("news.error")}</p> : null}
+      {state === "empty" ? <p className="layers-note">{t("news.empty")}</p> : null}
 
-        {state === "loading" ? <Spinner /> : null}
-        {state === "error" ? <p className="layers-note">{t("news.error")}</p> : null}
-        {state === "empty" ? <p className="layers-note">{t("news.empty")}</p> : null}
-
-        {bulletin ? (
-          <>
-            {/* La fecha en el idioma que se está leyendo: estaba fijada en "es", así que
-                un lector en inglés veía "22 sept, 14:05" en medio de texto en inglés. */}
-            <time dateTime={bulletin.generated_at} className="side-when">
-              {new Date(bulletin.generated_at).toLocaleString(lang, {
-                day: "2-digit",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </time>
-            <BulletinBody text={bulletin.summary} />
-            <p className="layers-src">
-              {t(bulletin.model ? "news.srcAuto" : "news.srcHeadlines", {
-                sources: bulletin.sources
-                  .filter((s) => !s.error)
-                  .map((s) => s.name)
-                  .join(", "),
-              })}
-              {bulletin.model ? ` ${t("news.autoWarn")}` : null}
-            </p>
-          </>
-        ) : null}
-      </div>
-    </div>
+      {bulletin ? (
+        <>
+          {/* La fecha en el idioma que se está leyendo: estaba fijada en "es", así que
+              un lector en inglés veía "22 sept, 14:05" en medio de texto en inglés. */}
+          <time dateTime={bulletin.generated_at} className="side-when">
+            {new Date(bulletin.generated_at).toLocaleString(lang, {
+              day: "2-digit",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </time>
+          <BulletinBody text={bulletin.summary} />
+          <p className="layers-src">
+            {t(bulletin.model ? "news.srcAuto" : "news.srcHeadlines", {
+              sources: bulletin.sources
+                .filter((s) => !s.error)
+                .map((s) => s.name)
+                .join(", "),
+            })}
+            {bulletin.model ? ` ${t("news.autoWarn")}` : null}
+          </p>
+        </>
+      ) : null}
+    </SideTab>
   );
 }
