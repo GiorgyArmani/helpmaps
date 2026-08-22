@@ -10,3 +10,9 @@ npm-debug.log*
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# Artefactos de ejecución del servidor de pruebas: caché de npm, config del usuario
+# del servicio y logs del proceso. No son del proyecto.
+.config/
+.npm/
+logs/
