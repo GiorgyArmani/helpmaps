@@ -323,8 +323,8 @@ Turbopack exactly. We did not bump it here: that is your call, not this branch's
 
 ## 10. Status
 
-Running at `help.acopiove.org` — a test deployment on our own VPS and Supabase, with the
-Venezuela emergency seeded and demonstration data.
+Running on a test deployment, with the Venezuela emergency seeded and demonstration
+data.
 
 | Phase | What it covers | Status |
 |---|---|---|
