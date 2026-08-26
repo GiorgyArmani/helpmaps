@@ -11,7 +11,7 @@ const venezuela: CountryConfig = {
   slug: "ve",
   code: "VE",
   name: "Venezuela",
-  host: "ve.helpmaps.net",
+  host: "helpmapvzla.net",
   regionNoun: { one: "estado", many: "estados" },
 
   geo: {
@@ -66,7 +66,7 @@ const venezuela: CountryConfig = {
   // No logo file yet: the wordmark renders the country initial over the brand colour.
   // Drop the asset in `public/` and point at it here when the migration brings it over.
   brand: {
-    logo: null,
+    logo: "/Venezuela.png",
     contact: {
       email: "info@helpmapvzla.net",
       whatsapp: "",

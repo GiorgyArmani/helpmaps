@@ -92,6 +92,8 @@ export interface CountryConfig {
   features?: Partial<FeatureConfig>;
   /** Reading language and local vocabulary. */
   language?: LanguageOverrides;
+  /** Seismic thresholds this country reads differently from the network default. */
+  hazard?: HazardOverrides;
 }
 
 // ---------------------------------------------------------------------------
@@ -354,6 +356,28 @@ export interface SeismicConfig {
 
 export interface HazardConfig {
   seismic: SeismicConfig;
+}
+
+/**
+ * What a country reads differently about the seismic layers, merged over
+ * `config/hazard.ts`.
+ *
+ * The thresholds in that file are tuned for a subduction margin: M4.5 and up, contours
+ * from M6. Those numbers are not universal, and a shared file cannot hold two answers.
+ *
+ *   Spain      the Granada sequence of August 2026 tops out at M5.2, so `minMagnitude`
+ *              4.5 keeps barely four events and `contourMinMagnitude` 6 draws NO
+ *              intensity footprint at all — the deployment's whole reason for existing,
+ *              blank, on a map standing up for that emergency.
+ *   Indonesia  the opposite problem: 153 events of M4.5+ in fourteen days across the
+ *              archipelago, well past `maxEvents`, so the cap silently truncates and the
+ *              map becomes a curtain of dots 5.000 km wide.
+ *
+ * Shallow-merged into `seismic`, so a country states the one or two numbers it reads
+ * differently and keeps following the base for the rest.
+ */
+export interface HazardOverrides {
+  seismic?: Partial<SeismicConfig>;
 }
 
 // ---------------------------------------------------------------------------
