@@ -241,8 +241,7 @@ a {
 .searchbar,
 .chips,
 .frow2,
-.maint-banner,
-.stale {
+.maint-banner {
   pointer-events: auto;
 }
 
@@ -554,26 +553,6 @@ a {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-.stale {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  color: #9a3412;
-  border-radius: 11px;
-  padding: 8px 12px;
-  font-size: 0.7188rem;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(16, 20, 28, 0.08);
-}
-
-.stale svg {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 auto;
 }
 
 /* ─────────────────────────────  FAB  ───────────────────────────── */
