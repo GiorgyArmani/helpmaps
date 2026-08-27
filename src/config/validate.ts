@@ -137,6 +137,13 @@ export function validateConfig(site: SiteConfig): void {
   if (site.hazard.seismic.enabled && !site.hazard.seismic.attribution.trim())
     errors.push("hazard.seismic.attribution vacío: la política de créditos de USGS la exige");
 
+  // ── Integraciones ────────────────────────────────────────────────────────
+  const ga = site.integrations.analytics.ga.trim();
+  if (ga && !/^G-[A-Z0-9]+$/.test(ga))
+    warnings.push(
+      `integrations.analytics.ga "${ga}" no tiene la forma "G-XXXXXXXX": gtag.js no registraría nada`,
+    );
+
   // ── Avisos ───────────────────────────────────────────────────────────────
 
   // Módulos sin portar. El interruptor existe, pero ningún código lo lee: encenderlo hoy
