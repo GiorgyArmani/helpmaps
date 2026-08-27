@@ -12,13 +12,37 @@
 
 import type { MapConfig } from "@/config/types";
 
+// Se lee una vez y se recorta: un salto de línea pegado al final de la variable
+// en un .env se convertiría en una URL de tesela inválida y en un mapa en blanco.
+const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY?.trim();
+
 const map: MapConfig = {
   // Teselas en ESCALA DE GRISES (CARTO Positron sobre datos de OpenStreetMap). No es
   // una preferencia estética: en este mapa el color pertenece a los puntos, y un mapa
   // base a todo color compite con los pines justo cuando alguien los está buscando.
-  // Sin API key ni cuota. La atribución es obligatoria por licencia: no la quites.
+  // La atribución es obligatoria por licencia: no la quites (validate.ts la exige).
+  //
+  // AHORA LLEVA API KEY. CARTO empezó a estampar una marca de agua "API key
+  // required" sobre las teselas RASTER como éstas. La key va como parámetro
+  // `key` en la URL y se lee de NEXT_PUBLIC_CARTO_API_KEY.
+  //
+  // Si la variable no está, la URL se queda TAL CUAL estaba y el mapa sigue
+  // funcionando —con marca de agua—, que es lo que tiene que pasar en un clon
+  // recién bajado: un despliegue sin key muestra un mapa feo, no un mapa roto.
+  // Por eso el parámetro se omite entero en vez de mandarse vacío.
+  //
+  // La key es PÚBLICA por necesidad: viaja en la URL de cada tesela que pide el
+  // navegador, así que cualquiera puede leerla con las herramientas de
+  // desarrollo. Eso es inherente al servicio, no un descuido — lo que la
+  // protege es la cuota (5.000.000 de teselas al mes) y que no sirve para nada
+  // más. No la reutilices en proyectos ajenos a HelpMaps.
+  //
+  // Las teselas VECTORIALES todavía no piden key. Cuando la pidan, esta misma
+  // variable ya está puesta.
   tiles: {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    url:
+      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" +
+      (CARTO_API_KEY ? `?key=${CARTO_API_KEY}` : ""),
     attribution: "© OpenStreetMap © CARTO",
     subdomains: "abcd",
     maxZoom: 19,
