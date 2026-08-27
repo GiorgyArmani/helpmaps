@@ -106,3 +106,17 @@ export function DocSection({ heading, children }: { heading: string; children: R
     </section>
   );
 }
+
+/**
+ * "github.com/usuario/repo" — sin esquema, que en un enlace visible solo estorba.
+ * Vive aquí porque lo usan las dos páginas que enseñan el repositorio: los términos
+ * (dentro de una frase) y el instructivo de despliegue (como enlace destacado).
+ */
+export function repoLabel(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.host}${u.pathname}`.replace(/\/$/, "");
+  } catch {
+    return url;
+  }
+}
