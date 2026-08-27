@@ -6,6 +6,7 @@ import { OG_FORMAT, parseOgFormat, trimText } from "@/lib/ogFormat";
 import { BRAND, COUNTRY, LANGUAGE, MAPCFG } from "@/config";
 import { daysSince, lastTouched } from "@/domain/center";
 import { translator } from "@/i18n";
+import { currentEmergencyId } from "@/server/emergency";
 
 /**
  * Social banner for a help point: what it RECEIVES and what it NEEDS now, so the need
@@ -40,7 +41,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const t = translator(LANGUAGE.default);
 
   const sb = supabasePublic();
-  const center = sb ? await fetchCenter(sb, id).catch(() => null) : null;
+  const center = sb ? await fetchCenter(sb, id, await currentEmergencyId()).catch(() => null) : null;
   if (!center) return new Response("Not found", { status: 404 });
 
   const d = ogCenterData(center);

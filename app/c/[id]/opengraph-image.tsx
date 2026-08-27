@@ -4,6 +4,7 @@ import { fetchCenter } from "@/data/centers";
 import { ogCenterData } from "@/features/share/ogData";
 import { BRAND, COUNTRY, LANGUAGE } from "@/config";
 import { translator } from "@/i18n";
+import { currentEmergencyId } from "@/server/emergency";
 
 /**
  * Link-preview card for a help point.
@@ -23,7 +24,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const t = translator(LANGUAGE.default);
 
   const sb = supabasePublic();
-  const center = sb ? await fetchCenter(sb, id).catch(() => null) : null;
+  const center = sb ? await fetchCenter(sb, id, await currentEmergencyId()).catch(() => null) : null;
   const data = center ? ogCenterData(center) : null;
 
   const accent = data?.accent ?? "#F59E0B";

@@ -7,7 +7,7 @@ import { getSupabase } from "@/lib/supabase/client";
 import { MIN_PASSWORD, passwordTooShort } from "@/lib/password";
 import { Button, Field, Input, Notice, Spinner } from "@/ui/primitives";
 import { useI18n } from "@/i18n/context";
-import { BRAND } from "@/config";
+import { useSite } from "@/features/app/SiteProvider";
 
 type Phase = "checking" | "ready" | "invalid" | "done";
 
@@ -30,6 +30,7 @@ type Phase = "checking" | "ready" | "invalid" | "done";
  * still parsing the fragment.
  */
 export default function ResetPasswordPage() {
+  const site = useSite();
   const { t } = useI18n();
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("checking");
@@ -170,7 +171,7 @@ export default function ResetPasswordPage() {
       ) : null}
 
       <Link className="linkbtn" href="/">
-        ← {BRAND.name}
+        ← {site.brand.name}
       </Link>
     </main>
   );

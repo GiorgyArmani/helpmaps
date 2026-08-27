@@ -9,6 +9,7 @@
 
 import type { FeatureConfig } from "@/config/types";
 import country from "~/config/country";
+import { mergeFeatures } from "@/config/assemble";
 
 const base: FeatureConfig = {
   // Núcleo cívico — lo que un país puede llenar desde el primer día.
@@ -39,6 +40,9 @@ const base: FeatureConfig = {
   missingReports: false,
 };
 
-const features: FeatureConfig = { ...base, ...country.features };
+/** El valor de la RED, antes de los overrides del país. Lo usa la ruta de base de datos. */
+export const BASE_FEATURES = base;
+
+const features: FeatureConfig = mergeFeatures(base, country.features);
 
 export default features;

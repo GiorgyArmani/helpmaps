@@ -45,8 +45,13 @@ export async function fetchStaffSession(sb: SupabaseClient): Promise<StaffSessio
     .eq("user_id", user.id)
     .maybeSingle();
   if (error || !data) return null;
-  const role = data.role === "admin" ? "admin" : "volunteer";
-  return { userId: user.id, email: data.email ?? user.email ?? null, role: role as StaffRole };
+  // Narrowed explicitly rather than with a fallback: collapsing "anything not admin" into
+  // "volunteer" is what silently demoted a superadmin to a volunteer when the role was
+  // added, taking their delete rights with it.
+  const raw = data.role;
+  const role: StaffRole =
+    raw === "superadmin" ? "superadmin" : raw === "admin" ? "admin" : "volunteer";
+  return { userId: user.id, email: data.email ?? user.email ?? null, role };
 }
 
 // ---------------------------------------------------------------------------

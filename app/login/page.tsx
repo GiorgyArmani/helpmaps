@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LoginForm from "@/features/admin/LoginForm";
 import { useI18n } from "@/i18n/context";
-import { BRAND } from "@/config";
+import { useSite } from "@/features/app/SiteProvider";
 
 /**
  * Team sign-in as a standalone page.
@@ -17,6 +17,7 @@ import { BRAND } from "@/config";
  * The form itself is the shared component, so there is one sign-in to keep correct.
  */
 export default function LoginPage() {
+  const site = useSite();
   const { t } = useI18n();
   const router = useRouter();
 
@@ -29,7 +30,7 @@ export default function LoginPage() {
       <LoginForm onSignedIn={() => router.replace("/?panel=1")} />
 
       <Link className="linkbtn" href="/">
-        ← {BRAND.name}
+        ← {site.brand.name}
       </Link>
     </main>
   );

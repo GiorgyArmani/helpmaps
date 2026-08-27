@@ -2,7 +2,7 @@
 
 import type { Center } from "@/domain/types";
 import { directionsUrl, lastTouched } from "@/domain/center";
-import { regionLabel, typeStyle } from "@/config";
+import { typeStyle } from "@/config";
 import { Icon, TypeGlyph } from "@/ui/icons";
 import { Badge } from "@/ui/primitives";
 import { useI18n, useTimeAgo } from "@/i18n/context";
@@ -10,6 +10,7 @@ import { StatusBadge, StatusWarning } from "@/features/centers/CenterStatus";
 import ShareRow from "@/features/share/ShareRow";
 import { telHref, whatsappHref } from "@/features/share/share";
 import type { DictKey } from "@/i18n";
+import { useSiteHelpers } from "@/features/app/SiteProvider";
 
 /**
  * The full card for one point.
@@ -20,6 +21,7 @@ import type { DictKey } from "@/i18n";
  * content, because "is this still true" outranks everything it says.
  */
 export default function CenterDetail({ center }: { center: Center }) {
+  const { regionLabel } = useSiteHelpers();
   const { t } = useI18n();
   const ago = useTimeAgo();
   const style = typeStyle(center.type);

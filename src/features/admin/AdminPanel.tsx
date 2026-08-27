@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuditEntry, Center, Donation, StaffSession, Submission } from "@/domain/types";
+import { isAdminRole } from "@/domain/types";
 import {
   deleteCenter,
   fetchAllCenters,
@@ -25,13 +26,14 @@ import {
   type DonationDraft,
 } from "@/data/donations";
 import { getSupabase } from "@/lib/supabase/client";
-import { FEATURES, isKnownRegion, regionLabel } from "@/config";
+import { useEmergencyId } from "@/features/app/SiteProvider";
 import { Badge, Notice } from "@/ui/primitives";
 import { Icon } from "@/ui/icons";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import CenterForm from "@/features/admin/CenterForm";
 import DonationForm from "@/features/admin/DonationForm";
 import type { DictKey } from "@/i18n";
+import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 
 type Tab = "activity" | "centers" | "submissions" | "volunteers" | "donations";
 
@@ -65,9 +67,11 @@ export default function AdminPanel({
    */
   onPendingChange?: (n: number) => void;
 }) {
+  const site = useSite();
+  const helpers = useSiteHelpers();
   const { t } = useI18n();
   const ago = useTimeAgo();
-  const isAdmin = session.role === "admin";
+  const isAdmin = isAdminRole(session.role);
 
   const [tab, setTab] = useState<Tab>("activity");
   const [centers, setCenters] = useState<Center[]>([]);
@@ -85,17 +89,22 @@ export default function AdminPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // La emergencia que se está administrando. En un despliegue que todavía no adoptó la
+  // tabla es null, y entonces el panel se comporta como siempre: una sola emergencia
+  // implícita, sin filtro y sin sello.
+  const emergencyId = useEmergencyId();
+
   const load = useCallback(async () => {
     const sb = getSupabase();
     if (!sb) return;
     try {
       const [c, sub, vol, log, settings, don] = await Promise.all([
-        fetchAllCenters(sb),
+        fetchAllCenters(sb, emergencyId),
         fetchSubmissions(sb),
         isAdmin ? fetchVolunteerRequests(sb) : Promise.resolve([]),
         fetchAudit(sb),
         fetchSettings(sb),
-        FEATURES.donations ? fetchAllDonations(sb) : Promise.resolve([]),
+        site.features.donations ? fetchAllDonations(sb) : Promise.resolve([]),
       ]);
       setCenters(c);
       setSubmissions(sub);
@@ -108,7 +117,7 @@ export default function AdminPanel({
     } catch (err) {
       setError(err instanceof Error ? err.message : "load failed");
     }
-  }, [isAdmin, onPendingChange]);
+  }, [isAdmin, onPendingChange, emergencyId]);
 
   useEffect(() => {
     // Fetch on mount. Every setState inside `load` happens after an await, so this
@@ -126,7 +135,7 @@ export default function AdminPanel({
   async function handleSave(draft: CenterDraft, statusChanged: boolean) {
     const sb = getSupabase();
     if (!sb) return;
-    await saveCenter(sb, draft, { statusChanged });
+    await saveCenter(sb, draft, { statusChanged, emergencyId });
     setEditing(null);
     setCreating(false);
     await load();
@@ -307,7 +316,7 @@ export default function AdminPanel({
           icon={<Icon.mail />}
           count={submissions.length}
         />
-        {FEATURES.donations ? (
+        {site.features.donations ? (
           <TabButton
             id="donations"
             tab={tab}
@@ -436,10 +445,10 @@ export default function AdminPanel({
                 <div className="aname">{center.name}</div>
                 <div className="asub">
                   {t(`type.${center.type}` as DictKey)}
-                  {center.region ? ` · ${regionLabel(center.region)}` : ""}
+                  {center.region ? ` · ${helpers.regionLabel(center.region)}` : ""}
                   {!center.active ? ` · ${t("admin.hidden")}` : ""}
                 </div>
-                {center.region && !isKnownRegion(center.region) ? (
+                {center.region && !helpers.isKnownRegion(center.region) ? (
                   <Badge tone="warn">{t("admin.unknownRegion")}</Badge>
                 ) : null}
               </div>
@@ -476,7 +485,7 @@ export default function AdminPanel({
         </div>
       ) : null}
 
-      {tab === "donations" && FEATURES.donations ? (
+      {tab === "donations" && site.features.donations ? (
         <div className="stack">
           <button type="button" className="addbtn" onClick={() => setCreatingDonation(true)}>
             <Icon.plus />
@@ -568,7 +577,7 @@ export default function AdminPanel({
               <div className="subcard-head">
                 <span>{v.email}</span>
                 {v.phone ? <span>{v.phone}</span> : null}
-                {v.region ? <span>{regionLabel(v.region)}</span> : null}
+                {v.region ? <span>{helpers.regionLabel(v.region)}</span> : null}
                 {v.profile ? <span>{v.profile}</span> : null}
               </div>
               {v.motivation ? <p className="subcard-msg">{v.motivation}</p> : null}

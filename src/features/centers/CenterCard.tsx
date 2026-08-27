@@ -2,11 +2,12 @@
 
 import type { Center } from "@/domain/types";
 import { statusOf } from "@/domain/center";
-import { regionLabel, typeStyle } from "@/config";
+import { typeStyle } from "@/config";
 import { Icon, TypeGlyph } from "@/ui/icons";
 import { Badge } from "@/ui/primitives";
 import { useI18n } from "@/i18n/context";
 import type { DictKey } from "@/i18n";
+import { useSiteHelpers } from "@/features/app/SiteProvider";
 
 /**
  * One point in the list.
@@ -21,6 +22,7 @@ export default function CenterCard({
   center: Center;
   onSelect: (id: string) => void;
 }) {
+  const { regionLabel } = useSiteHelpers();
   const { t } = useI18n();
   const style = typeStyle(center.type);
   const place = center.municipality ?? regionLabel(center.region);

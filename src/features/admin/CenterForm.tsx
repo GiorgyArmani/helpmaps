@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import type { Center, CenterStatus, HelpKind, LocationType } from "@/domain/types";
 import { CENTER_STATUSES, HELP_KINDS } from "@/domain/types";
 import { makeCenterId, type CenterDraft } from "@/data/centers";
-import { COUNTRY, enabledTypes } from "@/config";
+import { enabledTypes } from "@/config";
 import { Button, Chip, Field, Input, Notice, Select, TextArea } from "@/ui/primitives";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
 import { geocode, matchRegion, type GeoResult } from "@/features/admin/geocode";
 import type { DictKey } from "@/i18n";
+import { useSite } from "@/features/app/SiteProvider";
 
 /**
  * Add or edit a point.
@@ -41,6 +42,7 @@ export default function CenterForm({
   /** Publishes these coordinates to the map, or null when they are not usable yet. */
   onCoordsChange: (at: { lat: number; lng: number } | null) => void;
 }) {
+  const site = useSite();
   const { t } = useI18n();
   const info = center?.info ?? null;
 
@@ -120,7 +122,7 @@ export default function CenterForm({
     try {
       const hits = await geocode(query, {
         municipality: form.municipality.trim() || undefined,
-        regionName: COUNTRY.regions.find((r) => r.code === form.region)?.name,
+        regionName: site.country.regions.find((r) => r.code === form.region)?.name,
       });
       // A single unambiguous answer — which is always the case for a pasted link — is
       // applied straight away rather than shown as a one-item list to click through.
@@ -209,10 +211,10 @@ export default function CenterForm({
             ))}
           </Select>
         </Field>
-        <Field label={COUNTRY.regionNoun.one}>
+        <Field label={site.country.regionNoun.one}>
           <Select value={form.region} onChange={(e) => set("region", e.target.value)}>
             <option value="">—</option>
-            {COUNTRY.regions.map((r) => (
+            {site.country.regions.map((r) => (
               <option key={r.code} value={r.code}>
                 {r.name}
               </option>

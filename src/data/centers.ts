@@ -15,29 +15,67 @@ const INFO_COLUMNS =
 
 const SELECT = `${LOCATION_COLUMNS},info:center_info(${INFO_COLUMNS})`;
 
+/**
+ * Narrow a query to one emergency.
+ *
+ * `null` means "do not scope", which is the correct behaviour for a deployment that has
+ * not adopted `db/007_emergencies.sql`: there is one implicit emergency and every row
+ * belongs to it.
+ *
+ * When there IS an id, rows with `emergency_id is null` are included alongside it. That is
+ * not laxity, it is the failure mode being chosen deliberately: a country that runs the
+ * migration and creates its row without running the backfill would otherwise open to an
+ * EMPTY MAP. An unassigned row showing up in the only emergency that exists is a
+ * cosmetic problem; a blank map during an earthquake is not. The backfill snippet at the
+ * end of `db/008_tenancy.sql` is what makes the distinction exact, and running a second
+ * emergency in one database requires it.
+ */
+function scopeTo<T extends { or: (f: string) => T }>(query: T, emergencyId: string | null): T {
+  if (!emergencyId) return query;
+  return query.or(`emergency_id.eq.${emergencyId},emergency_id.is.null`);
+}
+
 /** Every active point with its needs. One request: the map needs them all at once. */
-export async function fetchCenters(sb: SupabaseClient): Promise<Center[]> {
-  const { data, error } = await sb
-    .from("locations")
-    .select(SELECT)
-    .eq("active", true)
-    .order("name", { ascending: true });
+export async function fetchCenters(
+  sb: SupabaseClient,
+  emergencyId: string | null = null,
+): Promise<Center[]> {
+  const { data, error } = await scopeTo(
+    sb.from("locations").select(SELECT).eq("active", true),
+    emergencyId,
+  ).order("name", { ascending: true });
   if (error) throw error;
   return mapCenters(data as unknown as Record<string, unknown>[]);
 }
 
 /** Including inactive rows — the staff panel must be able to see what it hid. */
-export async function fetchAllCenters(sb: SupabaseClient): Promise<Center[]> {
-  const { data, error } = await sb
-    .from("locations")
-    .select(SELECT)
-    .order("updated_at", { ascending: false });
+export async function fetchAllCenters(
+  sb: SupabaseClient,
+  emergencyId: string | null = null,
+): Promise<Center[]> {
+  const { data, error } = await scopeTo(
+    sb.from("locations").select(SELECT),
+    emergencyId,
+  ).order("updated_at", { ascending: false });
   if (error) throw error;
   return mapCenters(data as unknown as Record<string, unknown>[]);
 }
 
-export async function fetchCenter(sb: SupabaseClient, id: string): Promise<Center | null> {
-  const { data, error } = await sb.from("locations").select(SELECT).eq("id", id).maybeSingle();
+/**
+ * One point by id.
+ *
+ * Scoped like the others so a shared link cannot render another emergency's point inside
+ * this one's branding and legal notice — the id is unique, but the page around it is not.
+ */
+export async function fetchCenter(
+  sb: SupabaseClient,
+  id: string,
+  emergencyId: string | null = null,
+): Promise<Center | null> {
+  const { data, error } = await scopeTo(
+    sb.from("locations").select(SELECT).eq("id", id),
+    emergencyId,
+  ).maybeSingle();
   if (error) throw error;
   if (!data) return null;
   return mapCenter(data as unknown as Record<string, unknown>);
@@ -95,11 +133,16 @@ export function makeCenterId(name: string, type: LocationType): string {
 export async function saveCenter(
   sb: SupabaseClient,
   draft: CenterDraft,
-  opts: { statusChanged: boolean },
+  opts: { statusChanged: boolean; emergencyId?: string | null },
 ): Promise<void> {
   const { error: locError } = await sb.from("locations").upsert(
     {
       id: draft.id,
+      // Stamped on every write, so a point created today is assigned even where the legacy
+      // rows never were. Omitted entirely when there is no emergency, rather than written
+      // as null: an explicit null would overwrite a good value on a deployment that has
+      // adopted the table and is saving from an unmigrated call site.
+      ...(opts.emergencyId ? { emergency_id: opts.emergencyId } : {}),
       name: draft.name,
       type: draft.type,
       region: draft.region,

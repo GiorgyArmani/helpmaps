@@ -93,18 +93,35 @@ order by 1;
 -- ---------------------------------------------------------------------------
 -- 6) `search_path` en las funciones de seguridad.
 --
---    `is_staff()` e `is_admin()` deciden quién escribe. Una función SECURITY DEFINER sin
---    `search_path` fijo se puede secuestrar creando un objeto con el mismo nombre en un
---    esquema que vaya antes. SE ESPERA: proconfig contiene `search_path=public` en ambas.
+--    `is_staff()`, `is_admin()` y las funciones de alcance deciden quién escribe. Una
+--    función SECURITY DEFINER sin `search_path` fijo se puede secuestrar creando un
+--    objeto con el mismo nombre en un esquema que vaya antes.
+--
+--    Antes esta consulta llevaba la lista de nombres a mano. Se cambió a "todas las
+--    SECURITY DEFINER de public" porque la lista se quedó vieja en cuanto el esquema
+--    creció: las funciones de alcance de 008 existían, estaban bien, y el chequeo no las
+--    miraba. Una verificación que hay que acordarse de actualizar no es una verificación.
+--
+--    SE ESPERA: 0 filas. Cualquier fila aquí es una función que puede ser secuestrada.
 -- ---------------------------------------------------------------------------
-select p.proname          as funcion,
-       p.prosecdef        as security_definer,
-       p.proconfig        as config
+select p.proname   as funcion_secdef_sin_search_path,
+       p.proconfig as config
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public'
-  and p.proname in ('is_staff', 'is_admin', 'touch_updated_at')
+  and p.prosecdef
+  and (p.proconfig is null or not (p.proconfig::text like '%search_path=%'))
 order by 1;
+
+--    Y el inventario completo, para leerlo de un vistazo:
+select p.proname    as funcion,
+       p.prosecdef  as security_definer,
+       p.proconfig  as config
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.prokind = 'f'
+order by p.prosecdef desc, 1;
 
 -- ---------------------------------------------------------------------------
 -- 7) Vistas SECURITY DEFINER, que saltan el RLS de quien consulta.

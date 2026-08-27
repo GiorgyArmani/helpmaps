@@ -1,9 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { Lang } from "@/i18n/types";
-import { getDict, makeT, resolveLang, type Translate } from "@/i18n";
-import { LANGUAGE, storageKey } from "@/config";
+import { pickLang, type Lang } from "@/i18n/types";
+import { getDict, makeT, type Translate } from "@/i18n";
+import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 
 interface I18nValue {
   lang: Lang;
@@ -14,7 +14,6 @@ interface I18nValue {
 
 const Ctx = createContext<I18nValue | null>(null);
 
-const LANG_KEY = storageKey("lang");
 
 /**
  * Language state for the client tree.
@@ -33,23 +32,14 @@ export function I18nProvider({
   initial: Lang;
   children: React.ReactNode;
 }) {
+  // Idioma y clave de almacenamiento salen de la emergencia RESUELTA: un país puede
+  // declarar otro idioma por defecto y otra lista de idiomas ofrecidos, y con el preset
+  // compilado esa declaración no llegaba a la interfaz. El proveedor vive dentro de
+  // `SiteProvider` (ver `app/layout.tsx`), así que estos hooks están disponibles.
+  const site = useSite();
+  const { storageKey } = useSiteHelpers();
+  const LANG_KEY = storageKey("lang");
   const [lang, setLangState] = useState<Lang>(initial);
-
-  // Same reason as the data cache: localStorage is not readable during server render, so
-  // the saved choice can only be applied after mount.
-  useEffect(() => {
-    // Only consult storage when the link itself did not ask for a language.
-    if (typeof window === "undefined") return;
-    const url = new URL(window.location.href);
-    if (url.searchParams.get("lang")) return;
-    try {
-      const saved = window.localStorage.getItem(LANG_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- external store, see above
-      if (saved) setLangState(resolveLang(saved));
-    } catch {
-      // Private mode / storage disabled: the default language is a fine outcome.
-    }
-  }, []);
 
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
@@ -61,8 +51,44 @@ export function I18nProvider({
     document.documentElement.lang = next;
   }, []);
 
+  // Same reason as the data cache: localStorage is not readable during server render, so
+  // the saved choice can only be applied after mount.
+  //
+  // El `?lang=` del enlace NO lo aplica el servidor. Un layout de App Router no recibe
+  // `searchParams` —solo las páginas—, así que `initial` es siempre el idioma por defecto
+  // de la emergencia. Antes esto se leía como "el enlace ya vino resuelto" y el efecto se
+  // limitaba a NO pisarlo: el resultado era que `?lang=en` no hacía absolutamente nada,
+  // ni acá ni desde el almacenamiento. Se aplica acá, y manda sobre lo guardado: quien
+  // comparte un enlace con idioma lo eligió para quien lo recibe, no para sí mismo.
+  //
+  // La lista de idiomas sale de la emergencia RESUELTA y no de `resolveLang`, que mira el
+  // preset compilado: un país que declara otro idioma por defecto no lo veía respetado.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const { available, default: fallback } = site.language;
+    const asked = new URL(window.location.href).searchParams.get("lang");
+    if (asked) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- URL, external store
+      setLang(pickLang(asked, available, fallback));
+      return;
+    }
+    try {
+      const saved = window.localStorage.getItem(LANG_KEY);
+      // `setLang` y no `setLangState`: también hay que corregir el `lang` del <html>, que
+      // el servidor pintó con el idioma por defecto. Sin eso un lector de pantalla
+      // anuncia texto en inglés con voz en español.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- external store, see above
+      if (saved) setLang(pickLang(saved, available, fallback));
+    } catch {
+      // Private mode / storage disabled: the default language is a fine outcome.
+    }
+    // Solo al montar. Volver a correr esto al cambiar cualquier dependencia pisaría la
+    // elección de quien acaba de tocar el selector con lo que diga la URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const value = useMemo<I18nValue>(
-    () => ({ lang, t: makeT(getDict(lang)), setLang, available: LANGUAGE.available }),
+    () => ({ lang, t: makeT(getDict(lang)), setLang, available: site.language.available }),
     [lang, setLang],
   );
 

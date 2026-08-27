@@ -74,8 +74,22 @@ const venezuela: CountryConfig = {
     },
   },
 
-  // No `language` block on purpose: "Refugio" — the base dictionary's word — is the one
-  // Venezuela uses. Colombia is the country that overrides it, to "Albergue".
+  // "Refugio" — the base dictionary's word — is the one Venezuela uses, so there is no
+  // vocabulary override here. Colombia is the country that renames it, to "Albergue".
+  //
+  // Lo que sí vive acá es el sustantivo de región EN INGLÉS. `country.regionNoun` es un
+  // dato del país y tiene una sola forma, la del idioma en que se escribió el preset: con
+  // la interfaz en inglés, el filtro decía "All estados". El nombre de la división no se
+  // traduce solo —"departamento" no es "department"— así que lo declara quien conoce el
+  // país, por idioma, con el mismo mecanismo que renombra cualquier otra palabra.
+  language: {
+    overrides: {
+      en: {
+        "map.allRegions": "All states",
+        "map.regionOne": "State",
+      },
+    },
+  },
 };
 
 export default venezuela;

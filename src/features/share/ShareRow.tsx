@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Center } from "@/domain/types";
-import { regionLabel } from "@/config";
+
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
 import {
@@ -16,6 +16,7 @@ import {
   whatsappUrl,
 } from "@/features/share/share";
 import type { DictKey } from "@/i18n";
+import { useSiteHelpers } from "@/features/app/SiteProvider";
 
 /**
  * Share targets for one point.
@@ -26,6 +27,7 @@ import type { DictKey } from "@/i18n";
  * with each option showing a rectangle at its real ratio so it reads without reading.
  */
 export default function ShareRow({ center }: { center: Center }) {
+  const { regionLabel } = useSiteHelpers();
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [igOpen, setIgOpen] = useState(false);
