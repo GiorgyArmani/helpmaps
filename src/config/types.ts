@@ -399,6 +399,13 @@ export interface IntegrationsConfig {
   analytics: {
     /** Cookieless Vercel Web Analytics. Never send names or search terms as events. */
     vercel: boolean;
+    /**
+     * Google Analytics 4 measurement id ("G-XXXXXXXX"). Empty → no gtag.js is loaded.
+     * Read by the root layout, so it covers the entry page and the map alike. Same rule
+     * as `vercel`: pageviews only, never custom events carrying names, documents or
+     * search terms.
+     */
+    ga: string;
   };
   email: {
     /** Where the contact and suggestion forms deliver. Empty → forms store to DB only. */

@@ -6,6 +6,7 @@ import { themeCss } from "@/ui/theme";
 import { I18nProvider } from "@/i18n/context";
 import { SiteProvider } from "@/features/app/SiteProvider";
 import ServiceWorkerRegister from "@/features/app/ServiceWorkerRegister";
+import Analytics from "@/features/app/Analytics";
 
 /**
  * Metadata is generated rather than exported as a constant because the title, the
@@ -83,6 +84,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <I18nProvider initial={site.language.default}>{children}</I18nProvider>
         </SiteProvider>
         {site.integrations.pwa.enabled ? <ServiceWorkerRegister /> : null}
+        <Analytics id={site.integrations.analytics.ga} />
       </body>
     </html>
   );
