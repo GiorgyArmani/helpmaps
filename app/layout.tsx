@@ -84,7 +84,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <I18nProvider initial={site.language.default}>{children}</I18nProvider>
         </SiteProvider>
         {site.integrations.pwa.enabled ? <ServiceWorkerRegister /> : null}
-        <Analytics id={site.integrations.analytics.ga} />
+        <Analytics id={site.integrations.analytics.ga} country={site.country.code} />
       </body>
     </html>
   );

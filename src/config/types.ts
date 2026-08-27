@@ -401,9 +401,16 @@ export interface IntegrationsConfig {
     vercel: boolean;
     /**
      * Google Analytics 4 measurement id ("G-XXXXXXXX"). Empty → no gtag.js is loaded.
-     * Read by the root layout, so it covers the entry page and the map alike. Same rule
-     * as `vercel`: pageviews only, never custom events carrying names, documents or
-     * search terms.
+     * Read by the root layout, so it covers the entry page and the map alike.
+     *
+     * The same id is meant to be shared by every country deployment (`integrations` is not
+     * overridable per country), landing them in one GA4 property; the layout sends
+     * `country_code` on the `config` call so reports can still split by deployment. gtag
+     * boots with Consent Mode `analytics_storage: 'denied'`, i.e. cookieless, until a
+     * deployment's own consent banner (none today) grants it.
+     *
+     * Same rule as `vercel`: pageviews only, never custom events carrying names, documents
+     * or search terms.
      */
     ga: string;
   };
