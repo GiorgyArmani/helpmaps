@@ -572,17 +572,6 @@ export default function AppShell({
           </div>
         </div>
 
-        {stale && centers.length > 0 ? (
-          <div className="stale" role="status">
-            <Icon.alert />
-            <span>
-              <b>{t("offline.stale")}</b>
-              {cachedAt
-                ? ` · ${t("offline.staleHint", { ago: ago(new Date(cachedAt).toISOString()) })}`
-                : ""}
-            </span>
-          </div>
-        ) : null}
         <Filters
           filter={filter}
           onChange={setFilter}
