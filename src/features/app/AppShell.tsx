@@ -572,14 +572,6 @@ export default function AppShell({
           </div>
         </div>
 
-        <Filters
-          filter={filter}
-          onChange={setFilter}
-          centers={visible}
-          selectedId={selectedId}
-          onPickCenter={(id) => (id ? openCenter(id) : setSelectedId(null))}
-        />
-
         {/* No offline banner here. It used to sit under the filters, and any form of it —
             block or chip — is one more thing between the reader and the map, shown at the
             exact moment their connection is already making the app harder to use. The
