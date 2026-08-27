@@ -12,11 +12,17 @@
 
 import type { CountryConfig } from "@/config/types";
 import colombia from "~/config/presets/colombia";
+import espana from "~/config/presets/espana";
+import indonesia from "~/config/presets/indonesia";
+import peru from "~/config/presets/peru";
 import venezuela from "~/config/presets/venezuela";
 
 /** Presets incluidos en esta clonación. Borra los que no uses. */
 const PRESETS: Record<string, CountryConfig> = {
   co: colombia,
+  es: espana,
+  id: indonesia,
+  pe: peru,
   ve: venezuela,
 };
 

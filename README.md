@@ -11,6 +11,9 @@ entorno y otra base de datos. Un `git push` actualiza todos los países a la vez
 ```
 helpmaps.net          hub: la red, la documentación de la API, los términos
 co.helpmaps.net       Colombia      NEXT_PUBLIC_COUNTRY=co
+es.helpmaps.net       España        NEXT_PUBLIC_COUNTRY=es
+id.helpmaps.net       Indonesia     NEXT_PUBLIC_COUNTRY=id
+pe.helpmaps.net       Perú          NEXT_PUBLIC_COUNTRY=pe
 ve.helpmaps.net       Venezuela     NEXT_PUBLIC_COUNTRY=ve
 ```
 
@@ -116,8 +119,11 @@ distingue son sus variables de entorno, no su código:
 | `helpmaps-hub` | `NEXT_PUBLIC_MODE=hub` | helpmaps.net |
 | `helpmaps-co` | `NEXT_PUBLIC_COUNTRY=co` + Supabase de Colombia | co.helpmaps.net |
 | `helpmaps-ve` | `NEXT_PUBLIC_COUNTRY=ve` + Supabase de Venezuela | ve.helpmaps.net |
+| `helpmaps-pe` | `NEXT_PUBLIC_COUNTRY=pe` + Supabase de Perú | pe.helpmaps.net |
+| `helpmaps-es` | `NEXT_PUBLIC_COUNTRY=es` + Supabase de España | es.helpmaps.net |
+| `helpmaps-id` | `NEXT_PUBLIC_COUNTRY=id` + Supabase de Indonesia | id.helpmaps.net |
 
-Así se mantiene: un `git push` a este repo reconstruye los tres. No hay merges entre
+Así se mantiene: un `git push` a este repo los reconstruye todos. No hay merges entre
 países ni versiones que se queden atrás, porque no hay más que una.
 
 Luego añade el país a `config/network.ts` para que aparezca en el mapa de la portada.

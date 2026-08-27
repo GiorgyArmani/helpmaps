@@ -14,7 +14,7 @@
 //   - Supabase REST (reads)  → NETWORK-FIRST (fresh when online; cached only as an
 //                              offline fallback — SWR here would hand an online user
 //                              stale data on first load; the app's own localStorage
-//                              cache + "stale" badge already cover the offline case).
+//                              cache already covers the offline case).
 //   - Map tiles + Leaflet    → cache-first (areas viewed before render offline).
 
 import { BRAND } from "@/config";

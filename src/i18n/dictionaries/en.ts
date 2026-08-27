@@ -179,8 +179,6 @@ const en: Partial<Dict> = {
     "What you send is reviewed by the team. Your contact is never published and is only used to confirm the information.",
   "privacy.link": "How we handle your data",
 
-  "offline.stale": "Data may be out of date",
-  "offline.staleHint": "Last loaded {ago}. It refreshes on its own when the signal returns.",
   "offline.offline": "Offline",
   "offline.swBody": "You are offline and this page is not saved yet. Open the map once with a connection and it will be available without signal.",
   "offline.queued": "Offline: we will send it on its own once the signal is back.",

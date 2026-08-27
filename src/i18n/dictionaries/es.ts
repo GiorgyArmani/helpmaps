@@ -207,8 +207,6 @@ const es = {
   "privacy.link": "Cómo tratamos tus datos",
 
   // ── Datos en caché / mantenimiento ──────────────────────────────────────
-  "offline.stale": "Datos posiblemente desactualizados",
-  "offline.staleHint": "Última carga: {ago}. Se actualizan solos cuando vuelva la señal.",
   "offline.offline": "Sin conexión",
   "offline.swBody": "No hay conexión y esta página todavía no está guardada. Abre el mapa al menos una vez con internet y quedará disponible sin señal.",
   "offline.queued": "Sin conexión: lo enviaremos solo cuando vuelva la señal.",

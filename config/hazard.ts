@@ -23,8 +23,15 @@
 // botón y la leyenda.
 
 import type { HazardConfig } from "@/config/types";
+import country from "~/config/country";
 
-const hazard: HazardConfig = {
+// Los valores de la RED. Lo que un país lee distinto vive en su preset
+// (`config/presets/<pais>.ts` → `hazard`) y se funde abajo: estos números están afinados
+// para un margen de subducción —Colombia, Perú, Indonesia— y no valen igual en todas
+// partes. España es el caso que lo demuestra: su secuencia de Granada no pasa de M5.2, y
+// con `contourMinMagnitude: 6` la capa de zona afectada saldría VACÍA en el despliegue
+// que existe justamente para cubrir ese sismo.
+const base: HazardConfig = {
   seismic: {
     enabled: true,
 
@@ -62,6 +69,13 @@ const hazard: HazardConfig = {
     // no una capa de ayuda.
     defaultOn: { epicenters: false, intensity: true },
   },
+};
+
+// Fusión de un nivel dentro de `seismic`: un país declara los dos números que lee
+// distinto y sigue heredando el resto —la API, la atribución, el refresco— cuando la
+// base los cambie.
+const hazard: HazardConfig = {
+  seismic: { ...base.seismic, ...(country.hazard?.seismic ?? {}) },
 };
 
 export default hazard;

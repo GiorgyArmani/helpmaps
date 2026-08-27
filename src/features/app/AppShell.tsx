@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Center, Donation, SubmissionKind } from "@/domain/types";
 import { EMPTY_FILTER, filterCenters, pointsNeedingHelp, type CenterFilter } from "@/domain/center";
 import { Icon } from "@/ui/icons";
-import { useI18n, useTimeAgo } from "@/i18n/context";
+import { useI18n } from "@/i18n/context";
 import { useCenters } from "@/features/app/useCenters";
 import { useEmergency, useSite } from "@/features/app/SiteProvider";
 import NewsTab from "@/features/news/NewsTab";
@@ -97,8 +97,7 @@ export default function AppShell({
   // que ver el del panel la primera vez que lo abre.
   const STAFF_TOUR_KEY = helpers.storageKey("stafftour:v1");
   const { t, lang } = useI18n();
-  const ago = useTimeAgo();
-  const { centers, settings, loading, stale, cachedAt, configured } = useCenters();
+  const { centers, settings, loading, configured } = useCenters();
   const seismic = useQuakes();
 
   const site = useSite();
@@ -584,6 +583,21 @@ export default function AppShell({
             </span>
           </div>
         ) : null}
+        <Filters
+          filter={filter}
+          onChange={setFilter}
+          centers={visible}
+          selectedId={selectedId}
+          onPickCenter={(id) => (id ? openCenter(id) : setSelectedId(null))}
+        />
+
+        {/* No offline banner here. It used to sit under the filters, and any form of it —
+            block or chip — is one more thing between the reader and the map, shown at the
+            exact moment their connection is already making the app harder to use. The
+            freshness that decides whether a trip is worth making is per-point and already
+            on the card and the detail view (`CenterStatus`), where someone is looking when
+            the question occurs to them. `useCenters` still tracks `stale` / `cachedAt` for
+            anything that wants them. */}
       </header>
 
       {/* Lengüeta del panel de puntos, espejo de las de capas y noticias en el otro canto.

@@ -36,6 +36,47 @@ const network: Deployment[] = [
     note: "Refugios, puntos de acopio, comedores e iniciativas ciudadanas.",
   },
   {
+    slug: "es",
+    name: "España",
+    code: "ES",
+    flag: "🇪🇸",
+    url: "https://es.helpmaps.net",
+    status: "preparing",
+    lat: 40.42,
+    lng: -3.7,
+    note: "Serie sísmica de Granada de agosto de 2026: albergues, puntos de recogida e iniciativas vecinales.",
+  },
+  {
+    slug: "id",
+    name: "Indonesia",
+    code: "ID",
+    flag: "🇮🇩",
+    url: "https://id.helpmaps.net",
+    // "preparing" hasta que responda el DNS. La interfaz sale en inglés: no hay
+    // diccionario en indonesio y se decidió no retener el despliegue por ello (ver el
+    // preset), pero es una limitación que conviene recordar al anunciarlo.
+    status: "preparing",
+    lat: -6.18,
+    lng: 106.83,
+    note: "Terremoto M 7.7 del 15 de agosto de 2026 frente a Flores (Nusa Tenggara Timur).",
+  },
+  {
+    slug: "pe",
+    name: "Perú",
+    code: "PE",
+    flag: "🇵🇪",
+    url: "https://pe.helpmaps.net",
+    // ⚠️ "preparing" mientras el DNS de pe.helpmaps.net no responda: dibuja el pin en el
+    // hub y lo anuncia, sin mandar a nadie a una URL muerta justo cuando busca un
+    // albergue. El día que el despliegue esté arriba, esta línea pasa a "live" — y
+    // `src/config/validate.ts` avisa en cada build si la URL deja de coincidir con el
+    // `host` del preset.
+    status: "preparing",
+    lat: -12.05,
+    lng: -77.04,
+    note: "Sismo M 6.7 del 20 de agosto de 2026 en Ayacucho: albergues, puntos de acopio e iniciativas ciudadanas.",
+  },
+  {
     slug: "ve",
     name: "Venezuela",
     code: "VE",

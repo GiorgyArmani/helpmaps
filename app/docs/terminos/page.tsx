@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DocShell, DocSection } from "../DocShell";
+import { DocShell, DocSection, repoLabel } from "../DocShell";
 import { BRAND } from "@/config";
 
 export const metadata: Metadata = {
@@ -74,14 +74,4 @@ export default function TermsPage() {
       </DocSection>
     </DocShell>
   );
-}
-
-/** "github.com/usuario/repo" — sin esquema, que en un enlace visible solo estorba. */
-function repoLabel(url: string): string {
-  try {
-    const u = new URL(url);
-    return `${u.host}${u.pathname}`.replace(/\/$/, "");
-  } catch {
-    return url;
-  }
 }

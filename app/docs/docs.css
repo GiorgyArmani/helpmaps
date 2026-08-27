@@ -189,6 +189,10 @@ a.doc-tile-feature:hover .doc-tile-chev { background: var(--accent); color: #fff
   border-color: var(--accent-line);
 }
 .doc-tile-feature .doc-tile-ic { background: var(--accent); color: #fff; border-color: transparent; }
+/* El enlace al repositorio en /docs/desplegar: la misma teja del índice, pero suelta
+   dentro de una página de texto, así que necesita su propio aire debajo. */
+.doc-repo-tile { margin-bottom: 26px; }
+
 .doc-tile-soon { opacity: 0.9; }
 .doc-item-soon {
   align-self: flex-start;
