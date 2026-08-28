@@ -4,10 +4,11 @@
 // Este archivo decide qué se enciende, no con qué llave.
 //
 // ⚠️ ESTADO REAL, para que nadie encienda algo esperando que ocurra: hoy están conectados
-// `pwa.enabled` (alimenta el manifiesto) y `email.to` (buzón al que llegan los avisos de
+// `pwa.enabled` (alimenta el manifiesto), `email.to` (buzón al que llegan los avisos de
 // sugerencias y voluntariado, ver `src/lib/email.ts`; sin SMTP en el entorno el módulo no
-// hace nada y el equipo los ve igual en el panel). `analytics` y `feeds` están declarados
-// porque son lo siguiente en la lista, pero ningún código los lee todavía.
+// hace nada y el equipo los ve igual en el panel) y `analytics.ga` (carga gtag.js desde el
+// layout raíz cuando tiene un id). `analytics.vercel` y `feeds` están declarados porque son
+// lo siguiente en la lista, pero ningún código los lee todavía.
 
 import type { IntegrationsConfig } from "@/config/types";
 import brand from "~/config/brand";
@@ -18,6 +19,12 @@ const integrations: IntegrationsConfig = {
     // registrar quién busca a quién, siempre que no se envíen eventos propios con
     // nombres, documentos ni términos de búsqueda. No lo hagas.
     vercel: false,
+
+    // Google Analytics 4 (gtag.js). Vacío → no se carga nada. El layout raíz lo lee, así
+    // que cubre la página de inicio y el mapa por igual. Rige la misma regla que arriba:
+    // solo páginas vistas, nunca eventos propios con nombres, documentos ni términos de
+    // búsqueda.
+    ga: "G-5QR6KGP7RK",
   },
 
   email: {
