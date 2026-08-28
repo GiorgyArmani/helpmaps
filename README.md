@@ -103,6 +103,24 @@ values ('<uuid>', 'admin', 'tu@correo.net')
 on conflict (user_id) do update set role = 'admin';
 ```
 
+#### Autenticación del proyecto (tres ajustes, y los tres importan)
+
+Las cuentas de persona no las crea `supabase.auth.signUp()` sino la ruta
+`/api/account/register`, para que el correo salga por el SMTP del despliegue y para que
+el registro no se convierta en un oráculo de direcciones. Eso obliga a tres cosas en
+*Authentication* del proyecto, y saltarse cualquiera deja el registro roto de una forma
+distinta:
+
+| ajuste | dónde | si falta |
+| --- | --- | --- |
+| **Allow new users to sign up: OFF** | Providers → Email | Queda abierta la API de auth de Supabase: registro sin límite de tasa nuestro y sin comprobar contraseñas filtradas |
+| **Confirm email: ON** | Providers → Email | Cualquiera entra con el correo de otro |
+| **`https://<host>/cuenta` en Redirect URLs** | URL Configuration | Supabase rechaza el `redirectTo` y el enlace del correo aterriza en otro sitio: la persona confirma y llega sin sesión |
+
+Y `SUPABASE_SERVICE_ROLE_KEY` deja de ser opcional si quieres registro: sin ella
+`/api/account/register` responde 503. El `host` de esas Redirect URLs tiene que ser el
+que el navegador ve de verdad — si el apex redirige a `www`, va el `www`.
+
 ### 3. Variables de entorno
 
 Copia `.env.example` a `.env.local` (o cárgalas en el proveedor de hosting). Lo mínimo
