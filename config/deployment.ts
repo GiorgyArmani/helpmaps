@@ -2,7 +2,7 @@
 //
 // El mismo código sirve dos cosas distintas:
 //
-//   "country"  una app nacional (col.helpmaps.net): el mapa, los centros, las
+//   "country"  una app nacional (co.helpmaps.net): el mapa, los centros, las
 //              necesidades, el panel del equipo. Es el modo por defecto.
 //
 //   "hub"      helpmaps.net: qué es HelpMaps, en qué países está desplegado (mapa

@@ -1,7 +1,7 @@
 import type { CountryConfig } from "@/config/types";
 
 /**
- * Venezuela — ve.helpmaps.net
+ * Venezuela — www.helpmapvzla.net
  *
  * The original deployment (helpmapvzla.net) still runs from its own repository. This
  * preset is its migration target, and it keeps the base honest: a second country in the
@@ -11,7 +11,23 @@ const venezuela: CountryConfig = {
   slug: "ve",
   code: "VE",
   name: "Venezuela",
-  host: "helpmapvzla.net",
+  // CON `www.`, y no es un detalle cosmético.
+  //
+  // El apex responde 308 hacia `www`, así que el único host que la aplicación llega a ver
+  // es el de `www` — por eso la fila de `emergencies` declara `www.helpmapvzla.net`, que
+  // es contra lo que se casa el `Host` de cada petición.
+  //
+  // Este campo es la otra mitad y hace algo distinto: de aquí sale `siteUrl()`, y de ahí
+  // los enlaces que la gente reenvía, las canónicas, el sitemap, las imágenes OG y —lo que
+  // obligó a arreglarlo— el `redirectTo` de los correos de confirmación y de recuperación.
+  // Supabase valida ese `redirectTo` COMO CADENA contra su lista blanca antes de mandar el
+  // correo, así que el 308 no interviene: si acá dice el apex y la lista tiene `www`, el
+  // enlace se rechaza y la persona confirma su cuenta para aterrizar sin sesión.
+  //
+  // Con el apex acá, además, el host efectivo CAMBIABA al publicar la fila —preset antes,
+  // fila después— y obligaba a tener las cuatro URLs en la lista blanca para cubrir los dos
+  // estados. Declarando `www` en los dos sitios hay un solo host canónico y dos entradas.
+  host: "www.helpmapvzla.net",
   regionNoun: { one: "estado", many: "estados" },
 
   geo: {

@@ -34,7 +34,9 @@ export default function Brand() {
       </span>
       <span className="bcol">
         <span className="bname">{site.brand.name}</span>
-        <span className="btag">{site.country.host}</span>
+        {/* Sin el `www.`: el host canónico lo necesita —de él salen las canónicas y los
+            `redirectTo`— pero acá es un rótulo que se lee, no una dirección que se resuelve. */}
+        <span className="btag">{site.country.host.replace(/^www\./, "")}</span>
       </span>
     </Link>
   );

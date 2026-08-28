@@ -40,6 +40,24 @@ function findTodos(value: unknown, path: string, out: string[]): void {
   }
 }
 
+/**
+ * El nombre de dominio de una URL, para poder COMPARARLO.
+ *
+ * Existe porque la comprobación de abajo usaba `entry.url.includes(host)` y una subcadena
+ * no distingue un dominio de otro que lo contenga: `https://www.helpmapvzla.net` "incluye"
+ * `helpmapvzla.net`, así que Venezuela pasó el control mientras el preset declaraba el apex
+ * y la fila el `www`. Eso son dos hosts canónicos distintos según la fila esté publicada o
+ * no, y se pagó en la lista blanca de Supabase: cuatro URLs de redirección donde deberían
+ * bastar dos.
+ */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host.toLowerCase();
+  } catch {
+    return url.trim().toLowerCase();
+  }
+}
+
 function checkCountry(c: CountryConfig, errors: string[]): void {
   const { geo } = c;
 
@@ -169,11 +187,14 @@ export function validateConfig(site: SiteConfig): void {
         `"${site.country.name}" no aparece en config/network.ts: no saldrá en el mapa del hub ` +
           "ni en el pie de los demás despliegues",
       );
-    } else if (entry.status === "live" && !entry.url.includes(site.country.host)) {
+    } else if (entry.status === "live" && hostOf(entry.url) !== site.country.host) {
       // Dos URLs para el mismo país. Puede ser legítimo y transitorio —Venezuela sigue
       // sirviéndose desde su repositorio original mientras migra— pero entonces los
       // enlaces que la gente reenvía (siteUrl(), de `host`) y los del hub (`url`) llevan a
       // sitios distintos, y eso hay que decidirlo, no heredarlo sin mirar.
+      //
+      // Comparación de HOST y no `includes`: el apex y su `www` se contienen el uno al
+      // otro, que es justo el par que hay que separar.
       warnings.push(
         `network["${entry.slug}"].url (${entry.url}) no coincide con el host del preset ` +
           `(${site.country.host}): los enlaces compartidos y los del hub apuntarían a dominios distintos`,

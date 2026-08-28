@@ -1,7 +1,7 @@
 import type { CountryConfig } from "@/config/types";
 
 /**
- * Colombia — col.helpmaps.net
+ * Colombia — co.helpmaps.net
  *
  * A preset holds ONLY what is true about the country: identity, regions, viewport and
  * the law that applies. Look, language, features and integrations are separate files in

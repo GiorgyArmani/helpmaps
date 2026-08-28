@@ -397,6 +397,15 @@ on conflict (slug) do nothing;
 --                 camino de reserva que funciona mientras haya UNA sola emergencia activa
 --                 y deja de funcionar sin aviso el día que haya dos.
 --
+--                 Y el `host` del preset (`config/presets/<pais>.ts`) tiene que decir LO
+--                 MISMO. Esta fila decide contra qué se casa el `Host` de cada petición;
+--                 el del preset decide qué URL se ACUÑA — canonicals, sitemap, enlaces
+--                 compartidos y el `redirectTo` de los correos. Si difieren, el host
+--                 canónico cambia el día que publiques, y como Supabase valida el
+--                 `redirectTo` como cadena contra su lista blanca, hay que meter las dos
+--                 variantes de cada ruta para cubrir los dos estados. Con los dos campos
+--                 de acuerdo, un solo host y la mitad de entradas.
+--
 -- `geo`           `center` y `bounds` en orden [lat, lng] — el de Leaflet, que es el mapa
 --                 2D. `geocodeCountry` es el ISO alpha-2 en minúsculas.
 --

@@ -7,7 +7,7 @@ import HubLanding from "@/features/hub/HubLanding";
  * The root.
  *
  * Same codebase, two deployments: with NEXT_PUBLIC_MODE=hub this is helpmaps.net (the
- * network landing), otherwise it is a country app (col.helpmaps.net). Branching here
+ * network landing), otherwise it is a country app (co.helpmaps.net). Branching here
  * rather than in two route trees means every shared route — /docs, /api — stays
  * available and identical in both.
  */

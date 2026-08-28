@@ -449,7 +449,7 @@ export interface Deployment {
 // ---------------------------------------------------------------------------
 
 /**
- * "country" — a national app (col.helpmaps.net): map, centres, needs, staff panel.
+ * "country" — a national app (co.helpmaps.net): map, centres, needs, staff panel.
  * "hub"     — helpmaps.net itself: what HelpMaps is, where it runs, the public API
  *             documentation, the terms, and how to bring it to your country.
  *
