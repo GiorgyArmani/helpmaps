@@ -103,6 +103,62 @@ const colombia: CountryConfig = {
       },
     },
   },
+
+  // ── EL SISMO QUE ESTE DESPLIEGUE EXISTE PARA MOSTRAR ──────────────────────
+  //
+  // El M7.4 del 10 de agosto de 2026, 5 km al sur de San José del Palmar, Chocó
+  // (USGS `us6000tjl2`), a 110 km de profundidad, con MMI máxima 7.9 y alerta naranja.
+  //
+  // Con los valores heredados de `config/hazard.ts` ese sismo era INVISIBLE, y no por
+  // un fallo sino por una ventana pensada para otra cosa:
+  //
+  //   windowDays: 14   mira sólo las dos últimas semanas. El evento es del 10 de agosto,
+  //                    así que se salió de la ventana el 24 y el mapa se quedó sin un
+  //                    solo epicentro. Y sin epicentros no hay evento principal; sin
+  //                    evento principal `useQuakes.ts:96` no pide los contornos, así que
+  //                    "Zona afectada" tampoco dibujaba nada. El panel ofrecía las dos
+  //                    capas y las dos salían vacías, que se lee como que la aplicación
+  //                    está rota o —peor— como que aquí no ha temblado.
+  //
+  // ── POR QUÉ 180 DÍAS ──────────────────────────────────────────────────────
+  //
+  // Basta con 18 para alcanzar al 10 de agosto, pero una ventana justa caduca sola: hay
+  // que elegirla por cuánto tiempo aguanta. 180 días mantienen el sismo en el mapa hasta
+  // el 6 DE FEBRERO DE 2027, y esa fecha está escrita para que se pueda buscar.
+  //
+  // El tope de `maxEvents` (60) no amenaza al principal, al contrario de lo que sugiere
+  // la nota de Venezuela: `usgs.ts` consulta con `orderby: "magnitude"` y recorta con
+  // `sort(byImpact).slice(...)`, así que lo que se pierde por arriba son los eventos
+  // PEQUEÑOS, nunca el mayor. Una ventana amplia degrada la nube de réplicas, no el
+  // sismo que importa.
+  //
+  // ── LO QUE FALTA MEDIR, Y NO ME LO INVENTO ────────────────────────────────
+  //
+  // `minMagnitude` se queda en el 4.5 heredado y `bounds` en null a propósito. Los dos
+  // son sospechosos y ninguno es evidente:
+  //
+  //   minMagnitude   Venezuela bajó a 3.5 porque sus réplicas estaban entre 3.5 y 4. Este
+  //                  sismo fue a 110 km de profundidad y un evento intermedio produce
+  //                  muchas menos réplicas que uno superficial: bajarlo puede no añadir
+  //                  nada, o puede inundar el mapa. Hay que contarlo antes.
+  //
+  //   bounds         Al ser null cae a `geo.bounds`, que es el encuadre del mapa y va de
+  //                  -4.23 a 13.5 de latitud: mete dentro el norte de Ecuador, el sur de
+  //                  Panamá y la frontera con Perú. Y con `orderby: magnitude` eso duele
+  //                  MÁS que en Venezuela — un evento fuerte ecuatoriano entra por
+  //                  delante de las réplicas colombianas, no por detrás.
+  //
+  //                  Tampoco es un rectángulo fácil: la subducción del Pacífico frente a
+  //                  Nariño y Cauca está mar afuera, y el nido de Bucaramanga está a 600
+  //                  km de allí. Una caja que cubra las dos cubre medio Ecuador.
+  //
+  // Las consultas para medirlo están en `db/02_emergencia.co.sql`. Cuando haya números,
+  // van aquí Y en esa fila, con la tabla al lado.
+  hazard: {
+    seismic: {
+      windowDays: 180,
+    },
+  },
 };
 
 export default colombia;

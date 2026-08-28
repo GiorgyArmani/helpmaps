@@ -304,13 +304,147 @@ insert into public.emergencies (
       }
     }
   }'::jsonb,   -- language
-  -- ⚠️ VACÍO A PROPÓSITO, Y NO SE PUBLICA ASÍ. Ver «La sísmica de Colombia» abajo:
-  -- los tres números hay que MEDIRLOS, y el guardia de publicación lo exige.
-  '{}'::jsonb,   -- hazard
+  -- ESPEJO DE `config/presets/colombia.ts`, y tiene que seguir siéndolo.
+  --
+  -- Si esto quedara vacío, publicar la fila REVERTIRÍA la ventana al 14 heredado de
+  -- `config/hazard.ts` y el sismo del 10 de agosto volvería a desaparecer del mapa: la
+  -- fila gana sobre el preset, así que un campo vacío acá no significa "usa el preset",
+  -- significa "usa el valor por defecto de la red".
+  --
+  -- `minMagnitude` y `bounds` siguen sin declararse porque siguen sin medirse. Ver
+  -- «La sísmica de Colombia» abajo.
+  '{
+    "seismic": {
+      "windowDays": 180
+    }
+  }'::jsonb,   -- hazard
   '[]'::jsonb,   -- layers
-  -- Vacío = sin boletín, y la interfaz no muestra la pestaña. No hay configuración de
-  -- prensa por defecto en `config/`: si no está acá, no existe. Ver abajo cómo llenarlo.
-  '{}'::jsonb   -- news
+  -- Los diez medios se comprobaron uno a uno el 2026-08-28: los diez responden 200 con
+  -- content-type XML. Un feed muerto no rompe el boletín —se reporta como fuente con
+  -- error— pero tampoco aporta, y una lista sin verificar es una lista de adivinanzas.
+  --
+  -- Dos son de la ZONA SACUDIDA y son los que justifican la lista: La Patria cubre
+  -- Manizales y Caldas, El Diario cubre Pereira y Risaralda. Un boletín hecho sólo de
+  -- medios nacionales cuenta el terremoto; los regionales cuentan qué alcaldía abrió
+  -- qué albergue, que es lo que alguien necesita saber.
+  --
+  -- El filtro cruza LAS DOS listas: una palabra de emergencia Y una de lugar. Sólo
+  -- emergencia llena el boletín de terremotos en Japón; sólo lugar lo llena de cualquier
+  -- noticia que mencione Bogotá. En `place` van con y sin tilde a propósito: los
+  -- titulares de RSS no son consistentes con los acentos.
+  --
+  -- `deslizamiento` está en la lista de emergencia y no está en la de Venezuela: en la
+  -- cordillera colombiana el daño que sigue a un sismo son los deslizamientos, y una
+  -- vía cerrada por un derrumbe decide a qué albergue se puede llegar.
+  '{
+    "feeds": [
+      {
+        "id": "eltiempo",
+        "url": "https://www.eltiempo.com/rss/colombia.xml",
+        "name": "El Tiempo (Colombia)"
+      },
+      {
+        "id": "elcolombiano",
+        "url": "https://www.elcolombiano.com/rss/portada.xml",
+        "name": "El Colombiano"
+      },
+      {
+        "id": "publimetro",
+        "url": "https://www.publimetro.co/arc/outboundfeeds/rss/?outputType=xml",
+        "name": "Publimetro Colombia"
+      },
+      {
+        "id": "lapatria",
+        "url": "https://www.lapatria.com/rss.xml",
+        "name": "La Patria (Manizales)"
+      },
+      {
+        "id": "diariootun",
+        "url": "https://www.eldiario.com.co/feed/",
+        "name": "El Diario (Pereira)"
+      },
+      {
+        "id": "bbcmundo",
+        "url": "https://feeds.bbci.co.uk/mundo/rss.xml",
+        "name": "BBC Mundo"
+      },
+      {
+        "id": "dw",
+        "url": "https://rss.dw.com/xml/rss-es-all",
+        "name": "DW (Deutsche Welle)"
+      },
+      {
+        "id": "elpais",
+        "url": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/america/portada",
+        "name": "El País (América)"
+      },
+      {
+        "id": "reliefweb",
+        "url": "https://reliefweb.int/updates/rss.xml",
+        "name": "ReliefWeb (ONU)"
+      },
+      {
+        "id": "unocha",
+        "url": "https://www.unocha.org/rss.xml",
+        "name": "UN OCHA (ONU)"
+      }
+    ],
+    "keywords": {
+      "place": [
+        "colombia",
+        "chocó",
+        "choco",
+        "san josé del palmar",
+        "san jose del palmar",
+        "quibdó",
+        "quibdo",
+        "istmina",
+        "tadó",
+        "condoto",
+        "risaralda",
+        "pereira",
+        "dosquebradas",
+        "quindío",
+        "quindio",
+        "armenia",
+        "caldas",
+        "manizales",
+        "valle del cauca",
+        "cali",
+        "buenaventura",
+        "cartago",
+        "tuluá",
+        "eje cafetero"
+      ],
+      "emergency": [
+        "sismo",
+        "terremoto",
+        "temblor",
+        "réplica",
+        "albergue",
+        "refugio",
+        "acopio",
+        "damnificados",
+        "evacuación",
+        "emergencia",
+        "rescate",
+        "escombros",
+        "derrumbe",
+        "colapso",
+        "deslizamiento",
+        "magnitud",
+        "epicentro",
+        "desaparecidos",
+        "víctimas",
+        "fallecidos",
+        "heridos",
+        "ayuda humanitaria",
+        "tragedia",
+        "catástrofe"
+      ]
+    },
+    "refreshHours": 4
+  }'::jsonb   -- news
 )
 on conflict (slug) do nothing;
 
@@ -319,16 +453,19 @@ on conflict (slug) do nothing;
 -- La sísmica de Colombia — LO ÚNICO QUE FALTA, Y HAY QUE MEDIRLO
 -- ===========================================================================
 --
--- `hazard` quedó en `{}`, y eso significa que se heredan los valores de
--- `config/hazard.ts`: minMagnitude 4.5, windowDays 14, bounds null. Ése es el
--- comportamiento de Colombia HOY con el preset, así que dejarlo así no cambia nada al
--- publicar. Pero es incorrecto, y de una de las tres cosas hay certeza aritmética:
+-- De los tres números, uno ya está puesto —arriba y en el preset— y dos siguen sin medir.
 --
---   windowDays 14     El terremoto del Chocó es del 10 de agosto de 2026. Una ventana de
---                     14 días deja de alcanzarlo el 24 de agosto. Es decir: el mapa de
---                     Colombia YA no muestra el epicentro de su propio terremoto, y no
---                     por un fallo sino por un valor por defecto pensado para otra cosa.
---                     Esto no hay que medirlo, se cuenta con los dedos.
+-- El que está puesto no hacía falta medirlo, se cuenta con los dedos:
+--
+--   windowDays 180    El terremoto del Chocó es del 10 de agosto de 2026 y el valor
+--                     heredado era 14: dejó de alcanzarlo el 24 de agosto. Sin epicentros
+--                     no hay evento principal, y sin evento principal `useQuakes.ts:96`
+--                     ni pide los contornos, así que "Zona afectada" también salía vacía.
+--                     180 días lo sostienen hasta el 6 DE FEBRERO DE 2027.
+--
+--                     El tope de maxEvents (60) no amenaza al principal: `usgs.ts`
+--                     consulta con orderby=magnitude y recorta por impacto, así que lo
+--                     que se pierde por arriba son los eventos pequeños, nunca el mayor.
 --
 --   minMagnitude 4.5  Sospechoso, pero NO evidente, y por eso no lo toco. El del Chocó
 --                     fue a 110 km de profundidad, y un sismo intermedio produce muchas
@@ -375,19 +512,30 @@ on conflict (slug) do nothing;
 -- El boletín de prensa, si se quiere
 -- ===========================================================================
 --
--- `news` vacío = sin pestaña. Para encenderlo hacen falta `feeds` (los medios) y
--- `keywords`, que es el filtro de relevancia y cruza DOS listas: una palabra de
--- emergencia Y una de lugar. Sólo emergencia llena el boletín de terremotos en Japón;
--- sólo lugar lo llena de cualquier noticia que mencione Bogotá.
+-- Los diez medios y las dos listas de palabras ya están arriba. Lo que sigue es lo que
+-- HACE FALTA ADEMÁS, porque la fila sola no enciende nada:
 --
--- La estructura está en `db/02_emergencia.sql`, con los 13 medios de Venezuela como
--- ejemplo. Para Colombia los `place` serían del estilo "chocó", "san josé del palmar",
--- "quibdó", "risaralda", "quindío", "valle del cauca", "caldas", "pereira", "armenia":
--- los departamentos sacudidos, no el país entero.
+--   1. Publicar la fila. `news` sólo existe en `emergencies`: lo confirma que la palabra
+--      no aparezca en ningún archivo de `config/`, sólo en `src/config/fromRow.ts`. Un
+--      despliegue servido desde el preset compilado NO PUEDE tener boletín, por diseño.
+--      Y `NewsTab.tsx:75` corta en `if (!emergency || !newsEnabled(...)) return null`:
+--      sin fila resuelta falla la PRIMERA condición y la pestaña ni se monta.
 --
--- Además necesita `NEWS_CRON_SECRET` en el entorno del despliegue, o la ruta que lo
--- genera queda cerrada. Ése es el fallo seguro: sin secreto no se genera nada, en vez de
--- quedar abierta y sin saldo.
+--   2. `NEWS_CRON_SECRET` en el entorno del despliegue. Sin él `POST /api/news` responde
+--      401 y no se genera nada. Ése es el fallo seguro: un despliegue que lo olvidó se
+--      queda sin boletín; uno que quedara abierto se queda sin saldo.
+--
+--   3. ALGUIEN QUE LLAME A ESA RUTA. No hay `vercel.json` en el repo, así que no existe
+--      ningún cron declarado en ninguna parte: ni Colombia ni Venezuela regeneran el
+--      boletín solos. Hoy hay que dispararlo a mano:
+--
+--        curl -X POST https://co.helpmaps.net/api/news -H "x-cron-secret: <el secreto>"
+--
+--      Añadir `?dry=1` lo corre sin escribir, que es como se prueba la lista de medios
+--      sin ensuciar la tabla.
+--
+--   4. `OPENROUTER_API_KEY`, opcional. Sin ella publica los titulares agrupados por
+--      medio, que ya es útil; con ella añade una síntesis marcada como automática.
 
 
 -- ===========================================================================
@@ -455,8 +603,8 @@ on conflict (slug) do nothing;
 --   if fila is null      then raise exception 'No existe la emergencia: corre antes el insert de arriba.'; end if;
 --   if fila.host is null then raise exception 'La fila no declara host.'; end if;
 --   if fila.logo is null then raise exception 'La fila no declara logo: se publicaria sin isotipo.'; end if;
---   if fila.hz->'seismic' is null then
---     raise exception 'La sismica sigue sin medir: se publicaria con windowDays=14, que ya no alcanza al terremoto del 10 de agosto. Ver la seccion de sismica en este archivo.';
+--   if fila.hz->'seismic'->'windowDays' is null then
+--     raise exception 'La fila no declara windowDays: al publicar se caeria al 14 por defecto y el terremoto del 10 de agosto desapareceria del mapa. Ver la seccion de sismica en este archivo.';
 --   end if;
 -- end $$;
 --
