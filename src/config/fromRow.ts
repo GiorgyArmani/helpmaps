@@ -1,6 +1,6 @@
 // Turning an `emergencies` row into the configuration the application renders from.
 //
-// This is the whole point of `db/007_emergencies.sql` in one file: the row holds the same
+// This is the whole point of `db/01_esquema.sql § 007_emergencies` in one file: the row holds the same
 // `CountryConfig` the presets hold, so becoming a `SiteConfig` is a mapping, not a
 // translation. If this file ever starts making decisions — defaulting a viewport, guessing
 // a region list — the shapes have drifted apart and the fix belongs in the schema.

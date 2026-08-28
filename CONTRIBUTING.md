@@ -116,7 +116,7 @@ them, because the browser talks to Supabase with the public anon key.
   switch.
 - **Never commit real data.** Not as a fixture, not in a test, not in a screenshot attached to an
   issue. Invent the example.
-- **Run `db/099_security_check.sql` after any schema change** and paste the result in the pull
+- **Run `db/03_verificacion.sql` after any schema change** and paste the result in the pull
   request. It simulates the `anon` role and counts what it can actually reach.
 
 ### One codebase, many countries
@@ -181,7 +181,7 @@ region codes, inverted bounds or a map centre outside those bounds fails the bui
 - **`status: null` significa DESCONOCIDO.** Ninguna capa puede asumir «abierto» por defecto.
 - **El público nunca escribe el mapa.** Sus sugerencias entran en una cola que revisa una persona.
 - **Nunca subas datos reales**, ni como ejemplo ni en una captura.
-- Corre `db/099_security_check.sql` después de tocar el esquema y pega el resultado en el PR.
+- Corre `db/03_verificacion.sql` después de tocar el esquema y pega el resultado en el PR.
 - Los problemas de seguridad o privacidad **no van en un issue público**: escribe a
   info@helpmaps.net con `[SECURITY]` en el asunto. Ver [`SECURITY.md`](./SECURITY.md).
 - Prueba en un teléfono estrecho (375px) antes de abrir el PR.

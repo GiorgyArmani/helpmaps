@@ -77,16 +77,22 @@ un error de configuración nunca debe dejar en blanco la pantalla de quien busca
 
 ### 2. Su propia base de datos
 
-Un proyecto de Supabase **por país**. Corre los archivos de `db/` en orden en el editor
-SQL. Son idempotentes.
+Un proyecto de Supabase **por país**. Tres archivos, en orden, en el editor SQL. Son
+idempotentes.
 
 ```
-db/001_core.sql          locations + center_info + app_settings + lectura pública
-db/002_staff.sql         roles, is_staff()/is_admin(), escritura de staff
-db/003_submissions.sql   sugerencias del público y solicitudes de voluntariado
-db/004_audit_log.sql     bitácora append-only por trigger
-db/005_donations.sql     directorio de donaciones (+ su bitácora)
+db/01_esquema.sql        el esquema entero: 15 tablas, 45 políticas, 13 funciones,
+                         14 triggers, los índices y RLS en todas. Agnóstico de país.
+db/02_emergencia.sql     qué país es este despliegue: viewport, estados, marca, aviso
+                         legal, umbrales sísmicos, medios de prensa. Es LA PLANTILLA.
+db/03_verificacion.sql   simula el rol `anon` y comprueba que nada personal quede
+                         expuesto. Sólo lectura; córrelo tras cada cambio de esquema.
 ```
+
+⚠️ `db/schema.sql` **no sirve para esto**: es un volcado de contexto —lo dice en su
+primera línea— y no lleva ni una política, ni RLS, ni funciones, ni triggers. Una base
+levantada desde ahí deja `submissions`, `volunteer_requests`, `audit_log`, `staff_users`
+y `profiles` al alcance de cualquiera con la anon key, que es pública por diseño.
 
 El primer administrador no se puede crear desde la app (haría falta ser administrador).
 Crea el usuario en *Authentication → Users* y luego, con su UUID:
@@ -248,7 +254,7 @@ inventario completo, con su evidencia, está en
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Licencia de las contribuciones, DCO, y las reglas que no se negocian |
 | [`SECURITY.md`](./SECURITY.md) | Cómo reportar una vulnerabilidad, qué es grave y las reglas de prueba |
 | [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) | Todo lo de terceros que el proyecto usa o muestra |
-| `db/099_security_check.sql` | Verifica que RLS protege lo que debe. Córrelo tras cada cambio de esquema |
+| `db/03_verificacion.sql` | Verifica que RLS protege lo que debe. Córrelo tras cada cambio de esquema |
 
 Los problemas de seguridad o privacidad **no van en un issue público**: escribe a
 info@helpmaps.net con `[SECURITY]` en el asunto.

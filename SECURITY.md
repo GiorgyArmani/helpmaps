@@ -166,7 +166,7 @@ fixed.
 So you know what to expect, and where to look:
 
 - **RLS on every table**, with public read granted explicitly and only where the data is meant to
-  be public. `db/099_security_check.sql` exists to verify this; run it after any schema change.
+  be public. `db/03_verificacion.sql` exists to verify this; run it after any schema change.
 - **One Supabase project per country.** Not a shared database with a tenant column.
 - **The service role key is never used in a route that renders to the browser.** Today it is not
   used at all.

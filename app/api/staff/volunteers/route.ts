@@ -263,7 +263,7 @@ export async function GET() {
  *
  * The gap this closes: the welcome is only ever sent by `provision()`, so an account
  * created any OTHER way never gets one — and the documented way to bootstrap the first
- * account (db/002_staff.sql) is a hand-written `insert into staff_users`, which no
+ * account (db/01_esquema.sql § 002_staff) is a hand-written `insert into staff_users`, which no
  * trigger watches because the database sends no mail at all. Same for anyone whose
  * welcome bounced while SMTP was misconfigured.
  *

@@ -16,4 +16,10 @@ next-env.d.ts
 .config/
 .npm/
 logs/
+# Volcados de base que deja el servidor de pruebas. La regla es amplia a propósito: un
+# volcado lleva datos personales de gente real y no puede entrar al repo por descuido.
 *.sql
+# Pero `db/` ES el esquema, y es lo que otro despliegue necesita para levantarse. Sin esta
+# excepción, un archivo nuevo ahí se ignora en silencio: los que ya existen sobreviven sólo
+# porque git los rastreaba desde antes de que se agregara la regla de arriba.
+!db/**/*.sql

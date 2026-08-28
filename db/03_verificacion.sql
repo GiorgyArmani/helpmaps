@@ -8,7 +8,7 @@
 -- defensa — es TODA la defensa. Una tabla sin RLS, o una política de más, es una fuga,
 -- no un aviso.
 --
--- Córrelo después de CADA cambio de esquema. `db/001_core.sql` te manda aquí por eso.
+-- Córrelo después de CADA cambio de esquema. `db/01_esquema.sql § 001_core` te manda aquí por eso.
 --
 -- Lo que es público a propósito: `locations`, `center_info`, `app_settings` y las
 -- `donations` activas. Encontrarlas legibles NO es un hallazgo: el mapa existe para eso.
@@ -169,3 +169,50 @@ begin;
   select 'center_info', count(*) from public.center_info;
 
 rollback;
+
+-- ---------------------------------------------------------------------------
+-- 10) Cuentas de persona (db/01_esquema.sql § 010_accounts).
+--
+--     SE ESPERA: las tres en 0.
+--
+--     `profiles` no lleva correo a propósito, pero sí lleva el nombre que eligió cada
+--     quien, y una lista de quién tiene cuenta en un mapa de emergencia no es inofensiva.
+--     `point_reports` dice quién estuvo mirando qué punto. `favourites` es la peor de las
+--     tres: es un mapa de por dónde se mueve una persona.
+--
+--     ⚠️ Un 0 acá con las tablas VACÍAS no prueba nada — no distingue "la política lo
+--     impide" de "no hay filas". Vuelve a correr esto cuando haya cuentas reales; hasta
+--     entonces, lo que vale es la consulta 11.
+-- ---------------------------------------------------------------------------
+begin;
+  set local role anon;
+
+  select 'profiles'      as tabla, count(*) as filas_visibles_para_anon from public.profiles
+  union all
+  select 'favourites',    count(*) from public.favourites
+  union all
+  select 'point_reports', count(*) from public.point_reports;
+
+rollback;
+
+-- ---------------------------------------------------------------------------
+-- 11) ¿Tiene cada tabla nueva las políticas que creemos, y NINGUNA de más?
+--
+--     Esto sí sirve con las tablas vacías, porque lee la configuración y no los datos.
+--
+--     SE ESPERA, exactamente:
+--       favourites     1 política  (favourites_own, ALL, sin excepción para admin)
+--       profiles       4           (self read/insert/update + staff read)
+--       point_reports  3           (insert propio, read propio-o-equipo, update equipo)
+--
+--     Que `favourites` tenga MÁS de una política es el hallazgo a buscar: significaría
+--     que alguien le abrió una puerta al equipo, y esa tabla no la tiene que tener.
+-- ---------------------------------------------------------------------------
+select tablename  as tabla,
+       policyname as politica,
+       cmd        as operacion,
+       roles::text
+from pg_policies
+where schemaname = 'public'
+  and tablename in ('profiles', 'favourites', 'point_reports')
+order by tablename, policyname;

@@ -158,7 +158,7 @@ export interface AppSettings {
 }
 
 /**
- * `superadmin` administers the network registry (see `db/007_emergencies.sql`); `admin`
+ * `superadmin` administers the network registry (see `db/01_esquema.sql § 007_emergencies`); `admin`
  * runs one emergency; `volunteer` publishes inside it.
  *
  * A superadmin is ALSO an admin everywhere this type is compared, matching `is_admin()` in

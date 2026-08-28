@@ -26,7 +26,7 @@ import { createSiteHelpers } from "@/config/helpers";
  *
  * ── ON DEPLOYMENTS THAT SERVE MORE THAN ONE EMERGENCY ──────────────────────
  *
- * Since `db/007_emergencies.sql` a deployment can resolve its configuration from a row
+ * Since `db/01_esquema.sql § 007_emergencies` a deployment can resolve its configuration from a row
  * instead, chosen per request from the host. Where that happens this object is the
  * FALLBACK: with no matching row the preset wins and the deployment behaves exactly as it
  * did before that migration.

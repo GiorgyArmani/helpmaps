@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // El boletín se lee con la anon key (política pública) y se escribe SOLO con la clave de
 // servicio desde la ruta de generación: generar cuesta una llamada a un modelo de pago y
-// no puede dispararlo un navegador. Ver `db/009_news.sql`.
+// no puede dispararlo un navegador. Ver `db/01_esquema.sql § 009_news`.
 
 export interface BulletinRow {
   id: string;

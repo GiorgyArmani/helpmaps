@@ -5,7 +5,7 @@
 // Until now there was exactly one configuration per process — the preset chosen at build
 // time — so these could close over it directly, and `src/config/index.ts` did that.
 //
-// With `db/007_emergencies.sql` a deployment can serve more than one emergency, each one
+// With `db/01_esquema.sql § 007_emergencies` a deployment can serve more than one emergency, each one
 // resolved per request from the host. That means the same process needs two or more sets
 // of these helpers alive at once: one per resolved site.
 //

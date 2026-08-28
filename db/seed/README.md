@@ -9,26 +9,25 @@ esquema base ya están verificadas contra estos datos.
 | --- | --- | --- |
 | `ve_010_puntos.sql` | refugios, puntos de acopio y comedores + sus necesidades | 497 puntos · 476 con necesidades |
 | `ve_020_hospitales.sql` | los hospitales del despliegue viejo — **opcional** | 23 puntos |
-| `ve_030_donaciones.sql` | organizaciones del panel de donaciones | 8 |
 
 ## Orden en un proyecto nuevo
 
 En el editor SQL de Supabase, un archivo a la vez:
 
 ```
-db/001_core.sql
-db/seed/ve_010_puntos.sql     ← ya se puede ver el mapa lleno
-db/002_staff.sql
-db/003_submissions.sql
-db/004_audit_log.sql
-db/005_donations.sql
-db/seed/ve_030_donaciones.sql
-db/006_audit_scope.sql
-db/099_security_check.sql     ← verificación, no cambia nada
+db/01_esquema.sql             el esquema entero
+db/02_emergencia.sql          qué emergencia sirve este despliegue
+db/seed/ve_010_puntos.sql     ← aquí el mapa deja de estar vacío
+db/seed/ve_020_hospitales.sql opcional
+db/03_verificacion.sql        verificación, no cambia nada
 ```
 
-`ve_010_puntos.sql` va deliberadamente pegado a `001`: es lo que separa un mapa
-vacío de uno útil, y no depende de nada de `002`…`006`. Si prefieres sembrar más
+Los puntos van DESPUÉS de `02_emergencia.sql` y no antes: `locations.emergency_id`
+referencia a `emergencies`, así que sembrar primero deja 520 filas huérfanas que luego
+hay que adoptar a mano.
+
+`ve_010_puntos.sql` va pegado al esquema: es lo que separa un mapa vacío de uno
+útil. Si prefieres sembrar más
 tarde también funciona — el archivo apaga los triggers de auditoría mientras
 inserta, para no enterrar el historial real bajo mil filas de siembra.
 

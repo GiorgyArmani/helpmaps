@@ -105,7 +105,7 @@ on ours.
 Two new files in `db/`, after yours. **The same files run on every database**, the hub's and
 each country's. What differs is how many rows land in one table.
 
-### `db/007_emergencies.sql`
+### `db/01_esquema.sql § 007_emergencies`
 
 `emergencies` is `CountryConfig` serialised, plus the metadata of the event itself:
 
@@ -127,7 +127,7 @@ kill switch for the whole installation. Maintenance and the notice banner for on
 are columns on `emergencies`, which is where they belong, and changing the shape of your
 single-row table would have been the one part of this migration that was not additive.
 
-### `db/008_tenancy.sql`
+### `db/01_esquema.sql § 008_tenancy`
 
 Adds `emergency_id` to `locations`, `submissions`, `volunteer_requests`, `donations` and
 `audit_log`; adds `country_code` to `locations` for diaspora points; creates
@@ -158,7 +158,7 @@ replaced: `006_audit_scope.sql` restricts volunteers to map entities, and the sc
 keeps that condition and adds membership on top. Writing it with the scope alone would have
 handed `volunteer_requests` back to volunteers — exactly what your `006` closed.
 
-`db/099_security_check.sql` gets one change of its own. Its `search_path` check listed the
+`db/03_verificacion.sql` gets one change of its own. Its `search_path` check listed the
 function names by hand, so it only ever inspected `is_staff`, `is_admin` and
 `touch_updated_at`. It now checks **every** SECURITY DEFINER function in `public` and reports
 any without a pinned `search_path`. That was not only about our additions: the hardcoded list
@@ -413,5 +413,5 @@ country, through the copy-override mechanism that already exists for renaming an
 { "overrides": { "en": { "map.allRegions": "All states", "map.regionOne": "State" } } }
 ```
 
-`db/900_seed_venezuela.sql` carries this filled in, as the worked example. A country that
+`db/02_emergencia.sql` carries this filled in, as the worked example. A country that
 leaves it empty gets its own noun in every language, which is wrong but never broken.

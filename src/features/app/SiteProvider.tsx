@@ -12,7 +12,7 @@ import type { EmergencyIdentity } from "@/config/fromRow";
  *
  * A client component's imports are baked into the bundle at build time, so `SITE` there is
  * always the compiled preset — it cannot reflect a row somebody edited an hour ago. Even on
- * a single-country deployment that matters: the whole point of `db/007_emergencies.sql` is
+ * a single-country deployment that matters: the whole point of `db/01_esquema.sql § 007_emergencies` is
  * that an admin can move the viewport or add an affected region without a rebuild, and the
  * map has to draw the new one.
  *

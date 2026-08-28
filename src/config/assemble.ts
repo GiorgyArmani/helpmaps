@@ -8,7 +8,7 @@
 //
 // Those merges used to live inside the config files themselves, closed over the compiled
 // preset. That worked while a process served exactly one country. Since
-// `db/007_emergencies.sql` it can resolve a different emergency per request, so the same
+// `db/01_esquema.sql § 007_emergencies` it can resolve a different emergency per request, so the same
 // merges have to run against a country that is not the compiled one.
 //
 // They are extracted rather than copied on purpose. "Merged per language and per key, so a

@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // One deployment serves one country, so the credentials are the plain NEXT_PUBLIC pair.
 // The anon key is public by design: RLS is what protects the data, not the key's
-// secrecy. See db/002_staff.sql and db/099_security_check.sql.
+// secrecy. See db/01_esquema.sql § 002_staff and db/03_verificacion.sql.
 
 let cached: SupabaseClient | null = null;
 
