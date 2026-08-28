@@ -59,7 +59,30 @@ export default function LayersPanel({
   // Only the bands this event actually reached. A legend running to "X — very heavy" on
   // a map whose worst contour is VI reads as a forecast of what is still coming.
   const reached = state.contours.length > 0 ? Math.max(...state.contours.map((c) => c.mmi)) : 0;
-  const bands = INTENSITY_BANDS.filter((b) => b.degree >= 2 && b.degree <= Math.max(reached, 2));
+  // El suelo de 2 sólo tiene sentido cuando YA hay huella: sin contornos, `Math.max(0, 2)`
+  // fabricaba una banda de la nada y la leyenda mostraba "II–III · Ninguno" — el pie de
+  // una zona de sacudida que no existía. Sin contornos no hay leyenda.
+  const bands =
+    state.contours.length > 0
+      ? INTENSITY_BANDS.filter((b) => b.degree >= 2 && b.degree <= Math.max(reached, 2))
+      : [];
+
+  /**
+   * ¿Ofrecemos siquiera el interruptor de intensidad?
+   *
+   * Sólo si hay una huella que dibujar. USGS publica ShakeMap para eventos significativos
+   * y para nada más, así que en la mayoría de los días de la mayoría de los despliegues no
+   * hay ninguna — y un interruptor que no pinta nada se lee como que la aplicación falla,
+   * o peor, como que la sacudida no llegó a ninguna parte.
+   *
+   * Es la misma regla que `config/features.ts` aplica a los módulos: se enciende cuando ya
+   * existe el dato que lo sustenta, no antes. Vuelve solo en cuanto haya un sismo que USGS
+   * modele.
+   *
+   * Condicionado a que la carga HAYA TERMINADO: durante los primeros segundos no hay
+   * contornos todavía y sin esto el interruptor parpadearía al aparecer.
+   */
+  const canShowIntensity = state.loading || state.contours.length > 0;
 
   return (
     <SideTab
@@ -76,20 +99,22 @@ export default function LayersPanel({
     >
       {SEISMIC.enabled ? (
         <>
-          <label className="layers-opt">
-            <input
-              type="checkbox"
-              checked={layers.intensity}
-              onChange={(e) => onChange({ ...layers, intensity: e.target.checked })}
-            />
-            <span className="layers-opt-ic">
-              <Icon.waves />
-            </span>
-            <span className="layers-opt-txt">
-              <b>{t("layers.intensity")}</b>
-              <small>{t("layers.intensityHint")}</small>
-            </span>
-          </label>
+          {canShowIntensity ? (
+            <label className="layers-opt">
+              <input
+                type="checkbox"
+                checked={layers.intensity}
+                onChange={(e) => onChange({ ...layers, intensity: e.target.checked })}
+              />
+              <span className="layers-opt-ic">
+                <Icon.waves />
+              </span>
+              <span className="layers-opt-txt">
+                <b>{t("layers.intensity")}</b>
+                <small>{t("layers.intensityHint")}</small>
+              </span>
+            </label>
+          ) : null}
 
           <label className="layers-opt">
             <input

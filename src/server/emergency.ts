@@ -1,6 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { supabasePublic } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { SITE } from "@/config";
 import { validateConfig } from "@/config/validate";
 import { emergencyFromRow, type EmergencyRow, type ResolvedEmergency } from "@/config/fromRow";
@@ -12,7 +13,7 @@ import type { SiteConfig } from "@/config/types";
  * ── THE FALLBACK IS THE POINT ───────────────────────────────────────────────
  *
  * Everything here is written so that a deployment which has NOT adopted the emergencies
- * table behaves exactly as it did before `db/007_emergencies.sql`: no matching row, no
+ * table behaves exactly as it did before `db/01_esquema.sql § 007_emergencies`: no matching row, no
  * table, no database configured at all — the compiled preset wins and nothing changes.
  * That is what makes this branch safe to merge without migrating anything.
  *
@@ -81,16 +82,37 @@ async function requestHost(): Promise<string | null> {
   }
 }
 
-async function fetchBy(column: "host" | "slug", value: string): Promise<ResolvedEmergency | null> {
-  const sb = supabasePublic();
+/**
+ * Look one emergency up.
+ *
+ * `preview` is the escape hatch `HELPMAPS_EMERGENCY` promises and could not deliver.
+ *
+ * A draft is invisible twice over, and deliberately: the RLS policy of `007` does not
+ * return it to `anon`, and the filter below drops it even if a policy ever loosened. That
+ * is right for a request arriving from the internet — an emergency still being written is
+ * not published — but it also locked out the ONE case the environment variable was
+ * documented for: looking at an emergency BEFORE announcing it. Every emergency is a draft
+ * right up to the moment it goes live, so the preview that only worked on published rows
+ * was a preview of nothing.
+ *
+ * So a forced slug reads with the service role and keeps drafts. Three things bound it:
+ * it needs an explicit environment variable that no production deployment sets, it can
+ * only ever load the ONE slug that variable names, and `server-only` keeps this file out
+ * of the browser bundle. A deployment that does not set it behaves exactly as before.
+ */
+async function fetchBy(
+  column: "host" | "slug",
+  value: string,
+  { preview = false }: { preview?: boolean } = {},
+): Promise<ResolvedEmergency | null> {
+  // RLS hides drafts from the anon key, so previewing one needs the service role. This is
+  // the second file in the project allowed to reach for it; keep the list auditable.
+  const sb = preview ? supabaseAdmin() : supabasePublic();
   if (!sb) return null;
 
-  const { data, error } = await sb
-    .from("emergencies")
-    .select(COLUMNS)
-    .eq(column, value)
-    .neq("status", "draft")
-    .maybeSingle();
+  const base = sb.from("emergencies").select(COLUMNS).eq(column, value);
+
+  const { data, error } = await (preview ? base : base.neq("status", "draft")).maybeSingle();
 
   // A missing table is the expected state on a deployment that has not run the migration,
   // so it is not worth a line in the log on every request. Anything else is.
@@ -157,7 +179,7 @@ export async function currentEmergency(): Promise<ResolvedEmergency | null> {
   if (forced) {
     const key = `slug:${forced}`;
     const c = cached(key);
-    return c.hit ? c.value : remember(key, await fetchBy("slug", forced));
+    return c.hit ? c.value : remember(key, await fetchBy("slug", forced, { preview: true }));
   }
 
   const host = await requestHost();

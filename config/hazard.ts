@@ -56,8 +56,25 @@ const base: HazardConfig = {
     // Durante una crisis activa USGS revisa magnitudes y alertas en horas, no en días.
     refreshMinutes: 15,
 
-    // `null` = los límites del país (config/presets/*.ts → geo.bounds). Lo normal: el
-    // sismo que importa aquí es el que se sintió aquí.
+    // `null` = cae a los límites del país (config/presets/*.ts → geo.bounds).
+    //
+    // ⚠️ Es un valor por defecto aproximado, no el correcto, y conviene saber en qué falla
+    // antes de dejarlo puesto. `geo.bounds` existe para encuadrar el mapa y sesgar el
+    // geocodificador, y las dos cosas quieren un rectángulo generoso — que se vea mar
+    // alrededor, que buscar cerca del borde no falle. Generoso, en un rectángulo,
+    // significa el país del vecino dentro.
+    //
+    // Medido en Venezuela: de 52 sismos devueltos por USGS en 180 días, 21 eran de
+    // Colombia y uno de Trinidad. El 42% de los puntos del mapa eran de otro país.
+    //
+    // No se puede arreglar solo. Derivar la caja de los centroides de `regions` se probó
+    // y se midió: mejora Venezuela y rompe Perú e Indonesia, porque recorta la fosa —los
+    // centroides costeros están tierra adentro y los sismos grandes están mar afuera.
+    // Una caja sacada de la FORMA de un país no describe su sismicidad.
+    //
+    // Así que si tu país tiene un vecino sísmicamente activo pegado a la frontera, o una
+    // fosa mar adentro, declara acá TU cinturón —no tu silueta—. El ejemplo trabajado, con
+    // las mediciones al lado, está en `config/presets/venezuela.ts`.
     bounds: null,
 
     // Cada ShakeMap cuesta dos peticiones extra y ~100 KB. Por debajo de M6 la huella no

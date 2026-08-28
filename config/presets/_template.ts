@@ -65,6 +65,29 @@ const template: CountryConfig = {
 
   // features: { donations: false },   // apaga lo que este país todavía no puede llenar
 
+  // ── ¿Tu país tiene un vecino sísmico pegado, o una fosa mar adentro? ──────
+  //
+  // Si no declaras esto, la capa sísmica busca dentro de `geo.bounds` — el rectángulo de
+  // arriba, que existe para encuadrar el mapa y sesgar el geocodificador. Los dos usos
+  // quieren un rectángulo GENEROSO, y generoso significa el país del vecino dentro.
+  //
+  // Lo que costó en Venezuela antes de arreglarlo: de 52 sismos devueltos por USGS, 21
+  // eran de Colombia y uno de Trinidad. El 42% de los puntos del mapa eran de otro país.
+  //
+  // Declara acá TU CINTURÓN SÍSMICO, no tu silueta: dónde tiembla, que no es lo mismo que
+  // dónde está el país. `config/presets/venezuela.ts` tiene el ejemplo con las mediciones
+  // al lado, y `config/hazard.ts` explica por qué esto no se puede automatizar.
+  //
+  // hazard: {
+  //   seismic: {
+  //     minMagnitude: 4.5,   // TODO ¿cuánto tiembla normalmente aquí?
+  //     bounds: [
+  //       [0, 0],            // TODO [sur, oeste]
+  //       [0, 0],            // TODO [norte, este]
+  //     ],
+  //   },
+  // },
+
   // El vocabulario que la gente usa aquí vale más que cualquier rediseño. Se pisa clave
   // por clave sobre `src/i18n/dictionaries/`, así que sobrevive a los merges del repo base.
   // language: {

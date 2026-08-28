@@ -9,6 +9,39 @@ import type { SeismicConfig, SiteConfig } from "@/config/types";
  * `SEISMIC` directamente este módulo servía siempre la del preset. Se veía como que la
  * configuración del registro no hacía nada.
  */
+/**
+ * La caja con la que se le pregunta a USGS.
+ *
+ * ── LA TRAMPA QUE ESCONDE ESTE FALLBACK ─────────────────────────────────────
+ *
+ * `geo.bounds` NO es una caja sísmica. Existe para otras dos cosas —encuadrar el mapa y
+ * sesgar el geocodificador— y las dos quieren un rectángulo GENEROSO: que se vea mar
+ * alrededor, que buscar cerca del borde no falle. Generoso, en un rectángulo, significa el
+ * país del vecino dentro.
+ *
+ * Lo que eso cuesta, medido en Venezuela contra USGS (180 días, M3.5+): de 52 sismos
+ * devueltos, 30 eran venezolanos, 21 colombianos y uno de Trinidad. El 42% de los puntos
+ * del mapa eran de otro país — y en un mapa de emergencia eso no es ruido, sugiere una
+ * extensión del desastre que no ocurrió.
+ *
+ * Ningún despliegue se libra solo: los seis presets heredan esto mientras no declaren
+ * `seismic.bounds`.
+ *
+ * ── POR QUÉ NO SE ARREGLA "AUTOMÁTICAMENTE" ─────────────────────────────────
+ *
+ * La tentación es derivar la caja de los centroides de `regions`, que todo preset ya
+ * declara. Se probó, y se midió: en Venezuela baja los intrusos de 22 a 3, pero en Perú
+ * pierde 8 sismos de 60 y en Indonesia 28 de 905 — los de la FOSA. Los centroides de los
+ * departamentos costeros están tierra adentro, así que su envolvente recorta unos 130 km
+ * de océano, que es exactamente donde ocurren los grandes y los que generan tsunamis.
+ *
+ * Arreglaba un país rompiendo dos. Una caja derivada de la FORMA de un país no describe su
+ * sismicidad, porque la sismicidad no sigue fronteras ni costas.
+ *
+ * Así que el valor por defecto se queda como está —aproximado y honesto— y el país que
+ * conoce su cinturón sísmico lo declara en `seismic.bounds`, que gana sobre todo esto.
+ * `config/presets/venezuela.ts` es el ejemplo trabajado.
+ */
 function bounds(seismic: SeismicConfig, site?: SiteConfig): [[number, number], [number, number]] {
   return seismic.bounds ?? site?.country.geo.bounds ?? SEISMIC.bounds ?? [[-90, -180], [90, 180]];
 }
