@@ -5,14 +5,25 @@ import { useI18n } from "@/i18n/context";
 import { FLAG_ICON, LANG_NAME } from "@/ui/flags";
 
 /**
- * Language switcher: one button (flag + code) that opens a small menu.
+ * Language switcher: la bandera, y nada más.
  *
  * Ported from the original app, including the reason it is a menu and not three pills:
  * with three languages plus flag swatches, always-visible buttons did not fit a phone
  * header next to search, help and the staff gear, and something got clipped.
  *
- * On the narrowest phones the code and chevron are hidden by CSS and only the flag
- * remains — nothing is lost, the names are still in the menu, one tap away.
+ * ── POR QUÉ SE FUERON EL CÓDIGO Y EL GALÓN ──────────────────────────────────
+ *
+ * El botón llevaba bandera + "ES" + un galón, y era el elemento más ancho de la fila de
+ * acciones para decir lo que la bandera ya decía. Esa anchura se paga entera en la barra
+ * angosta, donde el buscador es lo que se queda sin sitio — y el buscador es la razón por
+ * la que alguien abre esto.
+ *
+ * El código no informaba de nada que la bandera no dijera, y el galón prometía un menú que
+ * de todas formas se descubre tocando. La regla de CSS que ya escondía las dos cosas por
+ * debajo de 360px hacía esta misma cuenta; ahora vale para todos los anchos.
+ *
+ * El nombre completo del idioma sigue existiendo: está en el menú, y en el `aria-label`,
+ * que es lo que oye quien no ve la bandera.
  */
 
 export default function LangSwitcher() {
@@ -39,12 +50,9 @@ export default function LangSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={LANG_NAME[lang]}
+        title={LANG_NAME[lang]}
       >
-        <span className="lg-flag lg-flag-lg">{FLAG_ICON[lang]}</span>
-        <span className="langbtn-code">{lang.toUpperCase()}</span>
-        <svg className="langbtn-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <span className="lg-flag lg-flag-btn">{FLAG_ICON[lang]}</span>
       </button>
 
       {open ? (

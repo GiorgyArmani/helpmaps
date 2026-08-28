@@ -4,6 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { ExpressionSpecification, Map as MapLibreMap } from "maplibre-gl";
 import type { EmergencyLayer } from "@/domain/layers";
+
+/**
+ * Un punto del mapa, reducido a lo que la escena necesita.
+ *
+ * Deliberadamente NO es `Center`: la escena no muestra teléfonos, ni horarios, ni
+ * necesidades, y arrastrar el objeto entero hasta acá son 520 fichas completas cruzando el
+ * límite servidor→cliente para dibujar 520 círculos.
+ */
+export interface ScenePoint {
+  id: string;
+  name: string;
+  type: string;
+  lat: number;
+  lng: number;
+  /** El color del tipo, resuelto en el servidor: `typeStyle` vive en la configuración. */
+  color: string;
+}
 import { Icon } from "@/ui/icons";
 import { Notice, Spinner } from "@/ui/primitives";
 import { useI18n } from "@/i18n/context";
@@ -37,9 +54,29 @@ type Toggles = Record<string, boolean>;
 export default function Scene3D({
   layers,
   fallbackCenter,
+  centers,
 }: {
   layers: EmergencyLayer[];
+  /**
+   * Dónde abrir la escena cuando no hay conjunto de edificios que la encuadre.
+   *
+   * En orden **[lng, lat]**, el de MapLibre — NO el `[lat, lng]` de `country.geo.center`,
+   * que es el de Leaflet porque lo consume el mapa 2D. Quien llama hace la conversión, y
+   * `app/3d/page.tsx` la hace con el porqué al lado.
+   *
+   * Se dice acá porque el error es mudo: pasarlo al revés no lanza nada, no avisa de nada
+   * y abre la escena en mitad del océano Antártico. Se ve exactamente igual que "el mapa
+   * 3D no funciona".
+   */
   fallbackCenter: [number, number];
+  /**
+   * Los puntos del mapa 2D, para verlos sobre el relieve.
+   *
+   * Es lo que hace que esta escena valga la pena sin un conjunto de edificios: con el
+   * terreno encendido se ve qué refugios están en ladera y cuáles en el valle, que en este
+   * país es media explicación de por dónde bajó el agua.
+   */
+  centers?: ScenePoint[];
 }) {
   const { t } = useI18n();
   const holder = useRef<HTMLDivElement | null>(null);
@@ -52,6 +89,8 @@ export default function Scene3D({
   const [panelOpen, setPanelOpen] = useState(false);
   const [flat, setFlat] = useState(false);
   const [terrain, setTerrain] = useState(false);
+  // Encendidos de entrada: son la razón por la que la mayoría abre esta escena.
+  const [showPoints, setShowPoints] = useState(true);
   const [on, setOn] = useState<Toggles>(() =>
     Object.fromEntries(layers.map((l) => [l.id, l.defaultOn])),
   );
@@ -59,9 +98,12 @@ export default function Scene3D({
   // La escena se abre sobre el conjunto de edificios si lo hay: es lo que la hace 3D.
   const anchor = useMemo(() => {
     const buildings = layers.find((l) => l.kind === "buildings3d");
+    const focused = buildings?.center ?? layers.find((l) => l.center)?.center;
     return {
-      center: buildings?.center ?? layers.find((l) => l.center)?.center ?? fallbackCenter,
-      zoom: buildings?.zoom ?? 15,
+      center: focused ?? fallbackCenter,
+      // 15 encuadra una manzana, que es lo que pide un conjunto de edificios. Sin él la
+      // escena es la del país entero y ese zoom deja fuera todo menos una esquina.
+      zoom: focused ? buildings?.zoom ?? 15 : 7,
     };
   }, [layers, fallbackCenter]);
 
@@ -160,6 +202,61 @@ export default function Scene3D({
     void sync();
   }, [sync]);
 
+  // ── los puntos del mapa ─────────────────────────────────────────────────
+  //
+  // Círculos y no columnas extruidas, que es lo primero que uno intenta: una extrusión se
+  // mide en METROS, así que a zoom de país una columna de 500 m ocupa menos de un píxel y
+  // la escena parece vacía. El radio de un círculo se mide en píxeles y se ve igual de
+  // bien encuadrando el país que una manzana.
+  //
+  // `circle-pitch-alignment: "map"` es lo que los hace tridimensionales de verdad: en vez
+  // de quedarse mirando a la cámara como una chincheta, se tumban sobre el suelo y siguen
+  // la inclinación y el relieve. Con el terreno encendido, un punto en ladera se ve en
+  // ladera.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const SRC = "scene-points";
+    const LYR = "scene-points-dots";
+
+    if (!showPoints || !centers || centers.length === 0) {
+      if (map.getLayer(LYR)) map.removeLayer(LYR);
+      if (map.getSource(SRC)) map.removeSource(SRC);
+      return;
+    }
+
+    const data = {
+      type: "FeatureCollection" as const,
+      features: centers.map((c) => ({
+        type: "Feature" as const,
+        geometry: { type: "Point" as const, coordinates: [c.lng, c.lat] },
+        properties: { name: c.name, color: c.color, type: c.type },
+      })),
+    };
+
+    const existing = map.getSource(SRC);
+    if (existing && "setData" in existing) {
+      (existing as { setData: (d: unknown) => void }).setData(data);
+      return;
+    }
+
+    map.addSource(SRC, { type: "geojson", data });
+    map.addLayer({
+      id: LYR,
+      type: "circle",
+      source: SRC,
+      paint: {
+        "circle-color": ["get", "color"],
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 3, 10, 6, 15, 11],
+        // El borde blanco es lo que separa dos puntos vecinos del mismo tipo, y lo que los
+        // despega de un terreno oscuro.
+        "circle-stroke-width": 1.5,
+        "circle-stroke-color": "#fff",
+        "circle-pitch-alignment": "map",
+      },
+    });
+  }, [centers, showPoints, ready]);
+
   // ── relieve del terreno ─────────────────────────────────────────────────
   //
   // DEM público de AWS en codificación "terrarium": sin clave ni cuota, igual que el
@@ -228,6 +325,20 @@ export default function Scene3D({
         >
           <Icon.waves />
         </button>
+
+        {/* Apagar los puntos deja la escena limpia para mirar el relieve o una capa de
+            daños. Va con los otros dos porque cambia cómo se MIRA, no qué datos hay. */}
+        {centers && centers.length > 0 ? (
+          <button
+            type="button"
+            className={`s3btn${showPoints ? " s3btn-on" : ""}`}
+            onClick={() => setShowPoints((v) => !v)}
+            aria-pressed={showPoints}
+            title={t("scene3d.points")}
+          >
+            <Icon.target />
+          </button>
+        ) : null}
       </div>
 
       {layers.length > 0 ? (
