@@ -315,6 +315,16 @@ insert into public.emergencies (
   -- «La sísmica de Colombia» abajo.
   '{
     "seismic": {
+      "bounds": [
+        [
+          1,
+          -79.5
+        ],
+        [
+          12.5,
+          -71.5
+        ]
+      ],
       "windowDays": 180
     }
   }'::jsonb,   -- hazard

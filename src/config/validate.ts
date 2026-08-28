@@ -202,6 +202,39 @@ export function validateConfig(site: SiteConfig): void {
     }
   }
 
+  // ── La caja sísmica de un país no puede alcanzar a otro despliegue ───────
+  //
+  // `usgs.ts` consulta con `orderby: "magnitude"` y `useQuakes.ts` sólo pide los contornos
+  // del evento MAYOR de la caja. Así que una caja que alcanza el territorio de otro
+  // despliegue no produce ruido de fondo: produce que el sismo de ESE país secuestre el
+  // evento principal, y que "Zona afectada" dibuje su huella de sacudida sobre este mapa.
+  //
+  // Ya ocurrió, y por eso existe esta regla. Colombia heredó `geo.bounds` —que llega a
+  // -66.85 de longitud y mete a Caracas, que está en -66.88— y al ampliar la ventana a
+  // 180 días para alcanzar su propio terremoto, el M7.5 de Venezuela del 24 de junio
+  // desplazó al M7.4 del Chocó. El mapa de Colombia dibujaba la zona afectada de Caracas:
+  // a alguien en Pereira le decía que el daño estaba a mil kilómetros.
+  //
+  // Es ERROR y no aviso por el criterio de este archivo: manda a alguien al sitio
+  // equivocado. Se arregla en el PRESET DEL PAÍS, declarando `hazard.seismic.bounds` —el
+  // cinturón sísmico que le importa a esta emergencia, no la silueta del país— así que
+  // arreglar un despliegue nunca toca a los otros.
+  //
+  // Usa las coordenadas que `config/network.ts` ya declara para pintar el mapa del hub:
+  // son la ciudad de cada despliegue, que sirve de proxy barato de "territorio ajeno".
+  if (site.mode === "country") {
+    const [[south, west], [north, east]] = site.hazard.seismic.bounds ?? site.country.geo.bounds;
+    for (const other of site.network) {
+      if (other.slug === site.country.slug) continue;
+      if (other.lat < south || other.lat > north || other.lng < west || other.lng > east) continue;
+      errors.push(
+        `la caja sísmica de ${site.country.name} contiene ${other.name} (${other.lat}, ${other.lng}): ` +
+          `un sismo mayor allí se convertiría en el evento principal de ESTE mapa y "Zona afectada" ` +
+          `dibujaría su huella aquí. Declara hazard.seismic.bounds en config/presets/<pais>.ts`,
+      );
+    }
+  }
+
   const label = `[HelpMaps · ${site.country.slug}]`;
   for (const w of warnings) console.warn(`${label} aviso de configuración — ${w}`);
 

@@ -132,31 +132,51 @@ const colombia: CountryConfig = {
   // PEQUEÑOS, nunca el mayor. Una ventana amplia degrada la nube de réplicas, no el
   // sismo que importa.
   //
-  // ── LO QUE FALTA MEDIR, Y NO ME LO INVENTO ────────────────────────────────
+  // ── LA CAJA CON LA QUE SE LE PREGUNTA A USGS ───────────────────────
   //
-  // `minMagnitude` se queda en el 4.5 heredado y `bounds` en null a propósito. Los dos
-  // son sospechosos y ninguno es evidente:
+  // Sin esta caja se hereda `geo.bounds`, que existe para encuadrar el mapa y sesgar el
+  // geocodificador. Llega hasta -66.85 de longitud, y Caracas está en -66.88: VENEZUELA
+  // ENTERA CABE DENTRO. Con `windowDays: 180` eso dejó de ser ruido y pasó a ser un fallo
+  // grave, porque `usgs.ts` consulta con `orderby: "magnitude"`:
   //
-  //   minMagnitude   Venezuela bajó a 3.5 porque sus réplicas estaban entre 3.5 y 4. Este
-  //                  sismo fue a 110 km de profundidad y un evento intermedio produce
-  //                  muchas menos réplicas que uno superficial: bajarlo puede no añadir
-  //                  nada, o puede inundar el mapa. Hay que contarlo antes.
+  //     7.5  Catia La Mar, 24 jun     🇻🇪  ← el mayor de la caja: EVENTO PRINCIPAL
+  //     7.4  San José del Palmar      🇨🇴      el sismo de esta emergencia, desplazado
+  //     7.2  San Felipe, 24 jun       🇻🇪
+  //     5.3  Darién                   🇨🇴
+  //     5.2  Cotacachi                🇪🇨
+  //     5.0  WSW de San José          🇨🇴
   //
-  //   bounds         Al ser null cae a `geo.bounds`, que es el encuadre del mapa y va de
-  //                  -4.23 a 13.5 de latitud: mete dentro el norte de Ecuador, el sur de
-  //                  Panamá y la frontera con Perú. Y con `orderby: magnitude` eso duele
-  //                  MÁS que en Venezuela — un evento fuerte ecuatoriano entra por
-  //                  delante de las réplicas colombianas, no por detrás.
+  // Y `useQuakes.ts` sólo pide los contornos del PRINCIPAL, así que "Zona afectada"
+  // dibujaba la huella de sacudida del terremoto de Venezuela sobre el mapa de Colombia.
+  // No es un detalle estético: le dice a alguien en Pereira que el daño está en Caracas.
   //
-  //                  Tampoco es un rectángulo fácil: la subducción del Pacífico frente a
-  //                  Nariño y Cauca está mar afuera, y el nido de Bucaramanga está a 600
-  //                  km de allí. Una caja que cubra las dos cubre medio Ecuador.
+  // Esta caja NO es la silueta de Colombia: es el cinturón sísmico que le importa a esta
+  // emergencia. Medida contra los seis eventos que el despliegue estaba trayendo:
   //
-  // Las consultas para medirlo están en `db/02_emergencia.co.sql`. Cuando haya números,
-  // van aquí Y en esa fila, con la tabla al lado.
+  //     dentro   San José del Palmar 7.4 · WSW de San José 5.0 · Darién 5.3      3/3 propios
+  //     fuera    Catia La Mar 7.5 · San Felipe 7.2 · Cotacachi 5.2              3/3 ajenos
+  //
+  // El límite ESTE (-71.5) es el que hace el trabajo: deja fuera San Felipe (-68.5),
+  // Catia La Mar (-67.0) y Mérida (-71.15, donde arranca la falla de Boconó), y conserva
+  // Bucaramanga (-73.1) y Cúcuta (-72.5), que sí son de acá.
+  //
+  // Lo que deja fuera, dicho en voz alta: el sur de Nariño por debajo de 1°N y con él la
+  // sismicidad del norte de Ecuador, que en un sismo grande SÍ se siente en Pasto e
+  // Ipiales. Es un intercambio consciente —con `orderby: magnitude`, un M7 ecuatoriano
+  // volvería a secuestrar el evento principal igual que lo hizo el venezolano— y hay que
+  // revisarlo el día que la emergencia de este despliegue sea otra y esté en el sur.
+  //
+  // `minMagnitude` se queda en el 4.5 heredado: sigue sin medirse si bajarlo añade algo.
+  // Este sismo fue a 110 km de profundidad y un evento intermedio produce muchas menos
+  // réplicas que uno superficial, así que puede no hacer falta. Las consultas para
+  // contarlo están en `db/02_emergencia.co.sql`.
   hazard: {
     seismic: {
       windowDays: 180,
+      bounds: [
+        [1, -79.5],
+        [12.5, -71.5],
+      ],
     },
   },
 };
