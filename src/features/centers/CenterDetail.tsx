@@ -8,6 +8,7 @@ import { Badge } from "@/ui/primitives";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import { StatusBadge, StatusWarning } from "@/features/centers/CenterStatus";
 import ShareRow from "@/features/share/ShareRow";
+import PointActions from "@/features/account/PointActions";
 import { telHref, whatsappHref } from "@/features/share/share";
 import type { DictKey } from "@/i18n";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
@@ -183,6 +184,11 @@ export default function CenterDetail({ center }: { center: Center }) {
           </a>
         ) : null}
       </div>
+
+      {/* Guardar y avisar. Va DESPUÉS de cómo llegar y ANTES de compartir: quien abre
+          una ficha viene a decidir si va, no a administrarla. Lo que cambia esa decisión
+          se lee primero. */}
+      <PointActions locationId={center.id} />
 
       <h3 className="dsection">{t("share.title")}</h3>
       <ShareRow center={center} />

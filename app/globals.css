@@ -384,22 +384,23 @@ a {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
+/* Sólo la bandera. Llevaba además el código del idioma y un galón, y con los tres era el
+   control más ancho de la fila para decir lo que la bandera ya dice. Ahora ocupa lo mismo
+   que los otros botones de icono y comparte su forma: la fila se lee como una fila. */
 .langbtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  flex: 0 0 auto;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 11px;
   box-shadow: 0 3px 12px rgba(16, 20, 28, 0.12);
+  width: 40px;
   height: 38px;
-  padding: 0 9px;
+  padding: 0;
   color: var(--ink);
   font-family: inherit;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
   cursor: pointer;
 }
 
@@ -3198,32 +3199,22 @@ a.hub-card:hover {
   }
 
   .langbtn {
-    padding: 0 7px;
-    gap: 5px;
+    width: 36px;
   }
 
 }
 
-/* Smallest phones: the language button drops to just its flag — no code, no chevron. The
-   menu still lists all three languages by name, so nothing is lost, only deferred a tap.
-   This block and the one above were flattened into the unconditional tail of this file
-   during the port, which applied the 36px flag-only button at EVERY width — including
-   desktop, where there is room for the code and the chevron the button is designed with. */
+/* Smallest phones: everything in the action row loses a couple of pixels together. El
+   botón de idioma ya es sólo la bandera en todos los anchos —ver `.langbtn`—, así que acá
+   no se esconde nada: sólo se estrecha, al mismo paso que los botones de al lado. */
 @media (max-width: 360px) {
   .gear {
     width: 34px;
   }
 
   .langbtn {
-    padding: 0;
-    width: 36px;
+    width: 34px;
     height: 36px;
-    justify-content: center;
-  }
-
-  .langbtn-code,
-  .langbtn-chev {
-    display: none;
   }
 
 }
@@ -3441,12 +3432,9 @@ fieldset.fieldset {
 .lg-flag{display:inline-flex;width:16px;height:11px;border-radius:2px;overflow:hidden;box-shadow:0 0 0 1px rgba(16,20,28,.12);flex:0 0 auto}
 .lg-flag svg{width:100%;height:100%;display:block}
 .lg-flag-lg{width:19px;height:13px}
+.lg-flag-btn{width:22px;height:15px}
 .langwrap{position:relative}
-.langbtn{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 3px 12px rgba(16,20,28,.12);height:38px;padding:0 9px;color:var(--ink);font-size:0.6875rem;font-weight:700;cursor:pointer}
 .langbtn-open{border-color:var(--accent)}
-.langbtn-code{letter-spacing:.2px}
-.langbtn-chev{width:12px;height:12px;color:var(--mut);transition:transform .15s ease}
-.langbtn-open .langbtn-chev{transform:rotate(180deg)}
 .lang-backdrop{position:fixed;inset:0;background:transparent;border:none;cursor:default;z-index:649}
 .lang-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:650;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 12px 30px rgba(16,20,28,.20);padding:5px;display:flex;flex-direction:column;gap:2px;min-width:150px}
 .lang-opt{display:flex;align-items:center;gap:9px;background:none;border:none;border-radius:9px;padding:8px 9px;cursor:pointer;text-align:left;font-family:inherit}
@@ -4092,6 +4080,7 @@ fieldset.fieldset {
    barra se lee como cinco cosas juntas y no como una. */
 .macbar .brand,
 .macbar .gear,
+.macbar .langbtn,
 .macbar .searchbar,
 .macbar .fdrop,
 .macbar .cpick > button {
@@ -4708,4 +4697,527 @@ fieldset.fieldset {
   .macbar { gap: 6px; }
   .macbar .hright { gap: 4px; }
   .macbar .fab { padding: 0 10px; }
+}
+
+/* ── Tu cuenta: el avatar, su menú y el panel ─────────────────────────────
+ *
+ * Una sola decisión de forma sostiene las tres piezas: la cuenta es un OBJETO —un disco
+ * con tu inicial— y todo lo que la rodea es lista. El disco aparece en tres tamaños (la
+ * barra, el menú, el panel) y es lo único con color saturado en las tres pantallas; el
+ * resto es la misma tipografía y las mismas líneas de siempre. Un panel de cuenta con
+ * tarjetas de colores, iconos de colores y botones de colores no se lee como "lo tuyo",
+ * se lee como un sitio distinto dentro de la misma aplicación.
+ *
+ * El color sale de `--accent`, así que un clon que cambie su marca cambia también esto.
+ */
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  text-transform: uppercase;
+  /* Sin sesión no hay a quién dibujar: un disco apagado con una silueta. Un círculo lleno
+     de color con un muñeco dentro promete una cuenta que todavía no existe. */
+  background: var(--soft2);
+  color: var(--mut);
+  overflow: hidden;
+}
+
+/* Con sesión el disco se llena. Es lo que hace que la barra diga "estás dentro" sin una
+   sola palabra, y lo único saturado del menú y del panel. */
+.avatar-signed {
+  background: var(--accent);
+  color: #fff;
+}
+
+.avatar svg {
+  width: 55%;
+  height: 55%;
+}
+
+/* ── En la barra ──────────────────────────────────────────────────────── */
+
+.userwrap {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.avatar-btn {
+  width: 34px;
+  height: 34px;
+  font-size: 0.8125rem;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  /* Un aro claro entre el disco y la barra translúcida: sin él, sobre un mapa oscuro el
+     disco se pega al borde de la barra y deja de leerse como un botón redondo. */
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+  transition:
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+}
+
+.avatar-btn:hover {
+  filter: brightness(0.94);
+}
+
+.avatar-on {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ── El menú ──────────────────────────────────────────────────────────── */
+
+.usermenu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 650;
+  width: min(88vw, 286px);
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: 0 14px 38px rgba(16, 20, 28, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: usermenu-in 0.14s ease-out;
+}
+
+@keyframes usermenu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .usermenu {
+    animation: none;
+  }
+}
+
+/* La ficha de arriba ES el enlace a la cuenta. No saluda: dice quién eres y cuántos
+   puntos llevas guardados, que es lo comprobable. */
+.userhead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 11px 12px;
+  border: none;
+  border-radius: var(--r-md);
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.userhead:hover {
+  background: var(--soft);
+}
+
+/* Sin sesión la ficha no es un botón: no hay cuenta a la que llevar. */
+.userhead-anon {
+  cursor: default;
+}
+
+.userhead-anon:hover {
+  background: none;
+}
+
+.avatar-lg {
+  width: 38px;
+  height: 38px;
+  font-size: 0.9375rem;
+}
+
+.userhead-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.userhead-name {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userhead-sub {
+  font-size: 0.75rem;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+
+.userhead-ch {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: var(--mut);
+}
+
+/* El filo que separa quién eres de qué puedes hacer. Es la única línea del menú, y por eso
+   significa algo: arriba una identidad, abajo unas acciones. */
+.usermenu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 5px;
+  border-top: 1px solid var(--line);
+}
+
+.useritem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 11px;
+  border: none;
+  border-radius: var(--r-md);
+  background: none;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.useritem:hover {
+  background: var(--soft);
+}
+
+.useritem-ic {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mut);
+}
+
+.useritem-ic svg {
+  width: 18px;
+  height: 18px;
+}
+
+.useritem-txt {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.useritem-n {
+  flex: 0 0 auto;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--soft2);
+  color: var(--mut);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lo que espera revisión no es un recuento más: es trabajo sin hacer. */
+.useritem-alert {
+  background: #e8452c;
+  color: #fff;
+}
+
+.useritem-quiet {
+  margin-top: 4px;
+  padding-top: 11px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  color: var(--mut);
+  font-weight: 500;
+}
+
+@media (max-width: 560px) {
+  .usermenu {
+    width: min(92vw, 286px);
+  }
+}
+
+/* ── El panel ─────────────────────────────────────────────────────────── */
+
+.acc {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Sin sesión: una frase que dice para qué sirve una cuenta EN ESTE mapa, y debajo el
+   formulario de siempre. */
+.acc-pitch {
+  margin: 0 0 4px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+/* La tarjeta de identidad. Es el único objeto teñido de todo el panel: lo de abajo es
+   lista blanca, y por eso esto se lee como "tú" en vez de como otra sección. */
+.acc-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 16px 17px;
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--accent) 5%, #fff);
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.avatar-xl {
+  width: 52px;
+  height: 52px;
+  font-size: 1.25rem;
+}
+
+.acc-id-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.acc-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
+  min-width: 0;
+}
+
+/* Cambiarse el nombre es configuración: cabe en un lápiz al lado del nombre, no en un
+   formulario que abre el panel. Ese formulario era lo primero que veía alguien que había
+   entrado a buscar los refugios que guardó. */
+.acc-edit {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--mut);
+  cursor: pointer;
+}
+
+.acc-edit:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--ink);
+}
+
+.acc-edit svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Dos cifras y nada más. Es lo que esta cuenta ES en este mapa. */
+.acc-ledger {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+
+.acc-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.acc-ok {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--ok);
+}
+
+.acc-rename {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.acc-rename-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.acc-rename-row .linkish {
+  font-size: 0.8125rem;
+}
+
+/* ── Las secciones ────────────────────────────────────────────────────── */
+
+.acc-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.acc-h {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--mut);
+}
+
+.acc-empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+/* Los guardados son las MISMAS tarjetas de la lista del mapa —mismo color de tipo, mismo
+   estado— y tocarlas abre el punto ahí. Una lista propia de nombres sueltos habría sido
+   otra pantalla que hay que aprender para leer lo mismo. */
+.acc-saved {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.acc-saved .card {
+  padding: 12px 13px;
+}
+
+.acc-saved .card:last-child {
+  border-bottom: none;
+}
+
+.acc-subs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.acc-sub {
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--soft);
+}
+
+.acc-sub-msg {
+  margin: 0 0 6px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.acc-sub-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--mut);
+}
+
+/* El punto de estado hace el trabajo de una etiqueta sin ocupar su sitio: en una lista de
+   envíos lo que se escanea es cuáles siguen esperando. */
+.acc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--mut);
+}
+
+.acc-dot-pending {
+  background: var(--adm);
+}
+
+.acc-dot-approved {
+  background: var(--ok);
+}
+
+.acc-dot-rejected {
+  background: var(--dec);
+}
+
+.acc-cta {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.acc-cta:hover {
+  background: var(--soft);
+}
+
+.acc-cta svg {
+  width: 15px;
+  height: 15px;
+  color: var(--mut);
+}
+
+.acc-fine {
+  margin: 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--mut);
 }

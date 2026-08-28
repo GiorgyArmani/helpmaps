@@ -533,3 +533,129 @@ export async function sendVolunteerWelcome(input: {
     ),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Confirmar una cuenta nueva
+//
+// ── POR QUÉ ESTE CORREO NO ROMPE LA REGLA 2 ─────────────────────────────────
+//
+// La regla de arriba dice, en mayúsculas, que nunca mandamos correo a una dirección que
+// escribió quien llama, y que no se reintroduzca un acuse al remitente. Esto es
+// literalmente eso: sale hacia una dirección que tecleó un desconocido.
+//
+// Lo que hacía peligroso el acuse original no era el destinatario: era que llevaba
+// DENTRO texto del remitente. Alguien ponía una estafa en el campo "nombre", nosotros se
+// la mandábamos a la víctima firmada con nuestro dominio, y el dominio quedaba
+// convertido en un relé.
+//
+// Este correo no interpola una sola cosa que venga del formulario. Ni el nombre para
+// mostrar, que sí tenemos a mano. El cuerpo es fijo, `{brand}` lo pone la configuración y
+// el enlace lo acuña Supabase con el service role. Un atacante que dispare esto contra la
+// dirección de otro consigue exactamente un mensaje inofensivo que dice "alguien pidió
+// una cuenta, si no fuiste vos ignoralo" — que es lo que ese mensaje tiene que decir.
+//
+// Lo que queda es el volumen, y eso NO lo resuelve la plantilla: lo resuelve el límite
+// por IP de la ruta que llama acá. Sin ese límite esto es un enviador de correo abierto.
+// ---------------------------------------------------------------------------
+
+export async function sendAccountConfirm(input: {
+  /** La dirección a confirmar. Único dato del formulario, y sólo como destinatario. */
+  to: string;
+  /** Enlace de un solo uso acuñado con el service role. */
+  confirmUrl: string;
+  hours?: number;
+  lang?: Lang;
+  site?: string;
+}): Promise<boolean> {
+  if (!isEmail(input.to)) return false;
+
+  const t = emailT(input.lang);
+  const site = (input.site ?? siteUrl()).replace(/\/+$/, "");
+  const hours = input.hours ?? 24;
+
+  const html = emailShell({
+    site,
+    preheader: t("email.confirm.preheader"),
+    footer: t("email.footer.note", { brand: BRAND.name }),
+    body: lines(
+      heading(t("email.confirm.title")),
+      paragraph(t("email.confirm.intro", { brand: BRAND.name })),
+      button(input.confirmUrl, t("email.confirm.cta")),
+      note(t("email.confirm.expires", { hours })),
+      divider(),
+      note(t("email.confirm.ignore")),
+    ),
+  });
+
+  return deliver({
+    to: input.to,
+    subject: t("email.confirm.subject", { brand: BRAND.name }),
+    html,
+    text: lines(
+      t("email.confirm.title"),
+      "",
+      t("email.confirm.intro", { brand: BRAND.name }),
+      "",
+      `${t("email.confirm.cta")}: ${input.confirmUrl}`,
+      "",
+      t("email.confirm.expires", { hours }),
+      "",
+      t("email.confirm.ignore"),
+    ),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Una postulación fue rechazada
+//
+// Lo dispara un admin, no un formulario, así que sí puede llevar el nombre: el camino es
+// el mismo que el de la bienvenida y tiene la misma garantía — alguien del equipo decidió
+// mandarlo.
+//
+// Existe porque hoy un rechazo es silencio, y el silencio se lee como "se perdió". Quien
+// se ofreció a ayudar en una emergencia merece una respuesta, y merece saber que puede
+// seguir sugiriendo puntos sin ser del equipo.
+// ---------------------------------------------------------------------------
+
+export async function sendVolunteerRejected(input: {
+  to: string;
+  name?: string | null;
+  lang?: Lang;
+  site?: string;
+}): Promise<boolean> {
+  if (!isEmail(input.to)) return false;
+
+  const t = emailT(input.lang);
+  const site = (input.site ?? siteUrl()).replace(/\/+$/, "");
+  const greetName = cleanName(input.name ?? "");
+  const greeting = greetName
+    ? t("email.welcome.greeting", { name: greetName })
+    : t("email.welcome.greetingPlain");
+
+  const html = emailShell({
+    site,
+    preheader: t("email.volDecision.rejectedPreheader"),
+    footer: t("email.footer.note", { brand: BRAND.name }),
+    body: lines(
+      heading(t("email.volDecision.rejectedTitle")),
+      paragraph(`${greeting} ${t("email.volDecision.rejectedBody")}`),
+      paragraph(t("email.volDecision.rejectedAgain")),
+      button(site, t("email.volDecision.map")),
+    ),
+  });
+
+  return deliver({
+    to: input.to,
+    subject: t("email.volDecision.rejectedSubject", { brand: BRAND.name }),
+    html,
+    text: lines(
+      t("email.volDecision.rejectedTitle"),
+      "",
+      `${greeting} ${t("email.volDecision.rejectedBody")}`,
+      "",
+      t("email.volDecision.rejectedAgain"),
+      "",
+      `${t("email.volDecision.map")}: ${site}`,
+    ),
+  });
+}

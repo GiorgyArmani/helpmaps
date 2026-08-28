@@ -12,7 +12,10 @@ import { useEmergency, useSite } from "@/features/app/SiteProvider";
 import NewsTab from "@/features/news/NewsTab";
 import { buildingLayers, defaultLayerState, mapLayers } from "@/domain/layers";
 import { useStaffSession } from "@/features/admin/useStaffSession";
-import LoginForm from "@/features/admin/LoginForm";
+import AccountPanel from "@/features/account/AccountPanel";
+import AccountMenu from "@/features/account/AccountMenu";
+import AccountView from "@/features/account/AccountView";
+import { useAccount } from "@/features/account/useAccount";
 import { fetchDonations } from "@/data/donations";
 import { getSupabase } from "@/lib/supabase/client";
 import { useQuakes } from "@/features/hazard/useQuakes";
@@ -54,14 +57,31 @@ const PasswordChange = dynamic(() => import("@/features/admin/PasswordChange"), 
   loading: () => null,
 });
 
-type View = "list" | "detail" | "needs" | "suggest" | "volunteer" | "donate" | "contact" | "admin";
+type View =
+  | "list"
+  | "detail"
+  | "needs"
+  | "suggest"
+  | "volunteer"
+  | "donate"
+  | "contact"
+  /** Mi cuenta: guardados, lo enviado, el nombre. Antes era la página `/cuenta`. */
+  | "account"
+  | "admin";
 
 /**
  * What the map opens ON, when the visitor arrived saying what they came for — today that
  * is the entry page (`/inicio`), whose two doors and campaign button land here. Resolved
  * from `?a=` in `app/page.tsx`, which also drops any action a feature switch has off.
  */
-export type EntryAction = "needs" | "suggest" | "initiative" | "volunteer" | "donate";
+export type EntryAction =
+  | "needs"
+  | "suggest"
+  | "initiative"
+  | "volunteer"
+  | "donate"
+  /** Aterriza en la cuenta: es a donde manda `/cuenta` tras confirmar el correo. */
+  | "account";
 
 /**
  * The country app.
@@ -160,8 +180,19 @@ export default function AppShell({
     setView((current) => (current === "detail" ? "list" : current));
   }, []);
 
-  // Resolved only once the panel is actually open — see useStaffSession.
-  const staff = useStaffSession(view === "admin");
+  // El menú del avatar. Vive acá y no dentro de `AccountMenu` porque abrirlo es lo que
+  // dispara las dos consultas de abajo, y porque cerrarlo es parte de "abrir una vista".
+  const [userMenu, setUserMenu] = useState(false);
+  // "Correo confirmado" pertenece a la LLEGADA desde el enlace del correo, no a la vista:
+  // sin esto reaparecía cada vez que se volvía a abrir la cuenta en la misma sesión.
+  const [justConfirmed, setJustConfirmed] = useState(initialAction === "account");
+  // Resolved only once the panel — or the avatar menu — is actually open. Ver
+  // useStaffSession: la consulta del rol no entra en el camino crítico del mapa.
+  const staff = useStaffSession(view === "admin" || userMenu);
+  // El perfil y los guardados, con la misma pereza. Una sola instancia para el menú y para
+  // la vista: son la misma cuenta, y dos copias del recuento de guardados es cómo el menú
+  // acaba diciendo 3 mientras el panel dice 4.
+  const account = useAccount(userMenu || view === "account");
   // "Register my initiative" is the same form with a different pre-selected kind: one
   // moderation queue, one shape, so the entry page needs no endpoint of its own.
   const [suggestKind] = useState<SubmissionKind>(
@@ -270,6 +301,7 @@ export default function AppShell({
 
   function back() {
     setView("list");
+    setJustConfirmed(false);
     setSelectedId(null);
     // The menu is header state, not panel state, so it outlives the view that owns it —
     // without this it would be hanging open the next time the panel is opened.
@@ -283,11 +315,17 @@ export default function AppShell({
    * Signing out closes the panel and leaves the map exactly as it was — no navigation.
    * The map is the product; tearing the client tree down to re-render a page that is
    * already on screen is a second of blank on a bad connection, for nothing.
+   *
+   * Sirve para las dos sesiones. Es una sola: la diferencia entre una persona y alguien
+   * del equipo es un rol en una tabla, no otra credencial, y tener dos botones de salir
+   * era prometer una separación que no existe.
    */
-  async function signOutStaff() {
+  async function signOut() {
     await getSupabase()?.auth.signOut();
     staff.clear();
+    account.refresh();
     setPending(0);
+    setUserMenu(false);
     back();
   }
 
@@ -371,13 +409,21 @@ export default function AppShell({
         onDraftPinMove={moveDraftPin}
       />
 
-      {/* Solo aparece si esta emergencia declara un conjunto de edificios. Un botón que
-          lleva a una escena vacía de una zona de desastre se lee como "no pasó nada". */}
-      {scenes3d.length > 0 ? (
+      {/* Aparece cuando hay ALGO que mostrar en 3D: un conjunto de edificios, o los puntos
+          del mapa sobre el relieve. Antes exigía los edificios, y como casi ningún
+          despliegue tiene ese dataset, el botón sólo existía con las capas de demostración
+          puestas — y al quitarlas se llevó la ruta por delante.
+
+          El argumento original sigue en pie y por eso el guardia no desaparece: un botón
+          que lleva a una escena vacía de una zona de desastre se lee como "no pasó nada".
+          Lo que cambia es qué cuenta como no-vacía.
+
+          El `?l=` sólo viaja si hay edificios: sin ellos no hay conjunto que elegir. */}
+      {scenes3d.length > 0 || visible.length > 0 ? (
         <Link
-          href={`/3d?l=${encodeURIComponent(scenes3d[0]!.id)}`}
+          href={scenes3d.length > 0 ? `/3d?l=${encodeURIComponent(scenes3d[0]!.id)}` : "/3d"}
           className="btn3d"
-          title={scenes3d[0]!.label}
+          title={scenes3d[0]?.label ?? t("scene3d.pointsTitle")}
         >
           <span className="btn3d-txt">3D</span>
         </Link>
@@ -537,26 +583,6 @@ export default function AppShell({
               </div>
             ) : null}
 
-            {/* Two states for the same slot, as in the original.
-                Signed out: a PADLOCK, not a gear — a gear promises settings, and the
-                spoked one this used to draw read as a brightness toggle at 19px.
-                Signed in: the sliders, wearing the count of what is waiting. Signing in
-                is over by then; what the button means is "open the panel", and a
-                volunteer who closed it still needs to see that something arrived.
-                Ordered as in the original: the two things a visitor might want (write to
-                us, how it works) bracket it, and the language button stays last. */}
-            <button
-              type="button"
-              className={staff.session ? "gear gear-badged" : "gear"}
-              data-tour="staffgear"
-              aria-label={staff.session ? t("admin.title") : t("login.title")}
-              title={staff.session ? t("admin.title") : t("login.title")}
-              onClick={() => setView("admin")}
-            >
-              {staff.session ? <Icon.sliders /> : <Icon.lock />}
-              {staff.session && pending > 0 ? <span className="gear-badge">{pending}</span> : null}
-            </button>
-
             <button
               type="button"
               className="gear"
@@ -569,6 +595,27 @@ export default function AppShell({
             </button>
 
             <LangSwitcher />
+
+            {/* Tu cuenta, al final de la barra.
+                Este hueco lo ocupaba un candado que sólo sabía decir "entrar al panel del
+                equipo", y estaba en medio de la fila. Ahora es el avatar, en el sitio y con
+                el gesto que cualquiera trae aprendidos de otro mapa: tu inicial en la
+                esquina y, debajo, tus puntos guardados, tu cuenta y la salida. El panel del
+                equipo es una entrada más de ese menú —lo tiene una de cada mil personas que
+                abren esto— y conserva sobre el avatar su recuento de pendientes, que es lo
+                único que no podía perderse por el camino. */}
+            <AccountMenu
+              open={userMenu}
+              onOpenChange={setUserMenu}
+              account={account}
+              staff={staff}
+              pending={pending}
+              volunteerEnabled={site.features.volunteerSignup}
+              onOpenAccount={() => setView("account")}
+              onOpenPanel={() => setView("admin")}
+              onOpenVolunteer={() => setView("volunteer")}
+              onSignOut={() => void signOut()}
+            />
           </div>
         </div>
 
@@ -735,9 +782,11 @@ export default function AppShell({
                     ? t("donate.title")
                     : activeView === "contact"
                       ? t("contact.title")
-                      : activeView === "admin"
-                        ? t(staff.session ? "admin.title" : "login.title")
-                        : t("volunteer.title")}
+                      : activeView === "account"
+                        ? t(account.userId ? "account.title" : "account.signIn")
+                        : activeView === "admin"
+                          ? t(staff.session ? "admin.title" : "login.title")
+                          : t("volunteer.title")}
             </span>
             {/* Session actions belong to the header, next to the title that names the
                 session — not folded into a menu inside the body. Replaying the
@@ -784,7 +833,7 @@ export default function AppShell({
                 >
                   <Icon.question />
                 </button>
-                <button type="button" className="signout" onClick={() => void signOutStaff()}>
+                <button type="button" className="signout" onClick={() => void signOut()}>
                   {t("login.signOut")}
                 </button>
               </>
@@ -810,6 +859,18 @@ export default function AppShell({
               />
             ) : null}
             {activeView === "contact" ? <ContactForm kind="donation" onDone={back} /> : null}
+            {/* Mi cuenta. `centers` entra entero y no una consulta de guardados: los
+                puntos ya están en memoria, así que la lista sale del mapa que la persona
+                está mirando y tocar uno lo abre ahí mismo. */}
+            {activeView === "account" ? (
+              <AccountView
+                account={account}
+                centers={centers}
+                onOpenCenter={openCenter}
+                onVolunteer={() => setView("volunteer")}
+                justConfirmed={justConfirmed}
+              />
+            ) : null}
             {activeView === "admin" ? (
               staff.session ? (
                 <AdminPanel
@@ -819,7 +880,15 @@ export default function AppShell({
                   onPendingChange={setPending}
                 />
               ) : staff.checked ? (
-                <LoginForm onSignedIn={staff.refresh} />
+                /* No es del equipo. Puede ser que no haya entrado, o que haya entrado con
+                   una cuenta de persona: `AccountPanel` distingue los dos casos y sólo
+                   muestra el formulario de acceso en el primero. Poner `LoginForm` suelto
+                   acá era pedirle la contraseña a alguien que ya la había puesto. */
+                <AccountPanel
+                  onSignedIn={staff.refresh}
+                  onOpenAccount={() => setView("account")}
+                  onVolunteer={() => setView("volunteer")}
+                />
               ) : (
                 <p className="empty">{t("common.loading")}</p>
               )

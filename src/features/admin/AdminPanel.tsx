@@ -7,6 +7,7 @@ import {
   deleteCenter,
   fetchAllCenters,
   saveCenter,
+  closeCenter,
   confirmCenterOpen,
   type CenterDraft,
 } from "@/data/centers";
@@ -30,12 +31,13 @@ import { useEmergencyId } from "@/features/app/SiteProvider";
 import { Badge, Notice } from "@/ui/primitives";
 import { Icon } from "@/ui/icons";
 import { useI18n, useTimeAgo } from "@/i18n/context";
+import { fetchPendingReports, resolveReports, type ReportGroup } from "@/data/account";
 import CenterForm from "@/features/admin/CenterForm";
 import DonationForm from "@/features/admin/DonationForm";
 import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 
-type Tab = "activity" | "centers" | "submissions" | "volunteers" | "donations";
+type Tab = "activity" | "centers" | "submissions" | "reports" | "volunteers" | "donations";
 
 /**
  * The team panel.
@@ -77,6 +79,7 @@ export default function AdminPanel({
   const [centers, setCenters] = useState<Center[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [volunteers, setVolunteers] = useState<VolunteerRequest[]>([]);
+  const [reports, setReports] = useState<ReportGroup[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [editingDonation, setEditingDonation] = useState<Donation | null>(null);
@@ -98,21 +101,25 @@ export default function AdminPanel({
     const sb = getSupabase();
     if (!sb) return;
     try {
-      const [c, sub, vol, log, settings, don] = await Promise.all([
+      const [c, sub, vol, log, settings, don, rep] = await Promise.all([
         fetchAllCenters(sb, emergencyId),
         fetchSubmissions(sb),
         isAdmin ? fetchVolunteerRequests(sb) : Promise.resolve([]),
         fetchAudit(sb),
         fetchSettings(sb),
         site.features.donations ? fetchAllDonations(sb) : Promise.resolve([]),
+        // Los avisos los ve TODO el equipo, no sólo los admins: un voluntario que sale a
+        // comprobar puntos es justo quien mejor puede resolverlos.
+        fetchPendingReports(sb),
       ]);
       setCenters(c);
       setSubmissions(sub);
       setVolunteers(vol);
+      setReports(rep);
       setAudit(log);
       setDonations(don);
       setMaintenanceState(settings.maintenance);
-      onPendingChange?.(sub.length + vol.length);
+      onPendingChange?.(sub.length + vol.length + rep.length);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "load failed");
@@ -315,6 +322,14 @@ export default function AdminPanel({
           label={t("admin.tab.submissions")}
           icon={<Icon.mail />}
           count={submissions.length}
+        />
+        <TabButton
+          id="reports"
+          tab={tab}
+          onClick={setTab}
+          label={t("admin.tab.reports")}
+          icon={<Icon.alert />}
+          count={reports.length}
         />
         {site.features.donations ? (
           <TabButton
@@ -558,6 +573,116 @@ export default function AdminPanel({
                   }
                 >
                   {t("admin.reject")}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {tab === "reports" ? (
+        <div className="stack">
+          {/* La promesa que sostiene todo el diseño, escrita donde el equipo la lee: estos
+              avisos NO cambiaron nada. Los manda gente con cuenta y sin permisos de
+              escritura, y el mapa sólo se mueve si alguien de acá lo mueve. */}
+          <p className="mut">{t("admin.reports.intro")}</p>
+          {reports.length === 0 ? <p className="mut">{t("admin.reports.none")}</p> : null}
+
+          {reports.map((g) => (
+            <article key={g.locationId} className="subcard">
+              <div className="subcard-head">
+                <strong>{g.locationName}</strong>
+                {g.region ? <span>{helpers.regionLabel(g.region)}</span> : null}
+                <span>{ago(g.ultimo)}</span>
+              </div>
+
+              {/* El recuento primero, y en grande. La pregunta que resuelve esta pantalla
+                  no es "¿le creo a esta persona?" sino "¿le creo a las cinco que dicen lo
+                  mismo?" — y esa se responde mucho mejor. */}
+              <p className="subcard-msg">
+                {g.sigueAbierto > 0 ? t("admin.reports.open", { n: g.sigueAbierto }) : null}
+                {g.sigueAbierto > 0 && (g.yaCerro > 0 || g.datoIncorrecto > 0) ? " · " : null}
+                {g.yaCerro > 0 ? t("admin.reports.closed", { n: g.yaCerro }) : null}
+                {g.yaCerro > 0 && g.datoIncorrecto > 0 ? " · " : null}
+                {g.datoIncorrecto > 0 ? t("admin.reports.wrong", { n: g.datoIncorrecto }) : null}
+              </p>
+
+              {/* Las notas, con quién las escribió. El nombre para mostrar, nunca el
+                  correo: `fetchPendingReports` ni siquiera lo trae. */}
+              {g.reports.filter((r) => r.note).length > 0 ? (
+                <ul className="feed-list">
+                  {g.reports
+                    .filter((r) => r.note)
+                    .map((r) => (
+                      <li key={r.id} className="small">
+                        <span className="mut">{r.by ?? t("admin.reports.anon")}: </span>
+                        {r.note}
+                      </li>
+                    ))}
+                </ul>
+              ) : null}
+
+              <div className="subcard-acts">
+                {g.sigueAbierto >= g.yaCerro ? (
+                  <button
+                    type="button"
+                    className="btnp"
+                    disabled={busy}
+                    onClick={() =>
+                      void review(async () => {
+                        const sb = getSupabase();
+                        if (!sb) return;
+                        await confirmCenterOpen(sb, g.locationId);
+                        await resolveReports(sb, g.locationId, "applied");
+                      })
+                    }
+                  >
+                    {t("admin.reports.confirmOpen")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btnp"
+                    disabled={busy}
+                    onClick={() =>
+                      void review(async () => {
+                        const sb = getSupabase();
+                        if (!sb) return;
+                        await closeCenter(sb, g.locationId);
+                        await resolveReports(sb, g.locationId, "applied");
+                      })
+                    }
+                  >
+                    {t("admin.reports.confirmClosed")}
+                  </button>
+                )}
+
+                {/* "Dato incorrecto" no se puede resolver de un clic: hace falta leer la
+                    ficha y arreglar lo que esté mal. Este botón lleva ahí. */}
+                <button
+                  type="button"
+                  className="btng"
+                  disabled={busy}
+                  onClick={() => {
+                    const target = centers.find((c) => c.id === g.locationId);
+                    if (target) setEditing(target);
+                  }}
+                >
+                  {t("admin.reports.edit")}
+                </button>
+
+                <button
+                  type="button"
+                  className="btng"
+                  disabled={busy}
+                  onClick={() =>
+                    void review(async () => {
+                      const sb = getSupabase();
+                      if (sb) await resolveReports(sb, g.locationId, "dismissed");
+                    })
+                  }
+                >
+                  {t("admin.reports.dismiss")}
                 </button>
               </div>
             </article>

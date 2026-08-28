@@ -100,6 +100,39 @@ const es = {
   "email.label.profile": "Perfil",
   "email.label.region": "Zona",
   "email.label.motivation": "Por qué quiere colaborar",
+
+  // ── Confirmar una cuenta nueva ────────────────────────────────────────────
+  //
+  // ATENCIÓN al escribir estas cadenas: este es el ÚNICO correo del proyecto que sale
+  // hacia una dirección que escribió un desconocido, sin que ningún admin lo haya
+  // aprobado. La regla 2 de `src/lib/email.ts` existe porque la primera versión del
+  // producto devolvía un acuse al remitente con SU PROPIO texto dentro, y eso convirtió
+  // el dominio en un relé de phishing.
+  //
+  // Por eso ninguna de estas cadenas acepta una variable que venga de un formulario. Ni
+  // el nombre. `{brand}` y el enlace son lo único que se interpola, y los dos los pone el
+  // servidor. Si alguna vez agregás `{name}` acá, reabrís el agujero.
+  "email.confirm.subject": "Confirma tu correo · {brand}",
+  "email.confirm.preheader": "Un paso para terminar de crear tu cuenta.",
+  "email.confirm.title": "Confirma tu correo",
+  "email.confirm.intro":
+    "Alguien pidió crear una cuenta de {brand} con esta dirección. Si fuiste tú, confírmalo con el botón.",
+  "email.confirm.cta": "Confirmar mi correo",
+  "email.confirm.expires": "El enlace sirve una sola vez y caduca en {hours} horas.",
+  "email.confirm.ignore":
+    "Si no pediste esta cuenta, ignora este mensaje: sin confirmar, la dirección no queda registrada y nadie recibe nada más.",
+
+  // ── Postulación resuelta ──────────────────────────────────────────────────
+  //
+  // Este sí lo dispara un admin, así que puede llevar el nombre de la persona.
+  "email.volDecision.rejectedSubject": "Sobre tu postulación · {brand}",
+  "email.volDecision.rejectedPreheader": "Novedades sobre tu solicitud para sumarte al equipo.",
+  "email.volDecision.rejectedTitle": "Sobre tu postulación",
+  "email.volDecision.rejectedBody":
+    "Gracias por ofrecerte. Por ahora no vamos a sumar tu solicitud al equipo. No es un juicio sobre vos: el equipo crece despacio porque cada cuenta publica en vivo sobre el mapa.",
+  "email.volDecision.rejectedAgain":
+    "Podés volver a postularte más adelante, y podés seguir ayudando desde el mapa sin cuenta de equipo: sugerir un punto o avisar de un cambio no requiere permisos.",
+  "email.volDecision.map": "Ir al mapa",
 } as const;
 
 export type EmailKey = keyof typeof es;

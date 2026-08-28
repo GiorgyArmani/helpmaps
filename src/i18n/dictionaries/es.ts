@@ -282,6 +282,121 @@ const es = {
   "login.submitting": "Entrando…",
   "login.error": "Correo o contraseña incorrectos.",
   "login.signOut": "Salir",
+  "login.noAccount": "¿No tienes cuenta?",
+  "login.createAccount": "Crear una cuenta",
+
+  // ── Crear una cuenta ────────────────────────────────────────────────────
+  //
+  // El nombre para mostrar es lo ÚNICO que otra persona del equipo llega a ver. El texto
+  // lo dice explícitamente porque de eso depende que alguien se sienta con permiso de
+  // poner un apodo, que es justamente lo que queremos que pueda hacer.
+  "register.title": "Crear una cuenta",
+  "register.subtitle":
+    "Para seguir lo que reportas, guardar puntos y postularte al equipo. No hace falta cuenta para usar el mapa.",
+  "register.displayName": "Nombre para mostrar",
+  "register.displayNameHint":
+    "Puede ser un apodo. Es lo único que ve el equipo; tu correo no lo ve nadie más que un administrador.",
+  "register.email": "Correo",
+  "register.emailHint": "Te enviamos un enlace para confirmarlo.",
+  "register.password": "Contraseña",
+  "register.submit": "Crear cuenta",
+  "register.submitting": "Creando…",
+  "register.doneTitle": "Revisa tu correo",
+  "register.doneBody":
+    "Si esa dirección puede usarse, te llega un enlace para confirmarla. El enlace sirve una sola vez y caduca en 24 horas.",
+  "register.doneSpam": "Si no aparece en unos minutos, mira en la carpeta de no deseados.",
+  "register.errorName": "Elige un nombre de entre 2 y 40 caracteres.",
+  "register.errorEmail": "Escribe un correo válido.",
+  "register.haveAccount": "¿Ya tienes cuenta?",
+
+  // ── Mi cuenta ───────────────────────────────────────────────────────────
+  "account.title": "Mi cuenta",
+  "account.checking": "Comprobando tu sesión…",
+  "account.needSession": "Inicia sesión para ver tu cuenta.",
+  "account.confirmed": "Correo confirmado. Tu cuenta ya está activa.",
+  "account.displayName": "Nombre para mostrar",
+  "account.displayNameHint": "Lo único que ve el equipo. Puedes cambiarlo cuando quieras.",
+  "account.saved": "Guardado.",
+  "account.privacy":
+    "Tu correo no aparece en ninguna lista ni lo ve el resto del equipo: solo un administrador puede consultarlo.",
+
+  "account.mine": "Lo que has enviado",
+  "account.noSubmissions":
+    "Todavía no has enviado nada. Cuando sugieras un punto desde el mapa, aparecerá aquí con su estado.",
+  "account.status.pending": "En revisión",
+  "account.status.approved": "Publicado",
+  "account.status.rejected": "Descartado",
+
+  "account.volunteer": "Sumarme al equipo",
+  "account.volNone":
+    "Puedes postularte para publicar en vivo sobre el mapa. Lo revisa un administrador.",
+  "account.volApply": "Postularme",
+  "account.volPending":
+    "Tu postulación está en revisión. Te avisamos por correo en cuanto haya respuesta.",
+  "account.volApproved": "Ya eres parte del equipo. El panel se abre desde tu avatar, arriba a la derecha.",
+  "account.volRejected":
+    "Por ahora tu postulación no siguió adelante. Puedes volver a postularte más adelante.",
+
+  "account.signOut": "Cerrar sesión",
+  "account.hello": "Hola, {name}",
+  "account.panelIntro":
+    "Tienes una cuenta de HelpMaps. No eres parte del equipo, así que no publicas directamente sobre el mapa — pero puedes guardar puntos, avisar de cambios y postularte.",
+  "account.open": "Mi cuenta",
+  "account.staffLogin": "Entrar como equipo",
+  "account.saved.title": "Tus puntos guardados",
+  "account.saved.none": "Todavía no has guardado ninguno. Toca el corazón en la ficha de un punto y vuelve a encontrarlo aquí.",
+  "account.saved.gone":
+    "{n} de tus puntos guardados ya no están en el mapa. Puede que el equipo los haya retirado.",
+
+  // ── El avatar de la barra y su menú ──────────────────────────────────────
+  // "login.title" es "Entrar al panel": el rótulo del equipo. Una persona que va a
+  // guardar refugios entra a lo suyo, no a un panel.
+  "account.signIn": "Entrar",
+  "account.anonTitle": "Tu cuenta",
+  "account.anonSub": "Entra para guardar puntos del mapa.",
+  "account.createAccount": "Crear una cuenta",
+  "account.roleStaff": "Parte del equipo",
+  "account.noName": "Sin nombre todavía",
+  "account.rename": "Cambiar mi nombre",
+  "account.whyAccount":
+    "Con una cuenta guardas los puntos que te sirven y ves en qué queda lo que envías. Nadie más ve lo que guardas.",
+
+  // El recuento de la cabecera. Ver `src/features/account/ledger.ts` para el plural.
+  "account.countSavedNone": "Sin puntos guardados",
+  "account.countSavedOne": "1 punto guardado",
+  "account.countSavedMany": "{n} puntos guardados",
+  "account.countSentNone": "Nada enviado todavía",
+  "account.countSentOne": "1 envío",
+  "account.countSentMany": "{n} envíos",
+
+  // ── Guardar y avisar, desde la ficha de un punto ─────────────────────────
+  "point.save": "Guardar",
+  "point.saved": "Guardado",
+  "point.saveHint": "Solo tú ves tus puntos guardados.",
+  "point.report": "Avisar de un cambio",
+  "point.reportIntro": "¿Qué sabes de este punto? Lo revisa el equipo antes de cambiar nada.",
+  "point.report.sigue_abierto": "Sigue abierto",
+  "point.report.ya_cerro": "Ya cerró",
+  "point.report.dato_incorrecto": "Hay un dato incorrecto",
+  "point.reportNote": "¿Algo más? (opcional)",
+  "point.reportSend": "Enviar aviso",
+  "point.reportThanks": "Gracias. El equipo lo revisa antes de cambiar el mapa.",
+  "point.reportDuplicate": "Ya enviaste un aviso de este punto. Está en revisión.",
+  "point.needAccount": "Crea una cuenta para guardar puntos y avisar de cambios.",
+
+  // ── Cola de avisos, en el panel del equipo ──────────────────────────────
+  "admin.tab.reports": "Avisos",
+  "admin.reports.none": "No hay avisos sin revisar.",
+  "admin.reports.intro":
+    "Avisos de personas con cuenta. No cambian el mapa: lo cambias tú desde aquí.",
+  "admin.reports.open": "{n} dicen que sigue abierto",
+  "admin.reports.closed": "{n} dicen que ya cerró",
+  "admin.reports.wrong": "{n} avisan de un dato incorrecto",
+  "admin.reports.confirmOpen": "Marcar abierto y confirmar",
+  "admin.reports.confirmClosed": "Marcar cerrado",
+  "admin.reports.edit": "Abrir la ficha",
+  "admin.reports.dismiss": "Descartar",
+  "admin.reports.anon": "Sin nombre",
 
   // ── Panel ───────────────────────────────────────────────────────────────
   "admin.title": "Panel del equipo",
@@ -452,6 +567,8 @@ const es = {
   "scene3d.tilt": "Ver inclinado",
   "scene3d.flat": "Ver plano",
   "scene3d.terrain": "Relieve del terreno",
+  "scene3d.points": "Puntos del mapa",
+  "scene3d.pointsTitle": "Puntos sobre el terreno",
   "scene3d.legendTitle": "Altura = daño estimado",
   "scene3d.legendBody":
     "La altura de cada bloque representa el porcentaje de daño estimado, no la altura real del edificio.",

@@ -19,7 +19,7 @@ const SELECT = `${LOCATION_COLUMNS},info:center_info(${INFO_COLUMNS})`;
  * Narrow a query to one emergency.
  *
  * `null` means "do not scope", which is the correct behaviour for a deployment that has
- * not adopted `db/007_emergencies.sql`: there is one implicit emergency and every row
+ * not adopted `db/01_esquema.sql § 007_emergencies`: there is one implicit emergency and every row
  * belongs to it.
  *
  * When there IS an id, rows with `emergency_id is null` are included alongside it. That is
@@ -27,7 +27,7 @@ const SELECT = `${LOCATION_COLUMNS},info:center_info(${INFO_COLUMNS})`;
  * migration and creates its row without running the backfill would otherwise open to an
  * EMPTY MAP. An unassigned row showing up in the only emergency that exists is a
  * cosmetic problem; a blank map during an earthquake is not. The backfill snippet at the
- * end of `db/008_tenancy.sql` is what makes the distinction exact, and running a second
+ * end of `db/01_esquema.sql § 008_tenancy` is what makes the distinction exact, and running a second
  * emergency in one database requires it.
  */
 function scopeTo<T extends { or: (f: string) => T }>(query: T, emergencyId: string | null): T {
@@ -199,6 +199,25 @@ export async function confirmCenterOpen(sb: SupabaseClient, id: string): Promise
     .from("center_info")
     .upsert(
       { location_id: id, status: "abierto", last_confirmed_at: now, updated_at: now },
+      { onConflict: "location_id" },
+    );
+  if (error) throw error;
+}
+
+/**
+ * "Ya cerró", en un toque, desde la cola de avisos.
+ *
+ * Gemela de `confirmCenterOpen` y por el mismo motivo: sella `last_confirmed_at` junto con
+ * el estado. Un punto marcado como cerrado sin fecha se lee como un cierre de hace meses y
+ * la gente lo ignora; con fecha de hoy, se lee como lo que es — alguien acaba de comprobar
+ * que esa puerta está cerrada, que es información tan útil como la contraria.
+ */
+export async function closeCenter(sb: SupabaseClient, id: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await sb
+    .from("center_info")
+    .upsert(
+      { location_id: id, status: "cerrado", last_confirmed_at: now, updated_at: now },
       { onConflict: "location_id" },
     );
   if (error) throw error;

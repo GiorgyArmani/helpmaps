@@ -11,7 +11,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  *     (`supabaseServer()`), and only then reach for this.
  *   • Keep the list of files that import it short enough to audit by hand.
  *
- * Today that list is: creating and revoking staff accounts.
+ * Today that list is:
+ *   • creating and revoking staff accounts
+ *   • `src/server/emergency.ts`, and ONLY on the `HELPMAPS_EMERGENCY` path — previewing a
+ *     draft emergency, which RLS hides from the anon key by design. Bounded to the one
+ *     slug that variable names, and no production deployment sets it.
  */
 export function supabaseAdmin(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

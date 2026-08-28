@@ -50,6 +50,10 @@ function action(value: string | undefined): EntryAction | undefined {
       return FEATURES.volunteerSignup ? "volunteer" : undefined;
     case "donate":
       return FEATURES.donations ? "donate" : undefined;
+    // Mi cuenta. No lleva interruptor: no es una función de la emergencia sino de quien
+    // la está mirando, y es a donde aterriza el enlace de confirmación del correo.
+    case "account":
+      return "account";
     default:
       return undefined;
   }

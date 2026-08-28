@@ -402,6 +402,8 @@ const en: Partial<Dict> = {
   "scene3d.tilt": "Tilted view",
   "scene3d.flat": "Flat view",
   "scene3d.terrain": "Terrain relief",
+  "scene3d.points": "Map points",
+  "scene3d.pointsTitle": "Points over the terrain",
   "scene3d.legendTitle": "Height = estimated damage",
   "scene3d.legendBody":
     "Each block's height represents the estimated damage percentage, not the building's real height.",

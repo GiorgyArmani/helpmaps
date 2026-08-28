@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { getSupabase } from "@/lib/supabase/client";
 import { Button, Field, Input } from "@/ui/primitives";
 import { useI18n } from "@/i18n/context";
@@ -73,6 +74,18 @@ export default function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
       <Button type="submit" loading={busy} block>
         {busy ? t("login.submitting") : t("login.submit")}
       </Button>
+
+      {/* La puerta para quien NO es del equipo.
+          Va acá y no en el encabezado por dos motivos. Uno: el encabezado de un mapa de
+          emergencia es espacio caro y ya lleva seis controles. Dos: éste es el sitio donde
+          alguien llega buscando entrar y descubre que no tiene cuenta — sin esta línea, el
+          candado es una puerta cerrada sin timbre, que es exactamente lo que pasaba. */}
+      <p className="small mut" style={{ margin: 0 }}>
+        {t("login.noAccount")}{" "}
+        <Link className="linkish" href="/registro">
+          {t("login.createAccount")}
+        </Link>
+      </p>
     </form>
   );
 }

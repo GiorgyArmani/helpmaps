@@ -241,12 +241,29 @@ export const Icon = {
       <path d="M3 13v6h2.5l5.5 1.5 8-2.5a1.7 1.7 0 0 0-1.2-3.1" />
     </Svg>
   ),
+  // Una sola persona. `users` es un grupo —rotula una iniciativa ciudadana— y este es
+  // "tu cuenta": el avatar de la barra cuando todavía no hay sesión que ponerle inicial.
+  user: (p: IconProps) => (
+    <Svg {...p}>
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M4.5 20v-1.1A5.4 5.4 0 0 1 9.9 13.5h4.2a5.4 5.4 0 0 1 5.4 5.4V20" />
+    </Svg>
+  ),
   // Padlock — the header entry to staff sign-in. Not a gear: a gear promises settings,
   // and at 19px the spoked version of it reads as a sun.
   lock: (p: IconProps) => (
     <Svg {...p}>
       <rect x="4" y="11" width="16" height="9" rx="2" />
       <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </Svg>
+  ),
+  // Puerta con flecha saliendo. El menú de la cuenta usaba el candado para "cerrar
+  // sesión", que es el icono de ENTRAR: el mismo dibujo para las dos direcciones.
+  logout: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M14.5 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8" />
+      <path d="M18 15.5 21.5 12 18 8.5" />
+      <path d="M21 12h-9.5" />
     </Svg>
   ),
   // Stacked sheets — the near-universal "map layers" mark. Legible at 19px, which the
