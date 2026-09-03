@@ -4,8 +4,9 @@ import { cronAuthorized, regenerateBulletin } from "@/lib/news/regenerate";
 /**
  * GET /api/news/cron — the scheduler's door.
  *
- * Vercel Cron (see `vercel.json`) calls this every four hours with a GET and, when the
- * project has a `CRON_SECRET` variable, an `Authorization: Bearer` header. It cannot send
+ * Vercel Cron (see `vercel.json`) calls this once a day (Hobby plans only allow daily crons;
+ * `refreshHours` still guards the cost) with a GET and, when the project has a `CRON_SECRET`
+ * variable, an `Authorization: Bearer` header. It cannot send
  * a POST or a custom header, which is why `POST /api/news` alone never ran in production.
  *
  * One Vercel project per country, so each project's cron regenerates its own emergency:
