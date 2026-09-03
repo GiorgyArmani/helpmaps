@@ -150,6 +150,12 @@ distingue son sus variables de entorno, no su código:
 Así se mantiene: un `git push` a este repo los reconstruye todos. No hay merges entre
 países ni versiones que se queden atrás, porque no hay más que una.
 
+**El boletín de prensa se regenera por cron, no solo.** `vercel.json` programa
+`GET /api/news/cron` cada cuatro horas en cada proyecto. Para que Vercel llegue con
+credencial, cada proyecto necesita `CRON_SECRET` con el mismo valor que
+`NEWS_CRON_SECRET` (y `OPENROUTER_API_KEY` si quieres la síntesis). Sin `CRON_SECRET` el
+cron recibe 401 y el boletín se queda en la fecha del último generado a mano.
+
 Luego añade el país a `config/network.ts` para que aparezca en el mapa de la portada.
 
 ---

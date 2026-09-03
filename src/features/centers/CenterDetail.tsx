@@ -1,7 +1,7 @@
 "use client";
 
 import type { Center } from "@/domain/types";
-import { directionsUrl, lastTouched } from "@/domain/center";
+import { directionsUrl, hasCoords, isDigital, lastTouched } from "@/domain/center";
 import { typeStyle } from "@/config";
 import { Icon, TypeGlyph } from "@/ui/icons";
 import { Badge } from "@/ui/primitives";
@@ -11,7 +11,8 @@ import ShareRow from "@/features/share/ShareRow";
 import PointActions from "@/features/account/PointActions";
 import { telHref, whatsappHref } from "@/features/share/share";
 import type { DictKey } from "@/i18n";
-import { useSiteHelpers } from "@/features/app/SiteProvider";
+import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
+import { coverageNames, instagramUrl } from "@/features/centers/coverage";
 
 /**
  * The full card for one point.
@@ -23,11 +24,18 @@ import { useSiteHelpers } from "@/features/app/SiteProvider";
  */
 export default function CenterDetail({ center }: { center: Center }) {
   const { regionLabel } = useSiteHelpers();
+  const site = useSite();
   const { t } = useI18n();
   const ago = useTimeAgo();
   const style = typeStyle(center.type);
   const info = center.info;
-  const place = [center.municipality, regionLabel(center.region)].filter(Boolean).join(", ");
+  // A digital initiative has no place. Its subtitle says so, and "where" becomes the
+  // coverage section below: the regions it serves, drawn on the map as rings.
+  const digital = isDigital(center);
+  const place = digital
+    ? ""
+    : [center.municipality, regionLabel(center.region)].filter(Boolean).join(", ");
+  const served = digital ? coverageNames(center, regionLabel) : [];
   const touched = lastTouched(center);
   const confirmed = info?.last_confirmed_at;
 
@@ -41,7 +49,7 @@ export default function CenterDetail({ center }: { center: Center }) {
           <h2 className="dname">{center.name}</h2>
           <div className="dsub">
             {t(`type.${center.type}` as DictKey)}
-            {place ? ` · ${place}` : ""}
+            {digital ? ` · ${t("digital.noSeat")}` : place ? ` · ${place}` : ""}
           </div>
         </div>
         <div className="wrapline" style={{ justifyContent: "center" }}>
@@ -71,6 +79,29 @@ export default function CenterDetail({ center }: { center: Center }) {
           <span className="dneed-l">{t("center.needsTitle")}</span>
           <p className="dneed-t">{info.needs}</p>
         </div>
+      ) : null}
+
+      {digital ? (
+        <>
+          <h3 className="dsection">{t("digital.coverageTitle")}</h3>
+          <div className="dtags">
+            {served.length > 0 ? (
+              served.map((name) => (
+                <span key={name} className="dtag">
+                  {name}
+                </span>
+              ))
+            ) : (
+              <span className="dtag">{t("digital.national")}</span>
+            )}
+          </div>
+          {center.coverage_municipalities.length > 0 ? (
+            <p className="sdesc">{center.coverage_municipalities.join(" · ")}</p>
+          ) : null}
+          <p className="small mut dcov-hint">
+            {t("digital.mapHint", { region: site.country.regionNoun.one })}
+          </p>
+        </>
       ) : null}
 
       {info && info.help.length > 0 ? (
@@ -117,7 +148,7 @@ export default function CenterDetail({ center }: { center: Center }) {
             <span className="dval">{place}</span>
           </div>
         ) : null}
-        {center.address ? (
+        {center.address && !digital ? (
           <div className="drow">
             <span className="dlabel">{t("form.address")}</span>
             <span className="dval">{center.address}</span>
@@ -144,14 +175,42 @@ export default function CenterDetail({ center }: { center: Center }) {
       </div>
 
       <div className="dactions">
-        <button
-          type="button"
-          className="btnp"
-          onClick={() => window.open(directionsUrl(center), "_blank", "noopener")}
-        >
-          <Icon.directions />
-          {t("center.directions")}
-        </button>
+        {/* Only for a point with somewhere to go. A digital initiative never gets a
+            route: its markers sit on region centroids, not on a door. */}
+        {hasCoords(center) && !digital ? (
+          <button
+            type="button"
+            className="btnp"
+            onClick={() => window.open(directionsUrl(center), "_blank", "noopener")}
+          >
+            <Icon.directions />
+            {t("center.directions")}
+          </button>
+        ) : null}
+
+        {info?.website ? (
+          <a
+            className={digital ? "btnp" : "btng"}
+            href={info.website}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon.link />
+            {t("center.website")}
+          </a>
+        ) : null}
+
+        {info?.instagram ? (
+          <a
+            className="btng"
+            href={instagramUrl(info.instagram)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon.spark />
+            {t("center.instagram")} · @{info.instagram}
+          </a>
+        ) : null}
 
         {center.whatsapp ? (
           <button

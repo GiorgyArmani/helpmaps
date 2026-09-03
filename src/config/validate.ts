@@ -20,6 +20,7 @@
 // mirar. Ante la duda, aviso.
 
 import type { LocationType } from "@/domain/types";
+import { LOCATION_TYPES } from "@/domain/types";
 import type { CountryConfig, SiteConfig } from "@/config/types";
 import { HUB_HOST } from "~/config/network";
 
@@ -146,6 +147,11 @@ export function validateConfig(site: SiteConfig): void {
   const types = Object.keys(site.map.types) as LocationType[];
   const enabled = types.filter((t) => site.map.types[t].enabled);
   if (enabled.length === 0) errors.push("config/map.ts: ningún tipo de punto activo — el mapa no podría mostrar nada");
+  // `Record<LocationType, …>` ya lo exige al compilar; esto cubre una fila de `emergencies`
+  // que trae `map` a medias y llegaría aquí sin pasar por el compilador.
+  for (const t of LOCATION_TYPES) {
+    if (!site.map.types[t]) errors.push(`map.types.${t} falta: typeStyle("${t}") devolvería undefined`);
+  }
   if (!site.map.tiles.attribution.trim())
     errors.push("map.tiles.attribution vacío: toda licencia de teselas que valga la pena la exige");
   if (site.map.staleAfterDays <= 0)

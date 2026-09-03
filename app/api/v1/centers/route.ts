@@ -3,7 +3,7 @@ import { fetchCenters } from "@/data/centers";
 import { currentEmergencyId } from "@/server/emergency";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { COUNTRY, hasFeature, isKnownRegion, isTypeEnabled } from "@/config";
-import { hasNeed, isOpenPoint, lastTouched, statusOf } from "@/domain/center";
+import { hasNeed, isDigital, isOpenPoint, lastTouched, servesRegion, statusOf } from "@/domain/center";
 import { isLocationType } from "@/domain/types";
 
 /**
@@ -71,7 +71,8 @@ export async function GET(req: Request) {
   }
 
   const filtered = centers.filter((c) => {
-    if (region && c.region !== region) return false;
+    // A digital initiative belongs to every region it serves (none declared = all).
+    if (region && (isDigital(c) ? !servesRegion(c, region) : c.region !== region)) return false;
     if (type && c.type !== type) return false;
     if (onlyNeeds && (!hasNeed(c) || !isOpenPoint(c))) return false;
     if (status && statusOf(c) !== status) return false;
@@ -97,11 +98,16 @@ export async function GET(req: Request) {
         region: c.region,
         region_name: c.region ? COUNTRY.regions.find((r) => r.code === c.region)?.name ?? null : null,
         municipality: c.municipality,
+        // Null only for `type: "digital"` — see `coverage_regions` for where it helps.
         lat: c.lat,
         lng: c.lng,
         address: c.address,
         phone: c.phone,
         whatsapp: c.whatsapp,
+        coverage_regions: c.coverage_regions,
+        coverage_municipalities: c.coverage_municipalities,
+        website: c.info?.website ?? null,
+        instagram: c.info?.instagram ?? null,
         status: statusOf(c),
         needs: c.info?.needs ?? null,
         receives: c.info?.receives ?? [],

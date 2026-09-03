@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import type { SubmissionKind } from "@/domain/types";
-import { Button, Field, Input, Notice, Select, TextArea } from "@/ui/primitives";
+import { Button, Chip, Field, Input, Notice, Select, TextArea } from "@/ui/primitives";
 import { useI18n } from "@/i18n/context";
 import PrivacyNotice from "@/features/suggest/PrivacyNotice";
 import { enqueue } from "@/features/suggest/offlineQueue";
 import type { DictKey } from "@/i18n";
+import { useSite } from "@/features/app/SiteProvider";
 
 const KINDS: SubmissionKind[] = ["center", "initiative", "need", "other"];
 
@@ -26,10 +27,21 @@ export default function SuggestForm({
   defaultKind?: SubmissionKind;
 }) {
   const { t } = useI18n();
+  const site = useSite();
   const [kind, setKind] = useState<SubmissionKind>(defaultKind);
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  // An initiative with no seat: instead of an address it declares where it helps and
+  // how to reach it. These travel in `payload` and stay hints — the staff form is what
+  // publishes them, after someone has read the message.
+  const [hasSeat, setHasSeat] = useState(true);
+  const [coverage, setCoverage] = useState<string[]>([]);
+  const [municipalities, setMunicipalities] = useState("");
+  const [website, setWebsite] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const digital = kind === "initiative" && !hasSeat;
   const [state, setState] = useState<
     "idle" | "sending" | "done" | "queued" | "error" | "limited"
   >("idle");
@@ -38,11 +50,24 @@ export default function SuggestForm({
     e.preventDefault();
     if (!message.trim() || state === "sending") return;
     setState("sending");
+    const payload = digital
+      ? {
+          digital: true,
+          coverage_regions: coverage,
+          coverage_municipalities: municipalities
+            .split(",")
+            .map((x) => x.trim())
+            .filter(Boolean),
+          website: website.trim(),
+          instagram: instagram.trim(),
+          whatsapp: whatsapp.trim(),
+        }
+      : null;
     try {
       const res = await fetch("/api/suggest", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind, message, name, contact }),
+        body: JSON.stringify({ kind, message, name, contact, payload }),
       });
       if (res.status === 429) {
         setState("limited");
@@ -53,7 +78,7 @@ export default function SuggestForm({
       // The network died mid-send. Keep what they typed and retry when the signal is
       // back: someone standing in front of a shelter on one bar may be the only person
       // who was ever going to report it.
-      enqueue({ kind, message, name: name || null, contact: contact || null });
+      enqueue({ kind, message, name: name || null, contact: contact || null, payload });
       setState("queued");
     }
   }
@@ -86,6 +111,66 @@ export default function SuggestForm({
           ))}
         </Select>
       </Field>
+
+      {kind === "initiative" ? (
+        <Field label={t("form.hasSeat")} hint={t("form.hasSeatHint")}>
+          <div className="seg">
+            <button
+              type="button"
+              className={`segb${hasSeat ? " segb-on" : ""}`}
+              aria-pressed={hasSeat}
+              onClick={() => setHasSeat(true)}
+            >
+              {t("common.yes")}
+            </button>
+            <button
+              type="button"
+              className={`segb${!hasSeat ? " segb-on" : ""}`}
+              aria-pressed={!hasSeat}
+              onClick={() => setHasSeat(false)}
+            >
+              {t("common.no")}
+            </button>
+          </div>
+        </Field>
+      ) : null}
+
+      {digital ? (
+        <>
+          <Field
+            label={t("form.coverage", { regions: site.country.regionNoun.many })}
+            hint={t("form.coverageHint")}
+          >
+            <div className="covpick">
+              {site.country.regions.map((r) => (
+                <Chip
+                  key={r.code}
+                  on={coverage.includes(r.code)}
+                  onClick={() =>
+                    setCoverage((list) =>
+                      list.includes(r.code) ? list.filter((x) => x !== r.code) : [...list, r.code],
+                    )
+                  }
+                >
+                  {r.name}
+                </Chip>
+              ))}
+            </div>
+          </Field>
+          <Field label={t("form.coverageMunicipalities")} optional optionalLabel={t("common.optional")}>
+            <Input value={municipalities} maxLength={400} onChange={(e) => setMunicipalities(e.target.value)} />
+          </Field>
+          <Field label={t("form.website")} optional optionalLabel={t("common.optional")}>
+            <Input value={website} maxLength={200} inputMode="url" onChange={(e) => setWebsite(e.target.value)} />
+          </Field>
+          <Field label={t("form.instagram")} optional optionalLabel={t("common.optional")}>
+            <Input value={instagram} maxLength={40} onChange={(e) => setInstagram(e.target.value)} />
+          </Field>
+          <Field label={t("form.whatsapp")} optional optionalLabel={t("common.optional")}>
+            <Input value={whatsapp} maxLength={24} inputMode="tel" onChange={(e) => setWhatsapp(e.target.value)} />
+          </Field>
+        </>
+      ) : null}
 
       <Field label={t("suggest.message")}>
         <TextArea

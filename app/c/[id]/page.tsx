@@ -3,10 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabasePublic } from "@/lib/supabase/server";
 import { fetchCenter } from "@/data/centers";
-import { daysSince, directionsUrl, isStale, lastTouched, statusOf } from "@/domain/center";
-import { BRAND, COUNTRY, MAPCFG, regionLabel } from "@/config";
+import {
+  daysSince,
+  directionsUrl,
+  hasCoords,
+  isDigital,
+  isStale,
+  lastTouched,
+  statusOf,
+} from "@/domain/center";
+import { BRAND, COUNTRY, LANGUAGE, MAPCFG, regionLabel } from "@/config";
 import { translator, resolveLang } from "@/i18n";
 import { telHref, whatsappHref } from "@/features/share/share";
+import { coverageLabel, instagramUrl } from "@/features/centers/coverage";
 import type { DictKey } from "@/i18n";
 import { currentEmergencyId } from "@/server/emergency";
 
@@ -30,7 +39,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const center = await fetchCenter(sb, id, await currentEmergencyId()).catch(() => null);
   if (!center) return { title: BRAND.name };
 
-  const place = [center.municipality, regionLabel(center.region)].filter(Boolean).join(", ");
+  const place = isDigital(center)
+    ? coverageLabel(center, regionLabel, translator(LANGUAGE.default))
+    : [center.municipality, regionLabel(center.region)].filter(Boolean).join(", ");
   const need = center.info?.needs?.trim();
   const description = need ? `Necesita: ${need}` : `${place || COUNTRY.name} · ${BRAND.tagline}`;
 
@@ -55,7 +66,11 @@ export default async function CenterPage({ params, searchParams }: Params) {
   if (!center) notFound();
 
   const status = statusOf(center);
-  const place = [center.municipality, regionLabel(center.region)].filter(Boolean).join(", ");
+  const digital = isDigital(center);
+  // A digital initiative has no place: the meta line says where it helps instead.
+  const place = digital
+    ? coverageLabel(center, regionLabel, t)
+    : [center.municipality, regionLabel(center.region)].filter(Boolean).join(", ");
   const staleDays = daysSince(lastTouched(center));
 
   return (
@@ -125,11 +140,28 @@ export default async function CenterPage({ params, searchParams }: Params) {
               </a>
             </li>
           ) : null}
-          <li>
-            <a href={directionsUrl(center)} target="_blank" rel="noopener noreferrer">
-              {t("center.directions")}
-            </a>
-          </li>
+          {center.info?.website ? (
+            <li>
+              <a href={center.info.website} target="_blank" rel="noopener noreferrer">
+                {t("center.website")}
+              </a>
+            </li>
+          ) : null}
+          {center.info?.instagram ? (
+            <li>
+              <a href={instagramUrl(center.info.instagram)} target="_blank" rel="noopener noreferrer">
+                Instagram · @{center.info.instagram}
+              </a>
+            </li>
+          ) : null}
+          {/* Never for a digital initiative: there is no door at a region's centroid. */}
+          {hasCoords(center) && !digital ? (
+            <li>
+              <a href={directionsUrl(center)} target="_blank" rel="noopener noreferrer">
+                {t("center.directions")}
+              </a>
+            </li>
+          ) : null}
         </ul>
       </section>
 

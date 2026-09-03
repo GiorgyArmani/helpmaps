@@ -19,6 +19,8 @@ export interface QueuedSubmission {
   message: string;
   name: string | null;
   contact: string | null;
+  /** Structured hints (a digital initiative's coverage and links). Optional: old queued items have none. */
+  payload?: Record<string, unknown> | null;
 }
 
 const KEY = storageKey("suggest-queue:v1");
@@ -66,6 +68,7 @@ async function send(sub: QueuedSubmission): Promise<"sent" | "drop" | "keep"> {
         message: sub.message,
         name: sub.name,
         contact: sub.contact,
+        payload: sub.payload ?? null,
       }),
     });
     if (res.ok) return "sent";

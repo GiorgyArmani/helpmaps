@@ -135,6 +135,20 @@ a {
   opacity: 0.5;
 }
 
+/* The coverage ring of a digital initiative. Same pill as a pin, but DASHED in the type
+   colour and without the heart: it sits on a region's centroid, and a solid pin there
+   would read as a door to walk to. `.mk-on` still wins when it is selected. */
+.mk-digital {
+  border: 1.5px dashed currentColor;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 3px 6px;
+}
+
+.mk-digital.mk-on {
+  border-style: solid;
+  border-color: var(--accent);
+}
+
 /* Cluster: a location pin tinted with the TYPE colour, the type glyph in white inside
    its head, and a count bubble. Icon and count are nested INSIDE the pin's own <svg> (one
    paint) so a neighbouring fanned-out pin cannot paint over them. */
@@ -4445,6 +4459,148 @@ fieldset.fieldset {
 }
 
 .counters .needbar .chev { flex: 0 0 auto; }
+
+/* ── Las dos pestañas del panel ───────────────────────────────────────────
+   "Puntos" (sitios a los que ir) y "Digitales" (iniciativas sin sede). Mismo lenguaje
+   que las pestañas del panel del equipo (`.admtabs` / `.atab`): una fila de pastillas,
+   la activa rellena. Van encima de los chips, que sólo acompañan a la lista de puntos. */
+
+.ptabs {
+  display: flex;
+  gap: 6px;
+  padding: 6px 12px 8px;
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+.ptab {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 11px;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ptab:not(.ptab-on):hover {
+  color: var(--ink);
+  border-color: #d9dce1;
+}
+
+.ptab-on {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.ptab-ic {
+  display: flex;
+  align-items: center;
+}
+
+.ptab-ic svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.ptab-n {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--soft);
+  border-radius: 999px;
+  padding: 3px 6px;
+}
+
+.ptab-on .ptab-n {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+/* Plegado el panel, las pestañas se van con la lista, igual que los chips. */
+.sheet.sheet-min .ptabs { display: none; }
+
+/* ── La tarjeta de una iniciativa digital ─────────────────────────────────
+   Misma anatomía que `.card`, pero el cuerpo tocable es un botón propio y los enlaces
+   van al lado: un enlace dentro de un botón no es HTML válido, y para una iniciativa sin
+   sede el enlace ES la acción principal, no algo escondido tras un toque. */
+
+.dcard {
+  padding-right: 10px;
+  cursor: default;
+}
+
+.dcard-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.clinks {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.clink {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clink:hover {
+  border-color: #d9dce1;
+  background: var(--soft);
+}
+
+.clink svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.clink-wa {
+  color: #1f9d55;
+}
+
+/* La línea "en el mapa aparece en…" de la ficha: pegada a las etiquetas de cobertura. */
+.dcov-hint {
+  margin: -6px 0 14px;
+}
+
+/* Elegir regiones en los formularios: chips que envuelven, reusa `.chip` / `.chip-on`. */
+.covpick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
 
 /* ── El galón del panel ───────────────────────────────────────────────────
    Apunta hacia donde el panel se va a plegar, y eso cambia con el tamaño de

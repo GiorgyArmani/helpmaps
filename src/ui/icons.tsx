@@ -217,6 +217,15 @@ export const Icon = {
       <path d="M18.2 14.2a4.2 4.2 0 0 1 3.3 4.1V20" />
     </Svg>
   ),
+  // A globe: an initiative with no seat, reached online and helping across zones. Not a
+  // pin and not `users` — that one already labels the initiative you can walk to.
+  globe: (p: IconProps) => (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17" />
+      <path d="M12 3.5c2.6 2.6 3.9 5.4 3.9 8.5S14.6 17.9 12 20.5c-2.6-2.6-3.9-5.4-3.9-8.5S9.4 6.1 12 3.5Z" />
+    </Svg>
+  ),
   // A cross in a SQUARE, not on a roof: the medical cross is what has to survive being
   // shrunk, and a gabled outline spends its detail budget on the roof instead.
   hospital: (p: IconProps) => (
@@ -306,6 +315,8 @@ export function TypeGlyph({ name, size = 18 }: { name: string; size?: number }) 
       return <Icon.spark width={size} height={size} />;
     case "users":
       return <Icon.users width={size} height={size} />;
+    case "globe":
+      return <Icon.globe width={size} height={size} />;
     case "hospital":
       return <Icon.hospital width={size} height={size} />;
     case "morgue":

@@ -55,10 +55,15 @@ const map: MapConfig = {
     // `users`, no "spark": una iniciativa ciudadana es gente organizada, no un edificio
     // ni una novedad destacada. La chispa se leía como "nuevo" y no como un lugar.
     iniciativa: { enabled: true, color: "#2563eb", icon: "users", order: 4 },
-    hospital: { enabled: true, color: "#dc2626", icon: "hospital", order: 5 },
+    // Iniciativa SIN sede: real, pero no es un sitio al que ir. No sale en los chips ni
+    // en el abanico de clústeres (ver `pinTypes()`); vive en la pestaña "Digitales" y se
+    // dibuja como aro de cobertura en el centroide de cada región que atiende. Cian, que
+    // no se confunde con el azul de la iniciativa ciudadana ni con el teal del comedor.
+    digital: { enabled: true, color: "#0891b2", icon: "globe", order: 5 },
+    hospital: { enabled: true, color: "#dc2626", icon: "hospital", order: 6 },
     // Un pin de morgue no puede convertirse en un conteo de víctimas que alguien
     // captura de pantalla. Apagado salvo decisión explícita del equipo local.
-    morgue: { enabled: false, color: "#475569", icon: "morgue", order: 6 },
+    morgue: { enabled: false, color: "#475569", icon: "morgue", order: 7 },
   },
 
   cluster: {

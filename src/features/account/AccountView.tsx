@@ -17,6 +17,8 @@ import {
 } from "@/data/account";
 import type { AccountState } from "@/features/account/useAccount";
 import CenterCard from "@/features/centers/CenterCard";
+import DigitalCard from "@/features/centers/DigitalCard";
+import { isDigital } from "@/domain/center";
 import LoginForm from "@/features/admin/LoginForm";
 import { savedLabel, sentLabel } from "@/features/account/ledger";
 
@@ -206,9 +208,13 @@ export default function AccountView({
           <p className="acc-empty">{t("account.saved.none")}</p>
         ) : (
           <div className="acc-saved">
-            {savedCenters.map((c) => (
-              <CenterCard key={c.id} center={c} onSelect={onOpenCenter} />
-            ))}
+            {savedCenters.map((c) =>
+              isDigital(c) ? (
+                <DigitalCard key={c.id} center={c} onSelect={onOpenCenter} />
+              ) : (
+                <CenterCard key={c.id} center={c} onSelect={onOpenCenter} />
+              ),
+            )}
           </div>
         )}
         {missing > 0 ? <p className="acc-empty">{t("account.saved.gone", { n: missing })}</p> : null}

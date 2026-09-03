@@ -1,8 +1,9 @@
 import type { Center } from "@/domain/types";
 import { BRAND, COUNTRY, LANGUAGE, regionLabel, typeStyle } from "@/config";
 import { translator } from "@/i18n";
-import { daysSince, lastTouched, statusOf } from "@/domain/center";
+import { daysSince, isDigital, lastTouched, statusOf } from "@/domain/center";
 import type { DictKey } from "@/i18n";
+import { coverageLabel } from "@/features/centers/coverage";
 
 /**
  * Everything the share images need about one point, resolved once.
@@ -49,7 +50,10 @@ export function ogCenterData(center: Center): OgCenterData {
     name: center.name,
     typeLabel: t(`type.${center.type}` as DictKey).toUpperCase(),
     accent: typeStyle(center.type).color,
-    place: [center.municipality, regionLabel(center.region)].filter(Boolean).join(" · "),
+    // A digital initiative's "place" is where it helps.
+    place: isDigital(center)
+      ? coverageLabel(center, regionLabel, t)
+      : [center.municipality, regionLabel(center.region)].filter(Boolean).join(" · "),
     // A civic initiative usually states no need: the ways to help ARE the ask.
     need: (info?.needs?.trim() || helpAsAsk).trim(),
     receives: info?.receives ?? [],
@@ -62,7 +66,8 @@ export function ogCenterData(center: Center): OgCenterData {
           : days === 1
             ? t("og.updatedOneDay")
             : t("og.updatedDays", { n: days }),
-    contact: center.whatsapp || center.phone || "",
+    // Falls back to the website: for a helpline or a remote network that IS the contact.
+    contact: center.whatsapp || center.phone || info?.website || "",
     attribution: info?.external_id && info.source ? t("center.source", { source: info.source }) : null,
     brandLine: `${COUNTRY.host} · ${BRAND.tagline}`,
   };

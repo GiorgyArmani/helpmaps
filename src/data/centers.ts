@@ -7,13 +7,43 @@ import { mapCenter, mapCenters } from "@/domain/center";
 // can grow: an added column would start flowing to the client without anyone deciding it.
 
 const LOCATION_COLUMNS =
-  "id,name,type,region,municipality,lat,lng,address,phone,whatsapp,active,updated_at";
+  "id,name,type,region,municipality,lat,lng,address,phone,whatsapp,active,updated_at," +
+  "coverage_regions,coverage_municipalities";
 
 const INFO_COLUMNS =
   "location_id,status,receives,needs,help,category,description,schedule,contact_name," +
-  "social_url,is_animal,last_confirmed_at,updated_at,source,external_id";
+  "social_url,website,instagram,is_animal,last_confirmed_at,updated_at,source,external_id";
 
 const SELECT = `${LOCATION_COLUMNS},info:center_info(${INFO_COLUMNS})`;
+
+// ── Before `011_digitales` ─────────────────────────────────────────────────
+//
+// One repository serves several countries, each on its own database, and they do not
+// all run a migration the same afternoon. A deploy that asks for `coverage_regions` on a
+// database that does not have it yet would get Postgres error 42703 back — and an EMPTY
+// MAP, during an emergency, for a column nobody there has heard of.
+//
+// So every read tries the full column list and, on that one error, falls back to the
+// list from before the migration. The mapper already treats the missing columns as
+// "no coverage, no links". The fallback is logged so the gap is visible, not silent.
+const LEGACY_LOCATION_COLUMNS =
+  "id,name,type,region,municipality,lat,lng,address,phone,whatsapp,active,updated_at";
+const LEGACY_INFO_COLUMNS =
+  "location_id,status,receives,needs,help,category,description,schedule,contact_name," +
+  "social_url,is_animal,last_confirmed_at,updated_at,source,external_id";
+const LEGACY_SELECT = `${LEGACY_LOCATION_COLUMNS},info:center_info(${LEGACY_INFO_COLUMNS})`;
+
+/** Postgres `undefined_column`, as PostgREST relays it. */
+function isMissingColumn(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && (error as { code?: string }).code === "42703");
+}
+
+let warnedLegacy = false;
+function warnLegacy(): void {
+  if (warnedLegacy) return;
+  warnedLegacy = true;
+  console.warn("[centers] esta base no tiene la sección 011_digitales: corre db/04_digitales.sql");
+}
 
 /**
  * Narrow a query to one emergency.
@@ -40,10 +70,15 @@ export async function fetchCenters(
   sb: SupabaseClient,
   emergencyId: string | null = null,
 ): Promise<Center[]> {
-  const { data, error } = await scopeTo(
-    sb.from("locations").select(SELECT).eq("active", true),
-    emergencyId,
-  ).order("name", { ascending: true });
+  const run = (columns: string) =>
+    scopeTo(sb.from("locations").select(columns).eq("active", true), emergencyId).order("name", {
+      ascending: true,
+    });
+  let { data, error } = await run(SELECT);
+  if (error && isMissingColumn(error)) {
+    warnLegacy();
+    ({ data, error } = await run(LEGACY_SELECT));
+  }
   if (error) throw error;
   return mapCenters(data as unknown as Record<string, unknown>[]);
 }
@@ -53,10 +88,15 @@ export async function fetchAllCenters(
   sb: SupabaseClient,
   emergencyId: string | null = null,
 ): Promise<Center[]> {
-  const { data, error } = await scopeTo(
-    sb.from("locations").select(SELECT),
-    emergencyId,
-  ).order("updated_at", { ascending: false });
+  const run = (columns: string) =>
+    scopeTo(sb.from("locations").select(columns), emergencyId).order("updated_at", {
+      ascending: false,
+    });
+  let { data, error } = await run(SELECT);
+  if (error && isMissingColumn(error)) {
+    warnLegacy();
+    ({ data, error } = await run(LEGACY_SELECT));
+  }
   if (error) throw error;
   return mapCenters(data as unknown as Record<string, unknown>[]);
 }
@@ -72,10 +112,13 @@ export async function fetchCenter(
   id: string,
   emergencyId: string | null = null,
 ): Promise<Center | null> {
-  const { data, error } = await scopeTo(
-    sb.from("locations").select(SELECT).eq("id", id),
-    emergencyId,
-  ).maybeSingle();
+  const run = (columns: string) =>
+    scopeTo(sb.from("locations").select(columns).eq("id", id), emergencyId).maybeSingle();
+  let { data, error } = await run(SELECT);
+  if (error && isMissingColumn(error)) {
+    warnLegacy();
+    ({ data, error } = await run(LEGACY_SELECT));
+  }
   if (error) throw error;
   if (!data) return null;
   return mapCenter(data as unknown as Record<string, unknown>);
@@ -91,12 +134,16 @@ export interface CenterDraft {
   type: LocationType;
   region: string | null;
   municipality: string | null;
-  lat: number;
-  lng: number;
+  /** Null only for `digital`; the database rejects it for any other type. */
+  lat: number | null;
+  lng: number | null;
   address: string | null;
   phone: string | null;
   whatsapp: string | null;
   active: boolean;
+  /** Region codes a digital initiative serves (empty = whole country). `[]` otherwise. */
+  coverage_regions: string[];
+  coverage_municipalities: string[];
   info: {
     status: CenterStatus | null;
     receives: string[];
@@ -107,6 +154,8 @@ export interface CenterDraft {
     schedule: string | null;
     contact_name: string | null;
     social_url: string | null;
+    website: string | null;
+    instagram: string | null;
     is_animal: boolean;
   };
 }
@@ -135,27 +184,38 @@ export async function saveCenter(
   draft: CenterDraft,
   opts: { statusChanged: boolean; emergencyId?: string | null },
 ): Promise<void> {
-  const { error: locError } = await sb.from("locations").upsert(
-    {
-      id: draft.id,
-      // Stamped on every write, so a point created today is assigned even where the legacy
-      // rows never were. Omitted entirely when there is no emergency, rather than written
-      // as null: an explicit null would overwrite a good value on a deployment that has
-      // adopted the table and is saving from an unmigrated call site.
-      ...(opts.emergencyId ? { emergency_id: opts.emergencyId } : {}),
-      name: draft.name,
-      type: draft.type,
-      region: draft.region,
-      municipality: draft.municipality,
-      lat: draft.lat,
-      lng: draft.lng,
-      address: draft.address,
-      phone: draft.phone,
-      whatsapp: draft.whatsapp,
-      active: draft.active,
-    },
-    { onConflict: "id" },
-  );
+  const location = {
+    id: draft.id,
+    // Stamped on every write, so a point created today is assigned even where the legacy
+    // rows never were. Omitted entirely when there is no emergency, rather than written
+    // as null: an explicit null would overwrite a good value on a deployment that has
+    // adopted the table and is saving from an unmigrated call site.
+    ...(opts.emergencyId ? { emergency_id: opts.emergencyId } : {}),
+    name: draft.name,
+    type: draft.type,
+    region: draft.region,
+    municipality: draft.municipality,
+    lat: draft.lat,
+    lng: draft.lng,
+    address: draft.address,
+    phone: draft.phone,
+    whatsapp: draft.whatsapp,
+    active: draft.active,
+  };
+  const digitalColumns = {
+    coverage_regions: draft.coverage_regions,
+    coverage_municipalities: draft.coverage_municipalities,
+  };
+  let { error: locError } = await sb
+    .from("locations")
+    .upsert({ ...location, ...digitalColumns }, { onConflict: "id" });
+  // Same fallback as the reads: a database without `011_digitales` can still save a
+  // place. A digital initiative cannot be saved there — it IS those columns.
+  if (locError && isMissingColumn(locError)) {
+    warnLegacy();
+    if (draft.type === "digital") throw locError;
+    ({ error: locError } = await sb.from("locations").upsert(location, { onConflict: "id" }));
+  }
   if (locError) throw locError;
 
   const info: Record<string, unknown> = {
@@ -169,6 +229,8 @@ export async function saveCenter(
     schedule: draft.info.schedule,
     contact_name: draft.info.contact_name,
     social_url: draft.info.social_url,
+    website: draft.info.website,
+    instagram: draft.info.instagram,
     is_animal: draft.info.is_animal,
     updated_at: new Date().toISOString(),
   };
@@ -176,9 +238,18 @@ export async function saveCenter(
     info.last_confirmed_at = new Date().toISOString();
   }
 
-  const { error: infoError } = await sb
+  let { error: infoError } = await sb
     .from("center_info")
     .upsert(info, { onConflict: "location_id" });
+  if (infoError && isMissingColumn(infoError)) {
+    warnLegacy();
+    const legacyInfo = { ...info };
+    delete legacyInfo.website;
+    delete legacyInfo.instagram;
+    ({ error: infoError } = await sb
+      .from("center_info")
+      .upsert(legacyInfo, { onConflict: "location_id" }));
+  }
   if (infoError) throw infoError;
 }
 

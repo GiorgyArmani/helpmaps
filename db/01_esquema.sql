@@ -1715,3 +1715,39 @@ create trigger profiles_touch before update on public.profiles
 --
 --   select count(*) from public.profiles;
 -- ---------------------------------------------------------------------------
+
+
+-- ###########################################################################
+-- ### 011_digitales
+-- ###########################################################################
+-- Iniciativas sin sede física. Copia literal de db/04_digitales.sql, que es el mismo
+-- bloque para aplicar encima de una base que ya corrió este archivo antes de que
+-- existiera la sección. Si cambias uno, cambia el otro.
+--
+-- Hasta aquí todo `locations` era un sitio al que ir: lat/lng obligatorios. Las
+-- iniciativas `digital` no tienen local; declaran las regiones y municipios donde prestan
+-- ayuda y la app las dibuja en el centroide de cada región como marcador de cobertura,
+-- no como pin. Lista vacía = todo el país.
+-- ===========================================================================
+
+alter table public.locations drop constraint if exists locations_type_check;
+alter table public.locations add constraint locations_type_check
+  check (type in ('shelter','donation_centre','comedor','iniciativa','hospital','morgue','digital'));
+
+-- Coordenadas opcionales SOLO para `digital`.
+alter table public.locations alter column lat drop not null;
+alter table public.locations alter column lng drop not null;
+alter table public.locations drop constraint if exists locations_coords_required;
+alter table public.locations add constraint locations_coords_required
+  check (type = 'digital' or (lat is not null and lng is not null));
+
+alter table public.locations
+  add column if not exists coverage_regions text[] not null default '{}';
+alter table public.locations
+  add column if not exists coverage_municipalities text[] not null default '{}';
+
+create index if not exists locations_coverage_regions_idx
+  on public.locations using gin (coverage_regions) where type = 'digital';
+
+alter table public.center_info add column if not exists website text;
+alter table public.center_info add column if not exists instagram text;

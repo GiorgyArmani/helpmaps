@@ -17,6 +17,8 @@ import {
 } from "@/features/share/share";
 import type { DictKey } from "@/i18n";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
+import { isDigital } from "@/domain/center";
+import { coverageLabel } from "@/features/centers/coverage";
 
 /**
  * Share targets for one point.
@@ -35,7 +37,9 @@ export default function ShareRow({ center }: { center: Center }) {
 
   const text = shareText(center, {
     typeLabel: t(`type.${center.type}` as DictKey),
-    place: center.municipality ?? regionLabel(center.region),
+    place: isDigital(center)
+      ? coverageLabel(center, regionLabel, t)
+      : center.municipality ?? regionLabel(center.region),
     needTemplate: t("share.needText", { name: "{name}", needs: "{needs}" }),
     pointTemplate: t("share.pointText", { name: "{name}", type: "{type}", place: "{place}" }),
   });

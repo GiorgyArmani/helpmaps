@@ -30,7 +30,11 @@ export interface Region {
   /** Stable machine code, snake_case, never displayed. Stored in `locations.region`. */
   code: string;
   name: string;
-  /** Approximate centroid — moves the viewport when filtered. Never places a pin. */
+  /**
+   * Approximate centroid — moves the viewport when filtered. Never places a PIN: the one
+   * thing drawn here is the coverage ring of a `digital` initiative that serves this
+   * region, and that ring is not a place anyone is sent to.
+   */
   lat: number;
   lng: number;
   /** Per-region zoom (a capital district needs more than a rural province). */

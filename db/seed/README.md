@@ -9,6 +9,7 @@ esquema base ya están verificadas contra estos datos.
 | --- | --- | --- |
 | `ve_010_puntos.sql` | refugios, puntos de acopio y comedores + sus necesidades | 497 puntos · 476 con necesidades |
 | `ve_020_hospitales.sql` | los hospitales del despliegue viejo — **opcional** | 23 puntos |
+| `co_030_digitales.sql` | **Colombia**: tres iniciativas digitales de EJEMPLO (sin sede, con zonas de cobertura) para ver la pestaña "Digitales" con datos — bórralas al publicar las reales | 3 |
 
 ## Orden en un proyecto nuevo
 
@@ -21,6 +22,11 @@ db/seed/ve_010_puntos.sql     ← aquí el mapa deja de estar vacío
 db/seed/ve_020_hospitales.sql opcional
 db/03_verificacion.sql        verificación, no cambia nada
 ```
+
+Para Colombia el orden es el mismo con `02_emergencia.co.sql` y, si quieres datos de
+muestra en la pestaña "Digitales", `db/seed/co_030_digitales.sql` (requiere la sección
+`011_digitales` de `01_esquema.sql`, o `db/04_digitales.sql` aplicado encima de una base
+anterior a ella).
 
 Los puntos van DESPUÉS de `02_emergencia.sql` y no antes: `locations.emergency_id`
 referencia a `emergencies`, así que sembrar primero deja 520 filas huérfanas que luego

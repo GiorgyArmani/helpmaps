@@ -1,16 +1,15 @@
 import { currentEmergency } from "@/server/emergency";
 import { supabasePublic } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import { fetchBulletins, insertBulletin, lastBulletinAt } from "@/data/news";
-import { collectHeadlines } from "@/lib/news/feeds";
-import { buildBulletin } from "@/lib/news/bulletin";
+import { fetchBulletins } from "@/data/news";
 import { newsEnabled } from "@/domain/news";
+import { cronAuthorized, regenerateBulletin } from "@/lib/news/regenerate";
 
 /**
  * The press bulletin.
  *
  *   GET  — the published bulletins. Public, reads only, never generates.
- *   POST — regenerate. Gated by `X-Cron-Secret`, called by a scheduler.
+ *   POST — regenerate. Gated by `X-Cron-Secret`, for an external scheduler or curl.
+ *          Vercel's own scheduler cannot POST: it calls `GET /api/news/cron` instead.
  *
  * The split is the same one AcopioVE arrived at, and it is not about tidiness: generating
  * calls a paid model, so a browser must never be able to trigger it. A GET that generated
@@ -18,6 +17,7 @@ import { newsEnabled } from "@/domain/news";
  */
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET() {
   const emergency = await currentEmergency();
@@ -32,57 +32,18 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const secret = process.env.NEWS_CRON_SECRET;
-  // Sin secreto configurado la ruta queda cerrada, no abierta. Un despliegue que olvidó
-  // ponerlo se queda sin boletín; uno que quedara abierto se queda sin saldo.
-  if (!secret || req.headers.get("x-cron-secret") !== secret) {
-    return json({ error: "unauthorized" }, 401);
-  }
+  // Cerrada sin secreto, no abierta: ver `cronAuthorized`.
+  if (!cronAuthorized(req)) return json({ error: "unauthorized" }, 401);
 
   const emergency = await currentEmergency();
   if (!emergency) return json({ error: "no_emergency" }, 404);
-  if (!newsEnabled(emergency.news)) return json({ error: "news_not_configured" }, 400);
 
   const url = new URL(req.url);
-  const dry = url.searchParams.get("dry") === "1";
-  const force = url.searchParams.get("force") === "1";
-
-  const admin = supabaseAdmin();
-  const reader = supabasePublic();
-
-  // ¿Toca? El cron puede correr más seguido que el ciclo declarado sin que eso signifique
-  // pagar otra síntesis: se pregunta antes de gastar.
-  if (!force && !dry && reader) {
-    const last = await lastBulletinAt(reader, emergency.id);
-    if (last) {
-      const hours = (Date.now() - last.getTime()) / 3_600_000;
-      if (hours < emergency.news.refreshHours) {
-        return json({ skipped: "too_soon", lastAt: last.toISOString(), hours: round(hours) });
-      }
-    }
-  }
-
-  const { headlines, sources } = await collectHeadlines(
-    emergency.news.feeds,
-    emergency.news.keywords,
-  );
-
-  const bulletin = await buildBulletin(headlines, {
-    emergency: emergency.name,
-    country: emergency.site.country.name,
+  const result = await regenerateBulletin(emergency, {
+    dry: url.searchParams.get("dry") === "1",
+    force: url.searchParams.get("force") === "1",
   });
-
-  // Una corrida en seco devuelve lo que publicaría sin escribir ni gastar. Sirve para
-  // comprobar que los medios responden y que el filtro deja pasar algo ANTES de encender
-  // el cron sobre una emergencia recién configurada.
-  if (dry) {
-    return json({ dry: true, headlines: headlines.length, sources, preview: bulletin.summary });
-  }
-
-  if (!admin) return json({ error: "service_role_not_configured" }, 503);
-
-  await insertBulletin(admin, emergency.id, bulletin, sources);
-  return json({ ok: true, headlines: headlines.length, sources, model: bulletin.model });
+  return json(result.body, result.status);
 }
 
 function json(body: unknown, status = 200) {
@@ -90,8 +51,4 @@ function json(body: unknown, status = 200) {
     status,
     headers: { "cache-control": "no-store" },
   });
-}
-
-function round(n: number): number {
-  return Math.round(n * 10) / 10;
 }

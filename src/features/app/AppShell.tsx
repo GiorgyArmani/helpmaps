@@ -4,7 +4,13 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Center, Donation, SubmissionKind } from "@/domain/types";
-import { EMPTY_FILTER, filterCenters, pointsNeedingHelp, type CenterFilter } from "@/domain/center";
+import {
+  EMPTY_FILTER,
+  filterCenters,
+  isDigital,
+  pointsNeedingHelp,
+  type CenterFilter,
+} from "@/domain/center";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
 import { useCenters } from "@/features/app/useCenters";
@@ -25,6 +31,8 @@ import LangSwitcher from "@/features/app/LangSwitcher";
 import Filters from "@/features/centers/Filters";
 import TypeChips from "@/features/centers/TypeChips";
 import CenterCard from "@/features/centers/CenterCard";
+import DigitalCard from "@/features/centers/DigitalCard";
+import PanelTabs, { type PanelTab } from "@/features/centers/PanelTabs";
 import CenterDetail from "@/features/centers/CenterDetail";
 import SuggestForm from "@/features/suggest/SuggestForm";
 import DonateView from "@/features/donate/DonateView";
@@ -160,6 +168,9 @@ export default function AppShell({
     pinDragRef.current?.(at);
   }, []);
   const [selectedId, setSelectedId] = useState<string | null>(initialCenterId ?? null);
+  // Which of the two lists the panel shows: places, or initiatives with no seat. The
+  // map does not depend on it — digital markers are drawn either way — only the list.
+  const [panelTab, setPanelTab] = useState<PanelTab>("points");
   const [view, setView] = useState<View>(() => {
     if (initialCenterId) return "detail";
     if (initialPanel) return "admin";
@@ -270,10 +281,20 @@ export default function AppShell({
     window.setTimeout(() => setToast(null), 3500);
   }
 
-  const visible = useMemo(() => filterCenters(centers, filter), [centers, filter]);
+  // Two lists from one load. Digital initiatives are not places: they never take a type
+  // chip (so the type filter does not apply to them), they answer the region filter by
+  // coverage, and the "needs help" count stays about points someone can travel to.
+  const physical = useMemo(() => centers.filter((c) => !isDigital(c)), [centers]);
+  const digitalAll = useMemo(() => centers.filter(isDigital), [centers]);
+  const visible = useMemo(() => filterCenters(physical, filter), [physical, filter]);
+  const visibleDigital = useMemo(
+    () => filterCenters(digitalAll, { ...filter, types: [] }),
+    [digitalAll, filter],
+  );
+  const listed = panelTab === "digital" ? visibleDigital : visible;
   const needing = useMemo(
-    () => pointsNeedingHelp(filter.region ? visible : centers),
-    [visible, centers, filter.region],
+    () => pointsNeedingHelp(filter.region ? visible : physical),
+    [visible, physical, filter.region],
   );
   const selected: Center | null = useMemo(
     () => centers.find((x) => x.id === selectedId) ?? null,
@@ -289,6 +310,10 @@ export default function AppShell({
   const openCenter = useCallback((id: string) => {
     setSelectedId(id);
     setView("detail");
+    // Opening a digital initiative — from its ring on the map, a saved list, a shared
+    // link — lands "Back" on the list it belongs to, not on the points list.
+    const target = centersRef.current.find((c) => c.id === id);
+    if (target && isDigital(target)) setPanelTab("digital");
     // Abrir el panel si estaba plegado.
     //
     // Tocar un pin con el panel cerrado no hacía nada visible: la ficha se pintaba dentro
@@ -298,6 +323,16 @@ export default function AppShell({
     setFolded(false);
     setOpen(true);
   }, []);
+
+  function switchTab(next: PanelTab) {
+    setPanelTab(next);
+    // Switching lists is asking "what else is there": the answer is the list, with the
+    // panel open — not the detail or the needs view that happened to be on screen.
+    setView("list");
+    setSelectedId(null);
+    setFolded(false);
+    setOpen(true);
+  }
 
   function back() {
     setView("list");
@@ -397,6 +432,7 @@ export default function AppShell({
     <div className={`app${folded ? " sheetmin" : ""}`}>
       <MapCanvas
         centers={visible}
+        digital={visibleDigital}
         selectedId={selectedId}
         onSelect={openCenter}
         region={filter.region}
@@ -471,7 +507,7 @@ export default function AppShell({
           <Filters
             filter={filter}
             onChange={changeFilter}
-            centers={visible}
+            centers={listed}
             selectedId={selectedId}
             onPickCenter={(id) => (id ? openCenter(id) : setSelectedId(null))}
           />
@@ -684,10 +720,19 @@ export default function AppShell({
           ) : null}
         </button>
 
+        {/* Las dos listas del panel: sitios a los que ir, e iniciativas sin sede. Las
+            digitales no se filtran por tipo, así que los chips sólo salen con la lista de
+            puntos; la búsqueda y la región valen para las dos. */}
+        <PanelTabs
+          tab={panelTab}
+          counts={{ points: visible.length, digital: visibleDigital.length }}
+          onChange={switchTab}
+        />
+
         {/* Los filtros por tipo viven DENTRO del panel de puntos, no sobre el mapa.
             Acotan exactamente lo que ese panel lista, y tenerlos flotando aparte obligaba
             a mirar a dos sitios para entender por qué la lista mostraba lo que mostraba. */}
-        <TypeChips filter={filter} onChange={changeFilter} />
+        {panelTab === "points" ? <TypeChips filter={filter} onChange={changeFilter} /> : null}
 
         {showingDetail && selected ? (
           <div className="list">
@@ -705,10 +750,16 @@ export default function AppShell({
           {activeView === "list" ? (
             <div className="counters">
               <span className="hcount">
-                <b>{visible.length}</b>{" "}
-                {visible.length === 1 ? t("sheet.point") : t("sheet.points")}
+                <b>{listed.length}</b>{" "}
+                {panelTab === "digital"
+                  ? listed.length === 1
+                    ? t("sheet.digital")
+                    : t("sheet.digitals")
+                  : listed.length === 1
+                    ? t("sheet.point")
+                    : t("sheet.points")}
               </span>
-              {site.features.needs && needing.length > 0 ? (
+              {panelTab === "points" && site.features.needs && needing.length > 0 ? (
                 <button
                   type="button"
                   className="needbar"
@@ -730,17 +781,21 @@ export default function AppShell({
 
           {!configured ? <p className="empty">{t("error.notConfigured")}</p> : null}
 
-          {configured && !loading && visible.length === 0 ? (
+          {configured && !loading && listed.length === 0 ? (
             <p className="empty">
-              <b>{t("map.noResults")}</b>
+              <b>{panelTab === "digital" ? t("digital.empty") : t("map.noResults")}</b>
               <br />
-              {t("map.noResultsHint")}
+              {panelTab === "digital" ? t("digital.emptyHint") : t("map.noResultsHint")}
             </p>
           ) : null}
 
-          {(activeView === "needs" ? needing : visible).slice(0, 300).map((center) => (
-            <CenterCard key={center.id} center={center} onSelect={openCenter} />
-          ))}
+          {(activeView === "needs" ? needing : listed).slice(0, 300).map((center) =>
+            isDigital(center) ? (
+              <DigitalCard key={center.id} center={center} onSelect={openCenter} />
+            ) : (
+              <CenterCard key={center.id} center={center} onSelect={openCenter} />
+            ),
+          )}
 
           <nav className="wrapline sheetfoot">
             <Link className="small mut" href="/docs/privacidad">

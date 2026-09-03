@@ -26,7 +26,8 @@ export default function TypeChips({
   onChange: (next: CenterFilter) => void;
 }) {
   const { t } = useI18n();
-  const { enabledTypes } = useSiteHelpers();
+  // Places only: a digital initiative has its own tab, not a sixth chip in a five-column grid.
+  const { pinTypes } = useSiteHelpers();
 
   function toggle(type: LocationType) {
     const on = filter.types.includes(type);
@@ -38,7 +39,7 @@ export default function TypeChips({
 
   return (
     <div className="chips" data-tour="types">
-      {enabledTypes().map((type) => {
+      {pinTypes().map((type) => {
         const on = filter.types.includes(type);
         return (
           <button

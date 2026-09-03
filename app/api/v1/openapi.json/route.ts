@@ -100,7 +100,9 @@ export function GET() {
         },
         Center: {
           type: "object",
-          required: ["id", "name", "type", "lat", "lng"],
+          // `lat`/`lng` left the required list when `digital` arrived: an initiative
+          // with no seat has none, and says where it helps in `coverage_regions`.
+          required: ["id", "name", "type"],
           properties: {
             id: { type: "string" },
             name: { type: "string" },
@@ -108,11 +110,24 @@ export function GET() {
             region: { type: ["string", "null"] },
             region_name: { type: ["string", "null"] },
             municipality: { type: ["string", "null"] },
-            lat: { type: "number", description: "WGS 84." },
-            lng: { type: "number", description: "WGS 84." },
+            lat: { type: ["number", "null"], description: "WGS 84. null solo para type 'digital'." },
+            lng: { type: ["number", "null"], description: "WGS 84. null solo para type 'digital'." },
             address: { type: ["string", "null"] },
             phone: { type: ["string", "null"] },
             whatsapp: { type: ["string", "null"] },
+            coverage_regions: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "Solo type 'digital': códigos de región donde presta ayuda. Vacío = todo el país. Siempre [] en los demás tipos.",
+            },
+            coverage_municipalities: {
+              type: "array",
+              items: { type: "string" },
+              description: "Solo type 'digital': municipios dentro de esas regiones, texto libre.",
+            },
+            website: { type: ["string", "null"], format: "uri" },
+            instagram: { type: ["string", "null"], description: "Usuario de Instagram, sin @." },
             status: {
               type: ["string", "null"],
               enum: [...CENTER_STATUSES, null],

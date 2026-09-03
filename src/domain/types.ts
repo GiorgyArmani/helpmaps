@@ -6,6 +6,10 @@
  * What kind of place a pin is. Shared across countries; a country simply may have none
  * of a given type. `hospital` and `morgue` exist as informational pins even where the
  * patient features are off.
+ *
+ * `digital` is the one type that is NOT a place: a real initiative with no seat (a
+ * volunteer network, a helpline, a campaign delivering across several zones). It has
+ * no coordinates and instead declares the regions it serves — see `coverage_regions`.
  */
 export type LocationType =
   | "shelter"
@@ -13,7 +17,8 @@ export type LocationType =
   | "comedor"
   | "iniciativa"
   | "hospital"
-  | "morgue";
+  | "morgue"
+  | "digital";
 
 export const LOCATION_TYPES: LocationType[] = [
   "shelter",
@@ -22,6 +27,7 @@ export const LOCATION_TYPES: LocationType[] = [
   "iniciativa",
   "hospital",
   "morgue",
+  "digital",
 ];
 
 export function isLocationType(v: unknown): v is LocationType {
@@ -69,13 +75,21 @@ export interface Location {
   /** Region code — matches a `Region.code` in the active CountryConfig. */
   region: string | null;
   municipality: string | null;
-  lat: number;
-  lng: number;
+  /** Null ONLY for `digital` — the database CHECK enforces it for every other type. */
+  lat: number | null;
+  lng: number | null;
   address: string | null;
   phone: string | null;
   whatsapp: string | null;
   active: boolean;
   updated_at: string | null;
+  /**
+   * Where a `digital` initiative helps: region codes of the active CountryConfig. Empty
+   * means the whole country. Always `[]` for physical types.
+   */
+  coverage_regions: string[];
+  /** Free-text municipalities inside those regions, when the initiative is that precise. */
+  coverage_municipalities: string[];
 }
 
 /**
@@ -98,6 +112,10 @@ export interface CenterInfo {
   schedule: string | null;
   contact_name: string | null;
   social_url: string | null;
+  /** Website, if any. Digital initiatives are mostly reached through this and Instagram. */
+  website: string | null;
+  /** Instagram handle, stored without the `@`. */
+  instagram: string | null;
   /** Animal-rescue point: flagged so people looking for human shelter aren't misdirected. */
   is_animal: boolean;
   /** Last time a human confirmed the point is still operating. */

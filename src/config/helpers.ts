@@ -39,6 +39,8 @@ export interface SiteHelpers {
   typeStyle(type: LocationType): PointTypeStyle;
   isTypeEnabled(type: LocationType): boolean;
   enabledTypes(): LocationType[];
+  /** `enabledTypes()` minus `digital`: the types that are PLACES and get a pin and a chip. */
+  pinTypes(): LocationType[];
   siteUrl(): string;
   absoluteUrl(path: string): string;
   storageKey(name: string): string;
@@ -50,6 +52,12 @@ export function createSiteHelpers(site: SiteConfig): SiteHelpers {
   // Built once per site rather than on every lookup: the region filter calls this for
   // every row it renders.
   const regionByCodeMap = new Map(site.country.regions.map((r) => [r.code, r]));
+
+  function enabledTypes(): LocationType[] {
+    return (Object.keys(site.map.types) as LocationType[])
+      .filter((t) => site.map.types[t].enabled)
+      .sort((a, b) => site.map.types[a].order - site.map.types[b].order);
+  }
 
   function siteUrl(): string {
     // NEXT_PUBLIC_SITE_URL wins (previews, local dev), otherwise the configured host — so
@@ -103,9 +111,17 @@ export function createSiteHelpers(site: SiteConfig): SiteHelpers {
 
     /** Enabled point types in display order — drives chips, legends and grouped selects. */
     enabledTypes() {
-      return (Object.keys(site.map.types) as LocationType[])
-        .filter((t) => site.map.types[t].enabled)
-        .sort((a, b) => site.map.types[a].order - site.map.types[b].order);
+      return enabledTypes();
+    },
+
+    /**
+     * The types that are places. A digital initiative is enabled (it has a colour, a
+     * glyph, a type label) but it is not a pin: it has no coordinates, it is not one of
+     * the five chips over the list, and it does not join the cluster fan. It lives in
+     * its own tab.
+     */
+    pinTypes() {
+      return enabledTypes().filter((t) => t !== "digital");
     },
 
     siteUrl,

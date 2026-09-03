@@ -20,8 +20,21 @@ import { useSite } from "@/features/app/SiteProvider";
  * Hence the address search (so the usual case is one click, not typed decimals) and the
  * standing warning to check the pin before saving.
  */
+/** What a public submission can pre-fill when it is published from the queue. */
+export interface CenterPrefill {
+  name?: string;
+  type?: LocationType;
+  description?: string;
+  whatsapp?: string;
+  coverage_regions?: string[];
+  coverage_municipalities?: string[];
+  website?: string;
+  instagram?: string;
+}
+
 export default function CenterForm({
   center,
+  prefill,
   onSave,
   onCancel,
   onDelete,
@@ -30,6 +43,8 @@ export default function CenterForm({
   onCoordsChange,
 }: {
   center: Center | null;
+  /** Initial values for a NEW point, e.g. lifted from a submission. Ignored when editing. */
+  prefill?: CenterPrefill;
   onSave: (draft: CenterDraft, statusChanged: boolean) => Promise<void>;
   onCancel: () => void;
   onDelete?: () => void;
@@ -47,27 +62,38 @@ export default function CenterForm({
   const info = center?.info ?? null;
 
   const [form, setForm] = useState({
-    name: center?.name ?? "",
-    type: (center?.type ?? enabledTypes()[0] ?? "shelter") as LocationType,
+    name: center?.name ?? prefill?.name ?? "",
+    type: (center?.type ?? prefill?.type ?? enabledTypes()[0] ?? "shelter") as LocationType,
     region: center?.region ?? "",
     municipality: center?.municipality ?? "",
     address: center?.address ?? "",
-    lat: center ? String(center.lat) : "",
-    lng: center ? String(center.lng) : "",
+    // A digital initiative has none; the string form of `null` must not become "null".
+    lat: center?.lat != null ? String(center.lat) : "",
+    lng: center?.lng != null ? String(center.lng) : "",
     phone: center?.phone ?? "",
-    whatsapp: center?.whatsapp ?? "",
+    whatsapp: center?.whatsapp ?? prefill?.whatsapp ?? "",
     active: center?.active ?? true,
     status: (info?.status ?? "") as CenterStatus | "",
     needs: info?.needs ?? "",
     receives: (info?.receives ?? []).join(", "),
     help: info?.help ?? ([] as HelpKind[]),
     category: info?.category ?? "",
-    description: info?.description ?? "",
+    description: info?.description ?? prefill?.description ?? "",
     schedule: info?.schedule ?? "",
     contactName: info?.contact_name ?? "",
     socialUrl: info?.social_url ?? "",
+    website: info?.website ?? prefill?.website ?? "",
+    instagram: info?.instagram ?? prefill?.instagram ?? "",
     isAnimal: info?.is_animal ?? false,
+    // Where a digital initiative helps. Region codes; empty = whole country.
+    coverageRegions: center?.coverage_regions ?? prefill?.coverage_regions ?? ([] as string[]),
+    coverageMunicipalities: (center?.coverage_municipalities ?? prefill?.coverage_municipalities ?? []).join(
+      ", ",
+    ),
   });
+
+  // The one type that is not a place: no address, no pin, coverage instead.
+  const digital = form.type === "digital";
 
   const [geoQuery, setGeoQuery] = useState("");
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -94,10 +120,11 @@ export default function CenterForm({
   const lng = Number.parseFloat(form.lng);
   const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
 
-  // Keyed on the PARSED numbers, so typing "4.8" then "4.80" moves nothing.
+  // Keyed on the PARSED numbers, so typing "4.8" then "4.80" moves nothing. A digital
+  // initiative publishes no pin even if stale decimals are still in the (hidden) fields.
   useEffect(() => {
-    onCoordsChange(hasCoords ? { lat, lng } : null);
-  }, [hasCoords, lat, lng, onCoordsChange]);
+    onCoordsChange(hasCoords && !digital ? { lat, lng } : null);
+  }, [hasCoords, lat, lng, digital, onCoordsChange]);
 
   // Hand the map a way to write coordinates back while this form is mounted. Assigning
   // to a ref, not state — nothing needs to re-render because of it.
@@ -152,7 +179,10 @@ export default function CenterForm({
     e.preventDefault();
     const lat = Number.parseFloat(form.lat);
     const lng = Number.parseFloat(form.lng);
-    if (!form.name.trim() || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    // Coordinates are required for every place. A digital initiative is the one row the
+    // database accepts without them — and rejects WITH a non-digital type, so the guard
+    // and the CHECK constraint say the same thing.
+    if (!form.name.trim() || (!digital && (!Number.isFinite(lat) || !Number.isFinite(lng)))) {
       setError(t("admin.saveError"));
       return;
     }
@@ -162,14 +192,21 @@ export default function CenterForm({
       id: center?.id ?? makeCenterId(form.name, form.type),
       name: form.name.trim(),
       type: form.type,
-      region: form.region || null,
-      municipality: form.municipality.trim() || null,
-      lat,
-      lng,
-      address: form.address.trim() || null,
+      region: digital ? null : form.region || null,
+      municipality: digital ? null : form.municipality.trim() || null,
+      lat: digital ? null : lat,
+      lng: digital ? null : lng,
+      address: digital ? null : form.address.trim() || null,
       phone: form.phone.trim() || null,
       whatsapp: form.whatsapp.trim() || null,
       active: form.active,
+      coverage_regions: digital ? form.coverageRegions : [],
+      coverage_municipalities: digital
+        ? form.coverageMunicipalities
+            .split(",")
+            .map((x) => x.trim())
+            .filter(Boolean)
+        : [],
       info: {
         status: form.status || null,
         receives: form.receives
@@ -183,6 +220,8 @@ export default function CenterForm({
         schedule: form.schedule.trim() || null,
         contact_name: form.contactName.trim() || null,
         social_url: form.socialUrl.trim() || null,
+        website: form.website.trim() || null,
+        instagram: form.instagram.trim().replace(/^@/, "") || null,
         is_animal: form.isAnimal,
       },
     };
@@ -211,18 +250,60 @@ export default function CenterForm({
             ))}
           </Select>
         </Field>
-        <Field label={site.country.regionNoun.one}>
-          <Select value={form.region} onChange={(e) => set("region", e.target.value)}>
-            <option value="">—</option>
-            {site.country.regions.map((r) => (
-              <option key={r.code} value={r.code}>
-                {r.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        {!digital ? (
+          <Field label={site.country.regionNoun.one}>
+            <Select value={form.region} onChange={(e) => set("region", e.target.value)}>
+              <option value="">—</option>
+              {site.country.regions.map((r) => (
+                <option key={r.code} value={r.code}>
+                  {r.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
       </div>
 
+      {digital ? (
+        <>
+          {/* Switching an existing place to digital drops its pin. Said before saving,
+              because the row cannot keep both: the CHECK constraint is one or the other. */}
+          {center && center.lat !== null ? (
+            <Notice tone="warn">{t("form.digitalDropsPin")}</Notice>
+          ) : null}
+          <Field
+            label={t("form.coverage", { regions: site.country.regionNoun.many })}
+            hint={t("form.coverageHint")}
+          >
+            <div className="covpick">
+              {site.country.regions.map((r) => (
+                <Chip
+                  key={r.code}
+                  on={form.coverageRegions.includes(r.code)}
+                  onClick={() =>
+                    set(
+                      "coverageRegions",
+                      form.coverageRegions.includes(r.code)
+                        ? form.coverageRegions.filter((x) => x !== r.code)
+                        : [...form.coverageRegions, r.code],
+                    )
+                  }
+                >
+                  {r.name}
+                </Chip>
+              ))}
+            </div>
+          </Field>
+          <Field label={t("form.coverageMunicipalities")}>
+            <Input
+              value={form.coverageMunicipalities}
+              onChange={(e) => set("coverageMunicipalities", e.target.value)}
+            />
+          </Field>
+        </>
+      ) : null}
+
+      {!digital ? (
       <div className="frow">
         <Field label={t("form.municipality")}>
           <Input value={form.municipality} onChange={(e) => set("municipality", e.target.value)} />
@@ -231,7 +312,9 @@ export default function CenterForm({
           <Input value={form.address} onChange={(e) => set("address", e.target.value)} />
         </Field>
       </div>
+      ) : null}
 
+      {!digital ? (
       <fieldset className="fieldset">
         <legend className="legend">{t("form.coords")}</legend>
         <div className="frow">
@@ -294,6 +377,7 @@ export default function CenterForm({
         ) : null}
         <Notice tone="warn">{t("form.pinWarning")}</Notice>
       </fieldset>
+      ) : null}
 
       <div className="frow">
         <Field label={t("form.phone")}>
@@ -380,6 +464,15 @@ export default function CenterForm({
           </Field>
           <Field label={t("form.socialUrl")}>
             <Input value={form.socialUrl} onChange={(e) => set("socialUrl", e.target.value)} />
+          </Field>
+        </div>
+
+        <div className="frow">
+          <Field label={t("form.website")}>
+            <Input inputMode="url" value={form.website} onChange={(e) => set("website", e.target.value)} />
+          </Field>
+          <Field label={t("form.instagram")}>
+            <Input value={form.instagram} onChange={(e) => set("instagram", e.target.value)} />
           </Field>
         </div>
 

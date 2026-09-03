@@ -36,7 +36,8 @@ const colombia: CountryConfig = {
   },
 
   // The 32 departamentos + Bogotá D.C. Centroids are approximate on purpose: they only
-  // move the viewport when a departamento is filtered, they never place a pin.
+  // move the viewport when a departamento is filtered, they never place a pin. (A digital
+  // initiative that serves the departamento draws a coverage ring here — not a pin.)
   regions: [
     { code: "amazonas", name: "Amazonas", lat: -1.2, lng: -71.6 },
     { code: "antioquia", name: "Antioquia", lat: 6.9, lng: -75.5 },

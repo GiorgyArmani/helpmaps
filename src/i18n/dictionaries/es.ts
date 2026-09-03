@@ -80,6 +80,8 @@ const es = {
   "type.hospital.plural": "Hospitales",
   "type.morgue": "Morgue",
   "type.morgue.plural": "Morgues",
+  "type.digital": "Iniciativa digital",
+  "type.digital.plural": "Iniciativas digitales",
 
   // ── Estado del punto ────────────────────────────────────────────────────
   "status.abierto": "Abierto",
@@ -108,6 +110,8 @@ const es = {
   "center.updatedLabel": "Última actualización",
   "center.confirmedLabel": "Confirmado por última vez",
   "center.socialLink": "Ver su red social",
+  "center.website": "Sitio web",
+  "center.instagram": "Instagram",
   "center.confirmed": "Confirmado {ago}",
   "center.neverConfirmed": "Sin confirmación reciente",
   "center.noNeeds": "Este punto no ha reportado necesidades.",
@@ -157,6 +161,18 @@ const es = {
   "fab.cta": "Colaborar",
   "sheet.point": "punto",
   "sheet.points": "puntos",
+  "sheet.digital": "iniciativa digital",
+  "sheet.digitals": "iniciativas digitales",
+
+  // ── Pestañas del panel e iniciativas digitales ──────────────────────────
+  "panel.tab.digital": "Digitales",
+  "digital.noSeat": "Sin sede física",
+  "digital.coverageTitle": "Dónde ayuda",
+  "digital.national": "Todo el país",
+  "digital.mapHint": "En el mapa aparece en el centro de cada {region} que atiende. No es un lugar al que ir.",
+  "digital.empty": "Todavía no hay iniciativas digitales aquí.",
+  "digital.emptyHint": "Si conoces una que ayuda sin tener sede, propónla desde Colaborar.",
+  "digital.more": "+{n} más",
   "suggest.cta": "Falta un punto en el mapa",
   "suggest.ctaHint": "Cuéntanos de un refugio, comedor, acopio o iniciativa que no aparece.",
   "suggest.ctaInitiative": "Registrar mi iniciativa",
@@ -432,6 +448,10 @@ const es = {
   "admin.saved": "Guardado",
   "admin.saveError": "No se pudo guardar.",
   "admin.unknownRegion": "Región desconocida",
+  "admin.filter.all": "Todos",
+  "admin.filter.points": "Con sede",
+  "admin.filter.digital": "Digitales",
+  "admin.publishDigital": "Publicar como iniciativa digital",
   "admin.unknownRegionHint":
     "Esta fila tiene una región que este país no define. Corrígela para que aparezca en el filtro.",
 
@@ -478,6 +498,14 @@ const es = {
   "form.schedule": "Horario",
   "form.contactName": "Responsable",
   "form.socialUrl": "Red social o web",
+  "form.website": "Sitio web",
+  "form.instagram": "Instagram (sin @)",
+  "form.hasSeat": "¿Tiene sede física?",
+  "form.hasSeatHint": "Si no tiene un lugar al que ir, dinos en qué zonas ayuda y cómo contactarla.",
+  "form.coverage": "{regions} donde ayuda",
+  "form.coverageHint": "Ninguna marcada = todo el país.",
+  "form.coverageMunicipalities": "Municipios (opcional, separados por coma)",
+  "form.digitalDropsPin": "Al pasar a iniciativa digital, el punto pierde sus coordenadas y deja de tener pin.",
   "form.isAnimal": "Es rescate animal",
 
   // ── Pie de página / red ─────────────────────────────────────────────────

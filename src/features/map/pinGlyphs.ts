@@ -1,4 +1,4 @@
-import { enabledTypes, typeStyle } from "@/config";
+import { pinTypes, typeStyle } from "@/config";
 import type { LocationType } from "@/domain/types";
 
 // Leaflet markers are built with `divIcon`, which takes an HTML string, so a pin glyph
@@ -20,6 +20,9 @@ const GLYPHS: Record<string, string> = {
   users:
     '<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20v-1.2A4.8 4.8 0 0 1 7.3 14h3.4a4.8 4.8 0 0 1 4.8 4.8V20"/>' +
     '<path d="M16.4 5.2a3.2 3.2 0 0 1 0 5.6"/><path d="M18.2 14.2a4.2 4.2 0 0 1 3.3 4.1V20"/>',
+  globe:
+    '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/>' +
+    '<path d="M12 3.5c2.6 2.6 3.9 5.4 3.9 8.5S14.6 17.9 12 20.5c-2.6-2.6-3.9-5.4-3.9-8.5S9.4 6.1 12 3.5Z"/>',
   hospital: '<rect x="3.5" y="4" width="17" height="17" rx="2"/><path d="M12 8.5v7M8.5 12h7"/>',
   morgue: '<path d="M6 21V10.5a6 6 0 0 1 12 0V21"/><path d="M4.5 21h15"/>',
   heart: '<path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 4.6-7 9-7 9Z"/>',
@@ -50,7 +53,8 @@ export function glyphSvg(name: string, size = 15, extra = ""): string {
  * a spread that is still symmetric, instead of a gap where the morgue used to be.
  */
 function fanOffsets(): Record<string, [number, number]> {
-  const types = enabledTypes();
+  // Places only: a digital initiative never joins the fan, it has its own group.
+  const types = pinTypes();
   const n = types.length;
   const out: Record<string, [number, number]> = {};
   types.forEach((type, i) => {

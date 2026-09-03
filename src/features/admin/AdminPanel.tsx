@@ -32,12 +32,36 @@ import { Badge, Notice } from "@/ui/primitives";
 import { Icon } from "@/ui/icons";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import { fetchPendingReports, resolveReports, type ReportGroup } from "@/data/account";
-import CenterForm from "@/features/admin/CenterForm";
+import CenterForm, { type CenterPrefill } from "@/features/admin/CenterForm";
 import DonationForm from "@/features/admin/DonationForm";
 import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
+import { isDigital } from "@/domain/center";
+import { coverageLabel } from "@/features/centers/coverage";
 
 type Tab = "activity" | "centers" | "submissions" | "reports" | "volunteers" | "donations";
+type TypeFilter = "all" | "points" | "digital";
+
+/**
+ * The digital hints a public submission may carry (see `app/api/suggest/route.ts`, which
+ * is the only writer). Read defensively anyway: it is jsonb, and old rows have none.
+ */
+function digitalHints(sub: Submission): CenterPrefill | null {
+  const p = sub.payload;
+  if (!p || p.digital !== true) return null;
+  const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+  return {
+    type: "digital",
+    name: sub.name ?? undefined,
+    description: sub.message,
+    coverage_regions: strs(p.coverage_regions),
+    coverage_municipalities: strs(p.coverage_municipalities),
+    website: str(p.website),
+    instagram: str(p.instagram),
+    whatsapp: str(p.whatsapp),
+  };
+}
 
 /**
  * The team panel.
@@ -87,7 +111,12 @@ export default function AdminPanel({
   const [maintenance, setMaintenanceState] = useState(false);
   const [editing, setEditing] = useState<Center | null>(null);
   const [creating, setCreating] = useState(false);
+  // Publishing straight from the queue: the form opens pre-filled, and the submission is
+  // marked approved once the point is actually saved — not before.
+  const [prefill, setPrefill] = useState<CenterPrefill | undefined>(undefined);
+  const [fromSubmission, setFromSubmission] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -135,16 +164,27 @@ export default function AdminPanel({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return centers;
-    return centers.filter((c) => c.name.toLowerCase().includes(q));
-  }, [centers, query]);
+    return centers.filter((c) => {
+      if (typeFilter === "digital" && !isDigital(c)) return false;
+      if (typeFilter === "points" && isDigital(c)) return false;
+      return !q || c.name.toLowerCase().includes(q);
+    });
+  }, [centers, query, typeFilter]);
+
+  function closeForm() {
+    setEditing(null);
+    setCreating(false);
+    setPrefill(undefined);
+    setFromSubmission(null);
+  }
 
   async function handleSave(draft: CenterDraft, statusChanged: boolean) {
     const sb = getSupabase();
     if (!sb) return;
     await saveCenter(sb, draft, { statusChanged, emergencyId });
-    setEditing(null);
-    setCreating(false);
+    // The point is on the map now, so the submission that asked for it is done.
+    if (fromSubmission) await reviewSubmission(sb, fromSubmission, "approved");
+    closeForm();
     await load();
   }
 
@@ -275,14 +315,12 @@ export default function AdminPanel({
         </div>
         <CenterForm
           center={editing}
+          prefill={editing ? undefined : prefill}
           canDelete={isAdmin}
           onPinDrag={onPinDrag}
           onCoordsChange={onDraftPin}
           onSave={handleSave}
-          onCancel={() => {
-            setEditing(null);
-            setCreating(false);
-          }}
+          onCancel={closeForm}
           onDelete={editing ? () => void handleDelete(editing) : undefined}
         />
       </div>
@@ -452,6 +490,22 @@ export default function AdminPanel({
             ) : null}
           </div>
 
+          {/* Places or digital initiatives. A single mixed list hid the three digital
+              rows among five hundred shelters. */}
+          <div className="seg">
+            {(["all", "points", "digital"] as TypeFilter[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`segb${typeFilter === f ? " segb-on" : ""}`}
+                aria-pressed={typeFilter === f}
+                onClick={() => setTypeFilter(f)}
+              >
+                {t(`admin.filter.${f}` as DictKey)}
+              </button>
+            ))}
+          </div>
+
           {filtered.length === 0 ? <p className="mut">{t("admin.noCenters")}</p> : null}
 
           {filtered.map((center) => (
@@ -460,10 +514,17 @@ export default function AdminPanel({
                 <div className="aname">{center.name}</div>
                 <div className="asub">
                   {t(`type.${center.type}` as DictKey)}
-                  {center.region ? ` · ${helpers.regionLabel(center.region)}` : ""}
+                  {isDigital(center)
+                    ? ` · ${coverageLabel(center, helpers.regionLabel, t)}`
+                    : center.region
+                      ? ` · ${helpers.regionLabel(center.region)}`
+                      : ""}
                   {!center.active ? ` · ${t("admin.hidden")}` : ""}
                 </div>
-                {center.region && !helpers.isKnownRegion(center.region) ? (
+                {/* A code the config no longer knows: for a place it is its `region`, for a
+                    digital initiative any of its coverage codes (that ring is not drawn). */}
+                {(center.region && !helpers.isKnownRegion(center.region)) ||
+                center.coverage_regions.some((code) => !helpers.isKnownRegion(code)) ? (
                   <Badge tone="warn">{t("admin.unknownRegion")}</Badge>
                 ) : null}
               </div>
@@ -547,10 +608,55 @@ export default function AdminPanel({
                 ) : null}
               </div>
               <p className="subcard-msg">{sub.message}</p>
+              {/* An initiative with no seat says where it helps and how to reach it. Shown
+                  as the same tags the public detail view uses, so what the reviewer sees
+                  is what would be published. */}
+              {(() => {
+                const hints = digitalHints(sub);
+                if (!hints) return null;
+                const regions = hints.coverage_regions ?? [];
+                const links = [hints.website, hints.instagram ? `@${hints.instagram}` : null, hints.whatsapp]
+                  .filter(Boolean)
+                  .join(" · ");
+                return (
+                  <>
+                    <div className="dtags">
+                      <span className="dtag">{t("type.digital")}</span>
+                      {regions.length > 0 ? (
+                        regions.map((code) => (
+                          <span key={code} className="dtag">
+                            {helpers.regionLabel(code)}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="dtag">{t("digital.national")}</span>
+                      )}
+                    </div>
+                    {(hints.coverage_municipalities ?? []).length > 0 ? (
+                      <p className="small mut">{hints.coverage_municipalities!.join(" · ")}</p>
+                    ) : null}
+                    {links ? <p className="small mut">{links}</p> : null}
+                  </>
+                );
+              })()}
               <div className="subcard-acts">
+                {digitalHints(sub) ? (
+                  <button
+                    type="button"
+                    className="btnp"
+                    disabled={busy}
+                    onClick={() => {
+                      setPrefill(digitalHints(sub) ?? undefined);
+                      setFromSubmission(sub.id);
+                      setCreating(true);
+                    }}
+                  >
+                    {t("admin.publishDigital")}
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  className="btnp"
+                  className={digitalHints(sub) ? "btng" : "btnp"}
                   disabled={busy}
                   onClick={() =>
                     void review(async () => {

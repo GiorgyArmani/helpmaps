@@ -32,6 +32,16 @@ export default function ApiDocsPage() {
         </p>
       </section>
 
+      <section className="doc-section">
+        <p>
+          Un punto de tipo <code>digital</code> es una iniciativa real sin sede física: llega con{" "}
+          <code>lat</code> y <code>lng</code> en <code>null</code> y dice dónde ayuda en{" "}
+          <code>coverage_regions</code> (códigos de región; vacío = todo el país). El filtro{" "}
+          <code>?region=</code> la incluye si atiende esa región. No mandes a nadie a sus coordenadas:
+          no las tiene.
+        </p>
+      </section>
+
       <DocSection heading={`Endpoint`}>
         <code className="code">{`GET ${base}/api/v1/centers`}</code>
         <p>

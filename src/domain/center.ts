@@ -1,5 +1,6 @@
 import type { Center, CenterInfo, CenterStatus, Location, LocationType } from "@/domain/types";
 import { helpKinds, isLocationType, toCenterStatus } from "@/domain/types";
+import type { Region } from "@/config/types";
 import { MAPCFG } from "@/config";
 
 // Everything the app decides ABOUT a point lives here: no component re-implements
@@ -35,6 +36,8 @@ export function mapCenterInfo(row: Row | null | undefined): CenterInfo | null {
     schedule: str(row.schedule),
     contact_name: str(row.contact_name),
     social_url: str(row.social_url),
+    website: str(row.website),
+    instagram: str(row.instagram),
     is_animal: row.is_animal === true,
     last_confirmed_at: str(row.last_confirmed_at),
     updated_at: str(row.updated_at),
@@ -56,7 +59,10 @@ export function mapCenter(row: Row): Center | null {
   const lat = num(row.lat);
   const lng = num(row.lng);
   const type = isLocationType(row.type) ? row.type : null;
-  if (!id || !name || lat === null || lng === null || !type) return null;
+  if (!id || !name || !type) return null;
+  // A physical point without coordinates is a row nobody can be sent to: dropped, as
+  // before. A digital initiative has none by definition and is placed by its coverage.
+  if (type !== "digital" && (lat === null || lng === null)) return null;
 
   const rawInfo = row.info ?? row.center_info;
   const infoRow = Array.isArray(rawInfo) ? (rawInfo[0] as Row | undefined) : (rawInfo as Row | null);
@@ -74,6 +80,8 @@ export function mapCenter(row: Row): Center | null {
     whatsapp: str(row.whatsapp),
     active: row.active !== false,
     updated_at: str(row.updated_at),
+    coverage_regions: type === "digital" ? strArray(row.coverage_regions) : [],
+    coverage_municipalities: type === "digital" ? strArray(row.coverage_municipalities) : [],
   };
 
   return { ...location, info: mapCenterInfo(infoRow) };
@@ -82,6 +90,57 @@ export function mapCenter(row: Row): Center | null {
 export function mapCenters(rows: Row[] | null | undefined): Center[] {
   if (!rows) return [];
   return rows.map(mapCenter).filter((c): c is Center => c !== null);
+}
+
+// ---------------------------------------------------------------------------
+// Digital initiatives — real, no seat, placed by where they help
+// ---------------------------------------------------------------------------
+
+export function isDigital(center: Pick<Center, "type">): boolean {
+  return center.type === "digital";
+}
+
+/** Narrows to a point that can be flown to, routed to, or pinned. */
+export function hasCoords<T extends { lat: number | null; lng: number | null }>(
+  center: T,
+): center is T & { lat: number; lng: number } {
+  return center.lat !== null && center.lng !== null;
+}
+
+/** Does this initiative help in that region? An empty coverage list means everywhere. */
+export function servesRegion(center: Pick<Center, "coverage_regions">, code: string): boolean {
+  return center.coverage_regions.length === 0 || center.coverage_regions.includes(code);
+}
+
+export interface CoveragePin {
+  /** Region code, or null for the national fallback point. */
+  code: string | null;
+  lat: number;
+  lng: number;
+}
+
+/**
+ * One marker per served region, at that region's centroid. National coverage (empty
+ * list) collapses to the single fallback point so the initiative is still findable on
+ * the map. Codes the active config does not know are skipped rather than drawn at 0,0:
+ * a region can be removed from the `emergencies` row without a deploy.
+ *
+ * These are COVERAGE markers, not pins: nobody should travel to a centroid.
+ */
+export function coveragePins(
+  center: Pick<Center, "coverage_regions">,
+  regions: readonly Region[],
+  fallback: readonly [number, number],
+): CoveragePin[] {
+  if (center.coverage_regions.length === 0) {
+    return [{ code: null, lat: fallback[0], lng: fallback[1] }];
+  }
+  const out: CoveragePin[] = [];
+  for (const code of center.coverage_regions) {
+    const r = regions.find((x) => x.code === code);
+    if (r) out.push({ code, lat: r.lat, lng: r.lng });
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -157,6 +216,8 @@ export function matchesQuery(center: Center, query: string): boolean {
     center.address ?? "",
     center.info?.category ?? "",
     center.info?.needs ?? "",
+    center.coverage_regions.join(" "),
+    center.coverage_municipalities.join(" "),
   ]
     .map(normalize)
     .join(" ");
@@ -182,7 +243,9 @@ export function filterCenters(centers: Center[], f: CenterFilter): Center[] {
   return centers.filter((c) => {
     if (!c.active) return false;
     if (f.types.length > 0 && !f.types.includes(c.type)) return false;
-    if (f.region && c.region !== f.region) return false;
+    // A digital initiative belongs to every region it serves, not to one `region` cell.
+    if (f.region && (isDigital(c) ? !servesRegion(c, f.region) : c.region !== f.region))
+      return false;
     if (f.onlyNeeds && !hasNeed(c)) return false;
     return matchesQuery(c, f.query);
   });
@@ -207,7 +270,11 @@ export function distanceKm(
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-/** Directions link that works on both phones and desktop, no app required. */
-export function directionsUrl(center: Pick<Center, "lat" | "lng" | "name">): string {
+/**
+ * Directions link that works on both phones and desktop, no app required. Takes real
+ * coordinates only: callers narrow with `hasCoords` first, so a digital initiative can
+ * never hand someone a route to a region's centroid.
+ */
+export function directionsUrl(center: { lat: number; lng: number }): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${center.lat},${center.lng}`;
 }

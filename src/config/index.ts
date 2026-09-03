@@ -76,6 +76,7 @@ export const isKnownRegion = H.isKnownRegion;
 export const typeStyle = H.typeStyle;
 export const isTypeEnabled = H.isTypeEnabled;
 export const enabledTypes = H.enabledTypes;
+export const pinTypes = H.pinTypes;
 export const siteUrl = H.siteUrl;
 export const absoluteUrl = H.absoluteUrl;
 export const storageKey = H.storageKey;

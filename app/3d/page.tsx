@@ -5,6 +5,7 @@ import { currentEmergency, currentEmergencyId, getSite } from "@/server/emergenc
 import { supabasePublic } from "@/lib/supabase/server";
 import { fetchCenters } from "@/data/centers";
 import { buildingLayers } from "@/domain/layers";
+import { hasCoords } from "@/domain/center";
 import { typeStyle } from "@/config";
 import SceneBar from "@/features/map3d/SceneBar";
 import type { ScenePoint } from "@/features/map3d/Scene3D";
@@ -65,7 +66,8 @@ export default async function Scene3DPage({
   if (sb) {
     try {
       const rows = await fetchCenters(sb, emergencyId);
-      centers = rows.map((c) => ({
+      // A digital initiative has no coordinates and nothing to stand on in a 3D scene.
+      centers = rows.filter(hasCoords).map((c) => ({
         id: c.id,
         name: c.name,
         type: c.type,

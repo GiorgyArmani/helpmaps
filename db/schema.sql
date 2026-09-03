@@ -14,11 +14,11 @@
 CREATE TABLE public.locations (
   id text NOT NULL,
   name text NOT NULL,
-  type text NOT NULL CHECK (type = ANY (ARRAY['shelter'::text, 'donation_centre'::text, 'comedor'::text, 'iniciativa'::text, 'hospital'::text, 'morgue'::text])),
+  type text NOT NULL CHECK (type = ANY (ARRAY['shelter'::text, 'donation_centre'::text, 'comedor'::text, 'iniciativa'::text, 'hospital'::text, 'morgue'::text, 'digital'::text])),
   region text,
   municipality text,
-  lat double precision NOT NULL,
-  lng double precision NOT NULL,
+  lat double precision,
+  lng double precision,
   address text,
   phone text,
   whatsapp text,
@@ -28,7 +28,10 @@ CREATE TABLE public.locations (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   emergency_id uuid,
   country_code text,
+  coverage_regions ARRAY NOT NULL DEFAULT '{}'::text[],
+  coverage_municipalities ARRAY NOT NULL DEFAULT '{}'::text[],
   CONSTRAINT locations_pkey PRIMARY KEY (id),
+  CONSTRAINT locations_coords_required CHECK (type = 'digital'::text OR (lat IS NOT NULL AND lng IS NOT NULL)),
   CONSTRAINT locations_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id)
 );
 CREATE TABLE public.center_info (
@@ -42,6 +45,8 @@ CREATE TABLE public.center_info (
   schedule text,
   contact_name text,
   social_url text,
+  website text,
+  instagram text,
   is_animal boolean NOT NULL DEFAULT false,
   last_confirmed_at timestamp with time zone,
   source text,

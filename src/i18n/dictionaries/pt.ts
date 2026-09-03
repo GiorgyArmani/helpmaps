@@ -33,6 +33,8 @@ const pt: Partial<Dict> = {
   "map.pointsCount": "{n} pontos",
   "map.noResults": "Nenhum ponto corresponde ao filtro",
 
+  "type.digital": "Iniciativa digital",
+  "type.digital.plural": "Iniciativas digitais",
   "type.shelter": "Abrigo",
   "type.shelter.plural": "Abrigos",
   "type.donation_centre": "Ponto de coleta",

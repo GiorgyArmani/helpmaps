@@ -40,7 +40,9 @@ export function useCenters(): CentersState {
   const helpers = useSiteHelpers();
   // Namespaced by the RESOLVED slug, not the compiled one: two emergencies opened in the
   // same browser must not read each other's cached points, and the cache outlives the tab.
-  const cacheKey = helpers.storageKey("centers:v1");
+  // v2: rows gained `coverage_regions`/`coverage_municipalities`. A v1 cache would hand
+  // the filter a Center without those arrays and crash the first region filter.
+  const cacheKey = helpers.storageKey("centers:v2");
   // El modo sin señal lo decide la EMERGENCIA, no el preset: un país puede apagarlo.
   const offline = useSite().features.offline;
 

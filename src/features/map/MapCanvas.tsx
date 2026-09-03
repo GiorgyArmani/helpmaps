@@ -21,8 +21,8 @@ import type { Center } from "@/domain/types";
 import type { IntensityContour, Quake } from "@/domain/hazard";
 import type { GeoJsonObject } from "geojson";
 import type { EmergencyLayer } from "@/domain/layers";
-import { hasNeed, statusOf } from "@/domain/center";
-import { MAPCFG, enabledTypes, typeStyle } from "@/config";
+import { coveragePins, hasCoords, hasNeed, statusOf } from "@/domain/center";
+import { MAPCFG, pinTypes, typeStyle } from "@/config";
 import { intensityBand } from "@/domain/hazard";
 import { clusterPinHtml, glyphSvg } from "@/features/map/pinGlyphs";
 import { alertColor, quakePopupHtml, quakeRadius } from "@/features/hazard/quakeMarkers";
@@ -32,7 +32,10 @@ import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 
 interface Props {
+  /** Points with coordinates. Never a digital initiative — those come in `digital`. */
   centers: Center[];
+  /** Initiatives with no seat, drawn as a coverage ring on each served region. */
+  digital: Center[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   /** Region code currently filtered; drives the viewport. */
@@ -119,8 +122,26 @@ function pinIcon(center: Center, selected: boolean): DivIconOptions {
   };
 }
 
+/**
+ * The coverage ring of a digital initiative: same pill as a pin, dashed, no heart. It
+ * sits on a region's centroid and is deliberately not a pin — nobody should read it as
+ * a place to travel to.
+ */
+function coverageIcon(center: Center, selected: boolean): DivIconOptions {
+  const style = typeStyle(center.type);
+  return {
+    className: "mkwrap",
+    html:
+      `<span class="mk mk-digital${selected ? " mk-on" : ""}" style="color:${style.color}">` +
+      `<span class="mkico" style="color:${selected ? "#fff" : style.color}">` +
+      `${glyphSvg(style.icon, 12)}</span></span>`,
+    iconSize: [0, 0],
+  };
+}
+
 export default function MapCanvas({
   centers,
+  digital,
   selectedId,
   onSelect,
   region,
@@ -142,6 +163,11 @@ export default function MapCanvas({
   // Los marcadores por id, para poder repintar solo el que cambió de selección en vez de
   // reconstruir los setecientos.
   const markersRef = useRef<Record<string, import("leaflet").Marker>>({});
+  // Las iniciativas digitales, en su propio grupo: varias que atienden la misma región
+  // caen en el MISMO centroide, y sólo un grupo con abanico las deja abrir una a una.
+  const digitalRef = useRef<MarkerClusterGroup | null>(null);
+  // Un marcador por región atendida, así que aquí cada id tiene una lista.
+  const digitalMarkersRef = useRef<Record<string, import("leaflet").Marker[]>>({});
   const labelsRef = useRef(false);
   // La selección pintada ahora mismo. `draw` la lee de acá en vez de depender de ella, para
   // no reconstruir la capa entera cada vez que alguien toca un pin.
@@ -207,7 +233,7 @@ export default function MapCanvas({
       await import("leaflet.markercluster");
 
       const groups: Record<string, MarkerClusterGroup> = {};
-      for (const type of enabledTypes()) {
+      for (const type of pinTypes()) {
         groups[type] = L.markerClusterGroup({
           chunkedLoading: true,
           maxClusterRadius: 55,
@@ -227,6 +253,22 @@ export default function MapCanvas({
       }
       clustersRef.current = groups;
 
+      // Después de los grupos por tipo, para que pinte encima: un aro de cobertura sobre
+      // un centroide no debe quedar enterrado bajo el clúster de los refugios de al lado.
+      digitalRef.current = L.markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 30,
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        disableClusteringAtZoom: MAPCFG.cluster.enabled ? MAPCFG.cluster.maxZoom : 0,
+        iconCreateFunction: (cluster) =>
+          L.divIcon({
+            className: "mkwrap",
+            html: clusterPinHtml("digital", cluster.getChildCount()),
+            iconSize: [0, 0],
+          }),
+      }).addTo(map);
+
       mapRef.current = map;
       setReady(true);
     })();
@@ -237,6 +279,8 @@ export default function MapCanvas({
       mapRef.current = null;
       clustersRef.current = null;
       markersRef.current = {};
+      digitalRef.current = null;
+      digitalMarkersRef.current = {};
       hazardRef.current = null;
       overlayRef.current = null;
       mountedRef.current = {};
@@ -422,6 +466,9 @@ export default function MapCanvas({
     const pending: Record<string, import("leaflet").Marker[]> = {};
 
     for (const center of centers) {
+      // `centers` is the physical list, but the type still allows null and the map must
+      // never place a marker at (null, null).
+      if (!hasCoords(center)) continue;
       const marker = L.marker([center.lat, center.lng], {
         icon: L.divIcon(pinIcon(center, center.id === selectedRef.current)),
         title: center.name,
@@ -454,6 +501,48 @@ export default function MapCanvas({
     if (!ready) return;
     void draw();
   }, [ready, draw]);
+
+  // ── coverage rings ──────────────────────────────────────────────────────
+  //
+  // One ring per served region, on that region's centroid; a national initiative gets
+  // one on the country's centre. Always drawn (subject to the region and search filters
+  // the parent already applied) — someone looking at Chocó should see who helps there
+  // without knowing the panel has a second tab.
+  const drawDigital = useCallback(async () => {
+    const group = digitalRef.current;
+    if (!mapRef.current || !group) return;
+    const L = (await import("leaflet")).default;
+    if (!digitalRef.current) return;
+
+    digitalMarkersRef.current = {};
+    const batch: import("leaflet").Marker[] = [];
+    for (const center of digital) {
+      const pins = coveragePins(center, site.country.regions, site.country.geo.center);
+      const list: import("leaflet").Marker[] = [];
+      for (const pin of pins) {
+        const marker = L.marker([pin.lat, pin.lng], {
+          icon: L.divIcon(coverageIcon(center, center.id === selectedRef.current)),
+          title: center.name,
+          alt: center.name,
+          riseOnHover: true,
+        });
+        marker.on("click", () => selectRef.current(center.id));
+        // On hover only: several rings share one centroid, and permanent labels there
+        // would stack into noise at every zoom.
+        marker.bindTooltip(center.name, { direction: "top", className: "mklabel", offset: [0, -10] });
+        list.push(marker);
+        batch.push(marker);
+      }
+      digitalMarkersRef.current[center.id] = list;
+    }
+    group.clearLayers();
+    if (batch.length) group.addLayers(batch);
+  }, [digital, site.country.regions, site.country.geo.center]);
+
+  useEffect(() => {
+    if (!ready) return;
+    void drawDigital();
+  }, [ready, drawDigital]);
 
   // Redrawn only when the label threshold is actually CROSSED, not on every zoom step.
   // The plugin owns the clustering now, so zooming no longer needs to rebuild anything —
@@ -561,19 +650,38 @@ export default function MapCanvas({
         const marker = markersRef.current[id];
         const center = centers.find((c) => c.id === id);
         if (marker && center) marker.setIcon(L.divIcon(pinIcon(center, on)));
+        // A digital initiative has one ring per region; all of them light up together.
+        const rings = digitalMarkersRef.current[id];
+        const initiative = digital.find((c) => c.id === id);
+        if (rings && initiative) {
+          for (const ring of rings) ring.setIcon(L.divIcon(coverageIcon(initiative, on)));
+        }
       };
       repaint(previous, false);
       repaint(selectedId, true);
     })();
-  }, [ready, selectedId, centers]);
+  }, [ready, selectedId, centers, digital]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !selectedId) return;
     const c = centers.find((x) => x.id === selectedId);
-    if (!c) return;
-    map.flyTo([c.lat, c.lng], Math.max(map.getZoom(), 15), { duration: 0.5 });
-  }, [selectedId, centers, ready]);
+    if (c && hasCoords(c)) {
+      map.flyTo([c.lat, c.lng], Math.max(map.getZoom(), 15), { duration: 0.5 });
+      return;
+    }
+    // A digital initiative: fly to the ring of the region being filtered, else its
+    // first one, at that region's own zoom — never to street level on a centroid.
+    const d = digital.find((x) => x.id === selectedId);
+    if (!d) return;
+    const pins = coveragePins(d, site.country.regions, site.country.geo.center);
+    const pin = pins.find((p) => p.code === region) ?? pins[0];
+    if (!pin) return;
+    const zoom = pin.code
+      ? helpers.regionByCode(pin.code)?.zoom ?? site.country.geo.regionZoom
+      : site.country.geo.zoom;
+    map.flyTo([pin.lat, pin.lng], zoom, { duration: 0.5 });
+  }, [selectedId, centers, digital, region, ready]);
 
   // ── my location ─────────────────────────────────────────────────────────
   // A denied or unavailable fix has to SAY so. Silently dropping back to the idle state
