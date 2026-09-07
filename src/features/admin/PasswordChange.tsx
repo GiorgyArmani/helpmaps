@@ -33,7 +33,7 @@ export default function PasswordChange() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/staff/password", {
+      const res = await fetch("/api/account/password", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ password }),

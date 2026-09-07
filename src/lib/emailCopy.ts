@@ -134,14 +134,36 @@ const es = {
   // cuenta» ni afirma que exista una: dice que alguien lo pidió, y que ignorarlo no tiene
   // consecuencias.
   "email.reset.subject": "Recuperar tu contraseña · {brand}",
-  "email.reset.preheader": "Un enlace para elegir una contraseña nueva.",
+  "email.reset.preheader": "Tu código para elegir una contraseña nueva.",
   "email.reset.title": "Elige una contraseña nueva",
   "email.reset.intro":
-    "Alguien pidió recuperar la contraseña de {brand} para esta dirección. Si fuiste tú, elige una nueva con el botón.",
-  "email.reset.cta": "Elegir contraseña",
-  "email.reset.expires": "El enlace sirve una sola vez y caduca en {hours} horas.",
+    "Alguien pidió recuperar la contraseña de {brand} para esta dirección. Si fuiste tú, escribe este código en la página:",
+  "email.reset.cta": "Ir a escribir el código",
+  "email.reset.expires": "El código sirve una sola vez y caduca en {hours} hora.",
   "email.reset.ignore":
-    "Si no lo pediste, ignora este mensaje. Tu contraseña no cambia hasta que alguien abra ese enlace, y nadie más lo recibió.",
+    "Si no lo pediste, ignora este mensaje. Tu contraseña no cambia hasta que alguien escriba ese código, y nadie más lo recibió.",
+
+  // ── Invitación a gestionar un punto ───────────────────────────────────────
+  //
+  // Este SÍ lo dispara alguien del equipo, y va dirigido a una persona concreta con la
+  // que ya se habló. Por eso puede llevar el nombre del punto: no es un correo que salga
+  // a una dirección tecleada al azar, es el final de una conversación.
+  //
+  // Va por ENLACE y no por código, al revés que la recuperación, y la diferencia importa:
+  // el token de `center_invites` es nuestro y sólo se canjea con una sesión iniciada
+  // (`accept_center_invite` exige `auth.uid()`). Un escáner de correo que lo visite no
+  // puede gastarlo, porque no puede iniciar sesión.
+  "email.centerInvite.subject": "Te invitaron a gestionar {place} · {brand}",
+  "email.centerInvite.preheader": "Ya puedes publicar las necesidades y campañas de tu iniciativa.",
+  "email.centerInvite.title": "Tu iniciativa en {brand}",
+  "email.centerInvite.intro":
+    "El equipo de {brand} te invitó a gestionar {place}. Al aceptar podrás mantener al día lo que necesitan, abrir campañas con una meta concreta y publicar lo que ya entregaron.",
+  "email.centerInvite.cta": "Aceptar la invitación",
+  "email.centerInvite.expires": "La invitación caduca en {days} días.",
+  "email.centerInvite.account":
+    "Hace falta una cuenta para aceptarla. Si todavía no tienes, el enlace te deja crearla primero.",
+  "email.centerInvite.ignore":
+    "Si crees que es un error, ignora este mensaje y no pasa nada: sin aceptar, nadie queda como responsable de nada.",
 
   // ── Postulación resuelta ──────────────────────────────────────────────────
   //
@@ -162,15 +184,27 @@ const en: Partial<Record<EmailKey, string>> = {
   "email.footer.note":
     "Automatic notice from {brand}. You can reply to this email if you need the team.",
 
+  "email.centerInvite.subject": "You've been invited to manage {place} · {brand}",
+  "email.centerInvite.preheader": "You can now publish your initiative's needs and campaigns.",
+  "email.centerInvite.title": "Your initiative on {brand}",
+  "email.centerInvite.intro":
+    "The {brand} team invited you to manage {place}. Once you accept you can keep their needs up to date, open campaigns with a concrete goal, and publish what has already been delivered.",
+  "email.centerInvite.cta": "Accept the invitation",
+  "email.centerInvite.expires": "The invitation expires in {days} days.",
+  "email.centerInvite.account":
+    "You need an account to accept it. If you do not have one yet, the link lets you create it first.",
+  "email.centerInvite.ignore":
+    "If you think this is a mistake, ignore this message: without accepting, nobody is left responsible for anything.",
+
   "email.reset.subject": "Reset your password · {brand}",
-  "email.reset.preheader": "A link to choose a new password.",
+  "email.reset.preheader": "Your code to choose a new password.",
   "email.reset.title": "Choose a new password",
   "email.reset.intro":
-    "Someone asked to reset the {brand} password for this address. If that was you, choose a new one with the button.",
-  "email.reset.cta": "Choose a password",
-  "email.reset.expires": "The link works once and expires in {hours} hours.",
+    "Someone asked to reset the {brand} password for this address. If that was you, enter this code on the page:",
+  "email.reset.cta": "Go and enter the code",
+  "email.reset.expires": "The code works once and expires in {hours} hour.",
   "email.reset.ignore":
-    "If you did not ask for this, ignore this message. Your password does not change until someone opens that link, and nobody else received it.",
+    "If you did not ask for this, ignore this message. Your password does not change until someone enters that code, and nobody else received it.",
 
   "email.submission.subject": "[{brand}] New suggestion · {kind}",
   "email.submission.preheader": "Someone suggested a point for the map.",

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import LoginForm from "@/features/admin/LoginForm";
 import { useI18n } from "@/i18n/context";
 import { useSite } from "@/features/app/SiteProvider";
+import { Suspense } from "react";
 import "../inicio/entry.css";
 import "../auth.css";
 
@@ -23,9 +24,31 @@ import "../auth.css";
  * contraseña tiene que decir de quién es antes de pedirla. Ver `app/auth.css`.
  */
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginBody />
+    </Suspense>
+  );
+}
+
+/**
+ * A dónde ir tras entrar.
+ *
+ * Sólo rutas de ESTE sitio: una que empiece por `//` o por un esquema es una redirección
+ * abierta, y una pantalla de acceso que manda a donde le digan es la pieza con la que se
+ * monta un phishing convincente — el dominio de la barra es el bueno hasta el segundo
+ * antes de dejar de serlo.
+ */
+function safeNext(value: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
+function LoginBody() {
   const site = useSite();
   const { t } = useI18n();
   const router = useRouter();
+  const next = safeNext(useSearchParams().get("next"));
 
   return (
     <main className="entry auth">
@@ -44,7 +67,7 @@ export default function LoginPage() {
         </header>
 
         <div className="auth-card">
-          <LoginForm onSignedIn={() => router.replace("/?panel=1")} />
+          <LoginForm onSignedIn={() => router.replace(next ?? "/?panel=1")} />
         </div>
 
         {/* Sin «¿no tienes cuenta?» aquí: `LoginForm` ya lo trae, porque también se usa

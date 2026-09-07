@@ -135,11 +135,19 @@ export default function AppShell({
   initialCenterId,
   initialAction,
   initialPanel,
+  initialMine,
 }: {
   initialCenterId?: string;
   initialAction?: EntryAction;
   /** Opens straight into the staff panel — how `/admin` and `/login` land here now. */
   initialPanel?: boolean;
+  /**
+   * Abre «Tu iniciativa». Lo pone `?mine=1`, que es a donde vuelve quien acaba de
+   * aceptar una invitación. El punto sale de `fetchManagedLocations`, no de la URL: si
+   * viniera de fuera, cualquiera podría pedir el panel de gestión de un punto ajeno — y
+   * aunque RLS lo pararía en cada consulta, la pantalla se dibujaría igual.
+   */
+  initialMine?: boolean;
 }) {
   const helpers = useSiteHelpers();
   // Las banderas de los tours se namespacean por la emergencia RESUELTA. Eran constantes
@@ -437,11 +445,42 @@ export default function AppShell({
   // abierto que la respuesta de la sesión anterior llegue tarde y le enseñe a la nueva
   // los puntos de otra persona. Con el `uid` dentro, esa respuesta ya no coincide.
   useEffect(() => {
-    const uid = account.userId;
-    if (!uid) return;
     const sb = getSupabase();
     if (!sb) return;
-    void fetchManagedLocations(sb, uid).then((ids) => setManaged({ uid, ids }));
+    // `account.userId` NO está listo al arrancar: el perfil se pide de forma perezosa, al
+    // abrir el menú del avatar, para no gastar dos viajes en el arranque del mapa. Eso
+    // está bien para la entrada del menú —que no existe hasta que se abre— y rompía
+    // `?mine=1`, que es justo el caso de quien acaba de aceptar una invitación y no va a
+    // abrir ningún menú.
+    //
+    // Así que sólo cuando la URL lo pide se resuelve la sesión por nuestra cuenta. El
+    // arranque normal sigue sin pagar ese viaje.
+    const conUid = account.userId
+      ? Promise.resolve(account.userId)
+      : initialMine
+        ? sb.auth.getUser().then(({ data }) => data.user?.id ?? null)
+        : Promise.resolve(null);
+
+    void conUid.then((uid) => {
+      if (!uid) return;
+      return fetchManagedLocations(sb, uid).then((ids) => {
+        setManaged({ uid, ids });
+        // Quien acaba de aceptar una invitación aterriza aquí con `?mine=1`. Se abre en
+        // cuanto se sabe QUÉ punto gestiona, que es lo que no se podía saber antes.
+        //
+        // La apertura vive dentro de este `.then` y no en un efecto aparte por dos
+        // razones: el dato que hace falta llega justo aquí, y un `setState` suelto en el
+        // cuerpo de un efecto encadena un render de más.
+        const primero = ids[0];
+        if (initialMine && primero) {
+          setSelectedId(primero);
+          setView("mine");
+        }
+      });
+    });
+    // `initialMine` es una constante de la carga de la página: no se lista como
+    // dependencia porque no cambia, y listarla no cambiaría nada.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account.userId]);
 
   const managed =
@@ -1023,9 +1062,11 @@ export default function AppShell({
                       ? t("contact.title")
                       : activeView === "account"
                         ? t(account.userId ? "account.title" : "account.signIn")
-                        : activeView === "admin"
-                          ? t(staff.session ? "admin.title" : "login.title")
-                          : t("volunteer.title")}
+                        : activeView === "mine"
+                          ? t("mine.kicker")
+                          : activeView === "admin"
+                            ? t(staff.session ? "admin.title" : "login.title")
+                            : t("volunteer.title")}
             </span>
             {/* Session actions belong to the header, next to the title that names the
                 session — not folded into a menu inside the body. Replaying the

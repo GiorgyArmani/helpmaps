@@ -120,6 +120,20 @@ export function linkCard(href: string, title: string, desc: string): string {
     </a>`;
 }
 
+/**
+ * Un código para teclear, en grande y espaciado.
+ *
+ * Es lo que sustituye al botón en el correo de recuperación, y la razón está explicada
+ * en `sendPasswordReset`: un enlace de un solo uso lo quema cualquier escáner de correo
+ * antes de que la persona lo toque. Un número escrito no se puede «visitar».
+ *
+ * Monoespaciado y con `letter-spacing`: se copia a mano, mirando de un lado a otro, y
+ * separar los dígitos es lo que evita confundir un 0 con una O.
+ */
+export function code(value: string): string {
+  return `<div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:30px;font-weight:700;letter-spacing:6px;color:${C.ink};background:${C.soft};border:1px solid ${C.line};border-radius:${R.md}px;padding:16px 12px;text-align:center;margin:4px 0 6px">${escapeHtml(value)}</div>`;
+}
+
 export function sectionLabel(text: string): string {
   return `<div style="font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:${C.muted};margin:20px 0 10px">${escapeHtml(text)}</div>`;
 }

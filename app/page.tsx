@@ -29,6 +29,10 @@ export default async function Home({
       initialCenterId={first(params.c)}
       initialAction={action(first(params.a))}
       initialPanel={first(params.panel) === "1"}
+      // `?mine=1` abre «Tu iniciativa». Es a donde vuelve quien acaba de aceptar una
+      // invitación: cae directo en el onboarding, con todo fresco en la cabeza, en vez
+      // de aterrizar en el mapa a buscar una entrada de menú que nunca ha visto.
+      initialMine={first(params.mine) === "1"}
     />
   );
 }

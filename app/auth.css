@@ -127,3 +127,14 @@
   color: var(--e-fg);
   text-decoration: underline;
 }
+
+/* El campo del código de recuperación. Monoespaciado y espaciado, igual que en el correo:
+   se copia dígito a dígito mirando de una ventana a otra, y ese ir y venir es donde se
+   confunde un 0 con una O. */
+.inp-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: 5px;
+  text-align: center;
+}

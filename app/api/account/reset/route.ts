@@ -94,16 +94,22 @@ export async function POST(req: Request) {
   // A partir de aquí, pase lo que pase.
   const ok = NextResponse.json({ ok: true });
 
+  // `generateLink` se usa por el CÓDIGO que devuelve, no por el enlace.
+  //
+  // `email_otp` y `action_link` son el mismo token en dos formatos: el enlace es de un
+  // solo uso y lo quema cualquier GET —los escáneres de Gmail y Outlook abren todos los
+  // enlaces de todos los correos—, y al quemarse muere también el código. Por eso el
+  // correo lleva el código y ningún enlace que lo contenga. Ver `sendPasswordReset`.
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email,
     options: { redirectTo: absoluteUrl("/reset") },
   });
 
-  if (error || !data?.properties?.action_link) {
+  if (error || !data?.properties?.email_otp) {
     // Lo más común es «no existe una cuenta con ese correo», que no es un fallo de nada.
     // Se registra para poder distinguirlo de un Supabase caído; quien llama recibe `ok`.
-    console.warn("[reset] generateLink:", error?.message ?? "sin enlace");
+    console.warn("[reset] generateLink:", error?.message ?? "sin código");
     return ok;
   }
 
@@ -112,7 +118,9 @@ export async function POST(req: Request) {
   after(() =>
     sendPasswordReset({
       to: email,
-      resetUrl: data.properties.action_link,
+      code: data.properties.email_otp,
+      // Sin token: sólo abre la pantalla donde se escribe el código.
+      resetUrl: absoluteUrl("/reset"),
       hours: RESET_HOURS,
     }),
   );

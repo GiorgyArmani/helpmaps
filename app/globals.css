@@ -6194,3 +6194,95 @@ fieldset.fieldset {
   margin-top: 1px;
   opacity: 0.75;
 }
+
+/* ─────────────────  Elegir insumos tocando  ──────────────────────────────
+   Sustituye al campo de texto con comas de «qué recibe», que era el más lento de toda la
+   ficha y el que más se actualiza. Los chips salen de lo más reportado en la base real;
+   ver `src/domain/needs.ts`. */
+
+.sup {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.sup-hint {
+  margin: 0;
+}
+
+.sup-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Envuelven en varias líneas en vez de desplazarse: aquí se eligen VARIOS, y una fila que
+   se desplaza esconde la mitad de las opciones justo cuando hay que compararlas. */
+.sup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sup-chip:not(.sup-chip-on):hover {
+  color: var(--ink);
+  border-color: #d9dce1;
+}
+
+.sup-chip-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.sup-chip svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+}
+
+/* Lo escrito a mano, distinguible de un preset de un vistazo: mismo relleno, borde
+   discontinuo. Vale igual — sólo se ve que no vino de la lista. */
+.sup-chip-own {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.sup-add {
+  display: flex;
+  gap: 7px;
+}
+
+.sup-add .finput {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sup-addbtn {
+  flex: 0 0 auto;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sup-addbtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

@@ -123,10 +123,34 @@ const es = {
 
   // ── Ayudas (no monetarias) ──────────────────────────────────────────────
   "help.voluntariado": "Voluntariado",
-  "help.especie": "Donación en especie",
+  // «En especie» se lee mal en Venezuela: arrastra la connotación de la caja del Estado.
+  // «Insumos» es como lo llama la gente que de verdad los recibe y los entrega.
+  "help.especie": "Donaciones de insumos",
   "help.oficios": "Oficios y trabajo técnico",
   "help.difusion": "Difusión",
   "help.economico": "Aporte económico",
+
+  // ── Insumos, para el selector rápido ────────────────────────────────────
+  // Los quince más frecuentes en los puntos ya publicados. Ver `src/domain/needs.ts`.
+  // Un país puede cambiar cualquiera desde `config/language.ts` sin tocar el código.
+  "supply.agua": "Agua",
+  "supply.ropa": "Ropa",
+  "supply.medicamentos": "Medicamentos",
+  "supply.alimentos": "Alimentos no perecederos",
+  "supply.cobijas": "Cobijas",
+  "supply.higiene": "Higiene personal",
+  "supply.insumosMedicos": "Insumos médicos",
+  "supply.panales": "Pañales",
+  "supply.colchonetas": "Colchonetas",
+  "supply.bebe": "Artículos de bebé",
+  "supply.toallasSanitarias": "Toallas sanitarias",
+  "supply.sabanas": "Sábanas",
+  "supply.limpieza": "Productos de limpieza",
+  "supply.linternas": "Linternas",
+  "supply.herramientas": "Herramientas",
+  "supply.pickerHint": "Toca lo que reciben. Si falta algo, escríbelo.",
+  "supply.addOwn": "Añadir otro",
+  "supply.add": "Añadir",
 
   // ── Lista de necesidades ────────────────────────────────────────────────
   "needs.barCount": "{n} puntos necesitan ayuda",
@@ -673,6 +697,36 @@ const es = {
     "Este enlace ya se usó o caducó. Pide uno nuevo desde «¿olvidaste tu contraseña?».",
   "reset.submit": "Guardar y entrar",
   "reset.done": "Listo. Entrando…",
+  // El canje por código. El enlace del correo ya no lleva token: ver `sendPasswordReset`.
+  "reset.codeSubtitle": "Escribe el código que te llegó por correo.",
+  "reset.codeLabel": "Código",
+  "reset.codeHint": "Ocho dígitos. Caduca en una hora.",
+  "reset.codeSubmit": "Continuar",
+  "reset.badCode": "Ese código no es válido o ya caducó. Pide uno nuevo.",
+  "reset.resend": "Enviarme otro código",
+
+  // ── Invitación a gestionar un punto ─────────────────────────────────────
+  "invite.title": "Tu iniciativa",
+  "invite.subtitle": "El equipo te invitó a gestionar un punto del mapa.",
+  "invite.body":
+    "Al aceptar podrás mantener al día lo que necesitan, abrir campañas con una meta concreta y publicar lo que ya entregaron.",
+  "invite.accept": "Aceptar",
+  "invite.done": "Listo. Abriendo tu iniciativa…",
+  "invite.needsAccount":
+    "Hace falta una cuenta para aceptarla. Crea una o entra con la que ya tienes: la invitación te espera.",
+  "invite.noToken": "Falta el código de la invitación. Abre el enlace completo que te enviaron.",
+
+  // Lo que ve el equipo al invitar, en la ficha de un punto.
+  "admin.managers": "Quién lo gestiona",
+  "admin.managersHint":
+    "Podrá actualizar lo que necesita el punto y publicar sus campañas. No podrá mover el pin ni cambiar el nombre.",
+  "admin.inviteEmail": "Correo de quien lo gestiona",
+  "admin.inviteEmailHint": "Opcional. Sin correo se genera el enlace y lo mandas tú por donde quieras.",
+  "admin.invite": "Crear invitación",
+  "admin.inviteSent": "Invitación enviada por correo.",
+  "admin.inviteLink": "Enlace de la invitación",
+  "admin.inviteLinkHint": "Vale una vez y caduca en 14 días. Cópialo y mándalo por donde coordinéis.",
+  "admin.inviteSaveFirst": "Guarda el punto antes de invitar a quien lo gestiona.",
 
   // ── Pedir el enlace ─────────────────────────────────────────────────────
   // Prefijo propio: `reset.*` ya nombra la pantalla de arriba, que es la OTRA mitad.

@@ -8,6 +8,8 @@ import { enabledTypes } from "@/config";
 import { Button, Chip, Field, Input, Notice, Select, TextArea } from "@/ui/primitives";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
+import CenterManagers from "@/features/admin/CenterManagers";
+import SupplyPicker from "@/features/centers/SupplyPicker";
 import { geocode, matchRegion, type GeoResult } from "@/features/admin/geocode";
 import type { DictKey } from "@/i18n";
 import { useSite } from "@/features/app/SiteProvider";
@@ -75,7 +77,8 @@ export default function CenterForm({
     active: center?.active ?? true,
     status: (info?.status ?? "") as CenterStatus | "",
     needs: info?.needs ?? "",
-    receives: (info?.receives ?? []).join(", "),
+    // Lista, no una cadena con comas: el selector trabaja con lo que la base guarda.
+    receives: info?.receives ?? [],
     help: info?.help ?? ([] as HelpKind[]),
     category: info?.category ?? "",
     description: info?.description ?? prefill?.description ?? "",
@@ -209,10 +212,7 @@ export default function CenterForm({
         : [],
       info: {
         status: form.status || null,
-        receives: form.receives
-          .split(",")
-          .map((x) => x.trim())
-          .filter(Boolean),
+        receives: form.receives.map((x) => x.trim()).filter(Boolean),
         needs: form.needs.trim() || null,
         help: form.help,
         category: form.category.trim() || null,
@@ -422,8 +422,8 @@ export default function CenterForm({
           <TextArea value={form.needs} onChange={(e) => set("needs", e.target.value)} />
         </Field>
 
-        <Field label={t("form.receives")} hint={t("form.receivesHint")}>
-          <Input value={form.receives} onChange={(e) => set("receives", e.target.value)} />
+        <Field label={t("form.receives")}>
+          <SupplyPicker value={form.receives} onChange={(next) => set("receives", next)} />
         </Field>
 
         <div>
@@ -494,6 +494,10 @@ export default function CenterForm({
         />
           <span className="fcheck-l">{t("form.active")}</span>
       </label>
+
+      {/* Quien gestiona este punto. Al final de la ficha y no arriba: repartir una llave
+          es lo último que se hace, después de que el punto esté bien descrito. */}
+      <CenterManagers locationId={center?.id ?? null} />
 
       {error ? <Notice tone="danger">{error}</Notice> : null}
 

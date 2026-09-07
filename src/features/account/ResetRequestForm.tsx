@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import { Button, Field, Input, Notice } from "@/ui/primitives";
+import { rememberResetEmail } from "@/features/account/resetHandoff";
 
 /**
  * Pedir el enlace para elegir una contraseña nueva.
@@ -46,6 +47,8 @@ export default function ResetRequestForm({ onBack }: { onBack?: () => void }) {
           );
           return;
         }
+        // Para que `/reset` no vuelva a pedir el correo mientras copian el código.
+        rememberResetEmail.write(email.trim().toLowerCase());
         setDone(true);
       } catch {
         setError(t("error.network"));

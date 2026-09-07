@@ -5,6 +5,7 @@ import { cleanName, cleanText, isEmail } from "@/lib/sanitize";
 import { emailT, type EmailKey, type EmailTranslate } from "@/lib/emailCopy";
 import {
   button,
+  code as codeBlock,
   divider,
   emailShell,
   field,
@@ -618,19 +619,41 @@ export async function sendAccountConfirm(input: {
 // ---------------------------------------------------------------------------
 
 /**
- * El enlace para elegir una contraseña nueva.
+ * El CÓDIGO para elegir una contraseña nueva.
  *
- * Hermano de `sendAccountConfirm`, y con sus mismas cautelas: sale hacia una dirección
- * que teclea cualquiera, sin que ningún admin lo apruebe, así que NO interpola nada del
- * formulario. Ver la nota junto a las cadenas en `src/lib/emailCopy.ts`.
+ * ── POR QUÉ UN CÓDIGO Y NO UN ENLACE, QUE ES LO NORMAL ──────────────────────
  *
- * El texto está escrito para que también funcione cuando llega a quien NO lo pidió, que
- * es el caso que hay que cubrir: alguien puede teclear la dirección de otra persona.
+ * Porque el enlace no funcionaba, y no por un fallo de este código.
+ *
+ * El enlace que acuña `generateLink` es de UN SOLO USO y se consume con cualquier GET.
+ * Medido contra este proyecto el 2026-09-07: un `curl` al enlace basta para que el
+ * siguiente acceso devuelva `error=access_denied`. Y quien hace ese primer GET no suele
+ * ser la persona: lo hacen los escáneres de seguridad de Gmail, Outlook y los antivirus,
+ * que abren cada enlace de cada correo para comprobar que no es malicioso. Cuando la
+ * persona pincha, el token ya está gastado y la pantalla dice «este enlace ya se usó o
+ * caducó», que es exactamente el síntoma que se reportó.
+ *
+ * Mandar el código ADEMÁS del enlace no arregla nada: `email_otp` y `action_link` son el
+ * mismo token en dos formatos, y quemar uno mata al otro (también medido). Así que el
+ * correo lleva el código y NINGÚN enlace que lo contenga.
+ *
+ * Un número escrito en el cuerpo del mensaje no se puede «visitar». El escáner no tiene
+ * nada que quemar, y de paso el flujo deja de depender de que las *Redirect URLs* del
+ * proyecto de Supabase estén bien puestas — que es un ajuste externo a este repositorio y
+ * que hoy está mal.
+ *
+ * ── LO QUE SE MANTIENE DE `sendAccountConfirm` ──────────────────────────────
+ *
+ * Sale hacia una dirección que teclea cualquiera, sin que ningún admin lo apruebe, así
+ * que NO interpola nada del formulario. Ver la nota junto a las cadenas en
+ * `src/lib/emailCopy.ts`. Y el texto funciona igual cuando llega a quien NO lo pidió.
  */
 export async function sendPasswordReset(input: {
   /** La dirección que recupera. Único dato del formulario, y sólo como destinatario. */
   to: string;
-  /** Enlace de un solo uso acuñado con el service role. */
+  /** El código de un solo uso. NO se manda ningún enlace que lo lleve dentro. */
+  code: string;
+  /** A dónde ir a escribirlo. Sin token: es una página, no una llave. */
   resetUrl: string;
   hours?: number;
   lang?: Lang;
@@ -649,8 +672,11 @@ export async function sendPasswordReset(input: {
     body: lines(
       heading(t("email.reset.title")),
       paragraph(t("email.reset.intro", { brand: BRAND.name })),
-      button(input.resetUrl, t("email.reset.cta")),
+      codeBlock(input.code),
       note(t("email.reset.expires", { hours })),
+      // El enlace va DESPUÉS del código y no lleva token: sólo abre la pantalla donde se
+      // escribe. Que un escáner lo visite no rompe nada.
+      button(input.resetUrl, t("email.reset.cta")),
       divider(),
       note(t("email.reset.ignore")),
     ),
@@ -665,11 +691,81 @@ export async function sendPasswordReset(input: {
       "",
       t("email.reset.intro", { brand: BRAND.name }),
       "",
-      `${t("email.reset.cta")}: ${input.resetUrl}`,
+      input.code,
       "",
       t("email.reset.expires", { hours }),
       "",
+      `${t("email.reset.cta")}: ${input.resetUrl}`,
+      "",
       t("email.reset.ignore"),
+    ),
+  });
+}
+
+/**
+ * Invitación a gestionar un punto del mapa.
+ *
+ * ── POR QUÉ ÉSTE SÍ VA POR ENLACE ───────────────────────────────────────────
+ *
+ * `sendPasswordReset` manda un código porque el enlace de Supabase se quema con cualquier
+ * GET. Aquí el token es NUESTRO —de `center_invites`— y sólo se canjea llamando a
+ * `accept_center_invite`, que exige una sesión iniciada. Un escáner de correo puede
+ * visitar este enlace todas las veces que quiera: sin sesión no puede aceptar nada, y la
+ * invitación sigue intacta.
+ *
+ * ── Y POR QUÉ PUEDE LLEVAR EL NOMBRE DEL PUNTO ──────────────────────────────
+ *
+ * Porque lo dispara alguien del equipo hacia una persona con la que ya habló, no una
+ * dirección tecleada por un desconocido. Ésa es la línea que separa este correo del de
+ * registro y del de recuperación, donde no se interpola nada.
+ */
+export async function sendCenterInvite(input: {
+  to: string;
+  /** Nombre del punto. Lo pone el servidor leyendo `locations`, no quien invita. */
+  place: string;
+  /** `/invitacion?t=…`. El token no se canjea sin sesión. */
+  inviteUrl: string;
+  days?: number;
+  lang?: Lang;
+  site?: string;
+}): Promise<boolean> {
+  if (!isEmail(input.to)) return false;
+
+  const t = emailT(input.lang);
+  const site = (input.site ?? siteUrl()).replace(/\/+$/, "");
+  const days = input.days ?? 14;
+  const place = cleanName(input.place) || COUNTRY.name;
+
+  const html = emailShell({
+    site,
+    preheader: t("email.centerInvite.preheader"),
+    footer: t("email.footer.note", { brand: BRAND.name }),
+    body: lines(
+      heading(t("email.centerInvite.title", { brand: BRAND.name })),
+      paragraph(t("email.centerInvite.intro", { brand: BRAND.name, place })),
+      button(input.inviteUrl, t("email.centerInvite.cta")),
+      note(t("email.centerInvite.account")),
+      note(t("email.centerInvite.expires", { days })),
+      divider(),
+      note(t("email.centerInvite.ignore")),
+    ),
+  });
+
+  return deliver({
+    to: input.to,
+    subject: t("email.centerInvite.subject", { brand: BRAND.name, place }),
+    html,
+    text: lines(
+      t("email.centerInvite.title", { brand: BRAND.name }),
+      "",
+      t("email.centerInvite.intro", { brand: BRAND.name, place }),
+      "",
+      `${t("email.centerInvite.cta")}: ${input.inviteUrl}`,
+      "",
+      t("email.centerInvite.account"),
+      t("email.centerInvite.expires", { days }),
+      "",
+      t("email.centerInvite.ignore"),
     ),
   });
 }
