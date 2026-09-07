@@ -7,6 +7,7 @@ import { I18nProvider } from "@/i18n/context";
 import { SiteProvider } from "@/features/app/SiteProvider";
 import ServiceWorkerRegister from "@/features/app/ServiceWorkerRegister";
 import Analytics from "@/features/app/Analytics";
+import RecoveryRedirect from "@/features/account/RecoveryRedirect";
 
 /**
  * Metadata is generated rather than exported as a constant because the title, the
@@ -80,6 +81,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <style dangerouslySetInnerHTML={{ __html: themeCss(site.brand) }} />
       </head>
       <body>
+        {/* Antes que nada: si el enlace de «elige tu contraseña» aterrizó en la raíz
+            porque Supabase descartó el `redirectTo`, esto lo lleva a `/reset` con el
+            token intacto. Ver el componente — el arreglo de verdad es de configuración. */}
+        <RecoveryRedirect />
         <SiteProvider site={site} emergency={identity}>
           <I18nProvider initial={site.language.default}>{children}</I18nProvider>
         </SiteProvider>

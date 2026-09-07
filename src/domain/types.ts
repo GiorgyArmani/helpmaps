@@ -207,3 +207,63 @@ export interface AuditEntry {
   actor_role: string | null;
   created_at: string;
 }
+
+// ---------------------------------------------------------------------------
+// El perfil de una iniciativa: lo que pide, lo que va a hacer y lo que ya hizo.
+// Ver `db/05_iniciativas.sql`.
+// ---------------------------------------------------------------------------
+
+export type CampaignStatus = "draft" | "active" | "reached" | "closed";
+
+/**
+ * Una campaña con meta concreta.
+ *
+ * `raised_amount` es DECLARADO por la propia iniciativa, no un saldo: la plataforma no
+ * cobra ni custodia dinero. Toda la UI que lo muestre está obligada a decirlo — para eso
+ * existe `raised_declared_at`.
+ */
+export interface Campaign {
+  id: string;
+  location_id: string;
+  title: string;
+  purpose: string;
+  goal_amount: number;
+  /** Texto libre: "USD", "colchonetas", "almuerzos". La mitad no se mide en dinero. */
+  goal_unit: string;
+  raised_amount: number;
+  /** Cuándo la iniciativa declaró esa cifra. Null = nunca la actualizó. */
+  raised_declared_at: string | null;
+  starts_on: string;
+  ends_on: string | null;
+  status: CampaignStatus;
+  updated_at: string | null;
+}
+
+export type ActivityStatus = "draft" | "scheduled" | "done" | "cancelled";
+
+/** Algo que la iniciativa va a hacer en su comunidad, y a lo que se puede ir. */
+export interface Activity {
+  id: string;
+  location_id: string;
+  title: string;
+  description: string | null;
+  starts_at: string;
+  ends_at: string | null;
+  /** Null = en la sede. Texto y no coordenadas: una plaza no es un punto del mapa. */
+  place: string | null;
+  needs_volunteers: boolean;
+  status: ActivityStatus;
+}
+
+export type PostKind = "avance" | "entrega" | "necesidad";
+
+/** Lo que la iniciativa cuenta. Con `campaign_id`, es la rendición de esa campaña. */
+export interface InitiativePost {
+  id: string;
+  location_id: string;
+  campaign_id: string | null;
+  kind: PostKind;
+  body: string;
+  photo_url: string | null;
+  created_at: string;
+}

@@ -103,10 +103,10 @@ export default function RegisterForm({ onSignIn }: { onSignIn?: () => void }) {
 
   return (
     <form className="form" onSubmit={submit}>
-      <p className="small mut" style={{ margin: 0 }}>
-        {t("register.subtitle")}
-      </p>
-
+      {/* El subtítulo NO va aquí: lo pinta la página, encima de la tarjeta, con el mismo
+          `.entry-lead` que `/inicio`. Dentro del formulario competía con la etiqueta del
+          primer campo —mismo tamaño, mismo gris— y empujaba hacia abajo lo que la persona
+          vino a hacer. */}
       <Field label={t("register.displayName")} hint={t("register.displayNameHint")}>
         <Input
           required
@@ -148,8 +148,11 @@ export default function RegisterForm({ onSignIn }: { onSignIn?: () => void }) {
       {onSignIn ? (
         <p className="small mut" style={{ margin: 0 }}>
           {t("register.haveAccount")}{" "}
+          {/* `account.signIn` y no `login.title`: aquel dice «Entrar al panel», que es el
+              rótulo del equipo. Quien acaba de crear una cuenta para guardar refugios
+              entra a lo suyo, no a un panel. El diccionario ya lo avisa junto a la clave. */}
           <button type="button" className="linkish" onClick={onSignIn}>
-            {t("login.title")}
+            {t("account.signIn")}
           </button>
         </p>
       ) : null}

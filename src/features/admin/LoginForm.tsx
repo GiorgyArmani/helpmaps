@@ -75,6 +75,17 @@ export default function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
         {busy ? t("login.submitting") : t("login.submit")}
       </Button>
 
+      {/* «Olvidé mi contraseña», y va JUSTO debajo del botón que acaba de fallar.
+          Este formulario es el único sitio del producto en el que alguien descubre que no
+          se acuerda de su contraseña, así que es el único sitio donde esa salida sirve.
+          Antes no existía en ninguna parte: `/reset` recibía el enlace, pero no había
+          forma de pedirlo, y volver a entrar pasaba por escribirle al equipo. */}
+      <p className="small mut" style={{ margin: 0 }}>
+        <Link className="linkish" href="/recuperar">
+          {t("forgot.link")}
+        </Link>
+      </p>
+
       {/* La puerta para quien NO es del equipo.
           Va acá y no en el encabezado por dos motivos. Uno: el encabezado de un mapa de
           emergencia es espacio caro y ya lleva seis controles. Dos: éste es el sitio donde

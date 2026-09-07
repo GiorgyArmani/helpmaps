@@ -13,6 +13,8 @@ import { telHref, whatsappHref } from "@/features/share/share";
 import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 import { coverageNames, instagramUrl } from "@/features/centers/coverage";
+import InitiativeSections from "@/features/centers/InitiativeSections";
+import { EMPTY_PROFILE, type InitiativeProfile } from "@/data/initiatives";
 
 /**
  * The full card for one point.
@@ -22,7 +24,18 @@ import { coverageNames, instagramUrl } from "@/features/centers/coverage";
  * phone at 4% battery gets the decision-changing facts first, and freshness before
  * content, because "is this still true" outranks everything it says.
  */
-export default function CenterDetail({ center }: { center: Center }) {
+export default function CenterDetail({
+  center,
+  profile = EMPTY_PROFILE,
+}: {
+  center: Center;
+  /**
+   * Campañas, agenda y entradas de esta iniciativa. Por defecto vacío: la ficha se dibuja
+   * entera antes de que esto llegue, y en un despliegue sin la migración
+   * `db/05_iniciativas.sql` no llega nunca — sin que se note.
+   */
+  profile?: InitiativeProfile;
+}) {
   const { regionLabel } = useSiteHelpers();
   const site = useSite();
   const { t } = useI18n();
@@ -248,6 +261,8 @@ export default function CenterDetail({ center }: { center: Center }) {
           una ficha viene a decidir si va, no a administrarla. Lo que cambia esa decisión
           se lee primero. */}
       <PointActions locationId={center.id} />
+
+      <InitiativeSections profile={profile} />
 
       <h3 className="dsection">{t("share.title")}</h3>
       <ShareRow center={center} />

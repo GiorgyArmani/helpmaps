@@ -122,6 +122,27 @@ const es = {
   "email.confirm.ignore":
     "Si no pediste esta cuenta, ignora este mensaje: sin confirmar, la dirección no queda registrada y nadie recibe nada más.",
 
+  // ── Recuperar la contraseña ───────────────────────────────────────────────
+  //
+  // El SEGUNDO correo que sale hacia una dirección que escribió un desconocido, y por eso
+  // vale la misma regla de arriba palabra por palabra: NADA que venga del formulario se
+  // interpola aquí. Ni el nombre, ni el correo. `{brand}`, `{hours}` y el enlace, que los
+  // pone el servidor.
+  //
+  // Además tiene que leerse bien para quien NO lo pidió: si alguien teclea la dirección
+  // de otra persona, esa persona recibe esto sin haber hecho nada. Por eso no dice «tu
+  // cuenta» ni afirma que exista una: dice que alguien lo pidió, y que ignorarlo no tiene
+  // consecuencias.
+  "email.reset.subject": "Recuperar tu contraseña · {brand}",
+  "email.reset.preheader": "Un enlace para elegir una contraseña nueva.",
+  "email.reset.title": "Elige una contraseña nueva",
+  "email.reset.intro":
+    "Alguien pidió recuperar la contraseña de {brand} para esta dirección. Si fuiste tú, elige una nueva con el botón.",
+  "email.reset.cta": "Elegir contraseña",
+  "email.reset.expires": "El enlace sirve una sola vez y caduca en {hours} horas.",
+  "email.reset.ignore":
+    "Si no lo pediste, ignora este mensaje. Tu contraseña no cambia hasta que alguien abra ese enlace, y nadie más lo recibió.",
+
   // ── Postulación resuelta ──────────────────────────────────────────────────
   //
   // Este sí lo dispara un admin, así que puede llevar el nombre de la persona.
@@ -140,6 +161,16 @@ export type EmailKey = keyof typeof es;
 const en: Partial<Record<EmailKey, string>> = {
   "email.footer.note":
     "Automatic notice from {brand}. You can reply to this email if you need the team.",
+
+  "email.reset.subject": "Reset your password · {brand}",
+  "email.reset.preheader": "A link to choose a new password.",
+  "email.reset.title": "Choose a new password",
+  "email.reset.intro":
+    "Someone asked to reset the {brand} password for this address. If that was you, choose a new one with the button.",
+  "email.reset.cta": "Choose a password",
+  "email.reset.expires": "The link works once and expires in {hours} hours.",
+  "email.reset.ignore":
+    "If you did not ask for this, ignore this message. Your password does not change until someone opens that link, and nobody else received it.",
 
   "email.submission.subject": "[{brand}] New suggestion · {kind}",
   "email.submission.preheader": "Someone suggested a point for the map.",

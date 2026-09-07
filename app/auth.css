@@ -1,0 +1,129 @@
+/*
+ * Crear cuenta y entrar — el mismo frente que `/inicio`.
+ *
+ * POR QUÉ SE PARECEN, Y POR QUÉ NO SE COPIA NADA
+ *
+ * Estas dos pantallas estaban en blanco, sin marca y pegadas al canto: quien llegaba
+ * desde el enlace de un correo no tenía forma de saber dónde estaba, y la única salida
+ * era un enlace subrayado al final de todo. Eran las únicas páginas del producto que no
+ * se parecían al producto.
+ *
+ * Ahora reusan `entry.css` TAL CUAL —`.entry`, `.entry-logo`, `.entry-brand`,
+ * `.entry-h1`, `.entry-hi`, `.entry-lead`— que es el fondo oscuro con el que abre la
+ * aplicación. Este archivo sólo añade lo que allí no existía: la tarjeta blanca que
+ * envuelve el formulario y los enlaces de debajo.
+ *
+ * LA TARJETA BLANCA NO ES DECORACIÓN. Es lo que deja que los campos sigan siendo los
+ * mismos `.fld` / `.finput` / `.btnp` del resto de la aplicación. Un formulario sobre el
+ * fondo oscuro habría obligado a un juego entero de campos en oscuro —foco, error,
+ * autorrelleno del navegador, contraste— para tres pantallas, y ese juego se separa del
+ * bueno en el primer retoque. Fondo oscuro para la marca, superficie blanca para
+ * trabajar: es lo mismo que hace `/inicio` con la puerta de «Necesito ayuda».
+ */
+
+/* La cabecera se aprieta un poco respecto a `/inicio`: allí es una portada y aquí hay un
+   formulario debajo que es lo que de verdad importa. */
+.auth .entry-head {
+  margin-bottom: 20px;
+}
+
+.auth .entry-logo {
+  width: 62px;
+  height: 62px;
+  border-radius: 17px;
+  margin-bottom: 13px;
+}
+
+.auth .entry-h1 {
+  font-size: 26px;
+}
+
+.auth-card {
+  background: #fff;
+  color: var(--ink);
+  border-radius: var(--r-lg);
+  padding: 20px 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+/* `.form` trae su propia columna con separación; aquí sólo se quita el margen que
+   arrastraría el primer párrafo. */
+.auth-card .form {
+  gap: 14px;
+}
+
+.auth-card .form > p:first-child {
+  margin-top: 0;
+}
+
+/* ── Lo de debajo de la tarjeta, ya sobre el fondo oscuro ────────────────── */
+
+.auth-foot {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--e-mut);
+}
+
+.auth-foot + .auth-foot {
+  margin-top: 9px;
+}
+
+/* Subrayado y no un botón: es la salida secundaria, y en esta pantalla el botón ya está
+   ocupado por la acción que la persona vino a hacer. */
+.auth-link {
+  color: #fff;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-link:hover {
+  color: color-mix(in srgb, var(--e-hi) 70%, #fff);
+}
+
+/* Volver al mapa. Va al final y en gris: quien abrió esto vino a entrar, no a salir —
+   pero tiene que poder salir sin buscarlo.
+   `--e-mut` (68%) y no `--e-dim` (45%): medido sobre este fondo, el tenue se queda en
+   4.4:1 y AA pide 4.5:1 para texto de este tamaño. En `/inicio` el tenue viste el
+   dominio, que es decorativo; aquí viste enlaces, que hay que poder leer. */
+.auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  color: var(--e-mut);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.auth-back:hover {
+  color: var(--e-fg);
+}
+
+/* Los legales, en una pantalla que pide un correo y una contraseña. En `/inicio` no
+   hacían falta; aquí sí, y por eso viven en este archivo y no en aquél. */
+.auth-legal {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  font-size: 11.5px;
+}
+
+.auth-legal a {
+  /* Ver la nota de contraste en `.auth-back`. */
+  color: var(--e-mut);
+  text-decoration: none;
+}
+
+.auth-legal a:hover {
+  color: var(--e-fg);
+  text-decoration: underline;
+}

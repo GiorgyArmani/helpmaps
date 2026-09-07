@@ -5649,3 +5649,548 @@ fieldset.fieldset {
   line-height: 1.5;
   color: var(--mut);
 }
+
+/* ─────────────────  El perfil de una iniciativa  ─────────────────────────
+   Lo que está recaudando, lo que va a hacer y lo que ya hizo. Va debajo de los botones
+   de contacto: quien necesita algo decide antes de que a nadie se le pida ayudar.
+   Ver `src/features/centers/InitiativeSections.tsx`. */
+
+.isec {
+  display: block;
+}
+
+/* ── Una campaña ──────────────────────────────────────────────────────── */
+
+.icamp {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 13px 14px 12px;
+  margin-bottom: 10px;
+}
+
+.icamp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.icamp-t {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.icamp-done {
+  flex: 0 0 auto;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, #fff);
+  border: 1px solid color-mix(in srgb, var(--ok) 26%, #fff);
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.icamp-p {
+  margin: 6px 0 12px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.icamp-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--soft);
+  overflow: hidden;
+}
+
+.icamp-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  /* Una barra a 0 no puede desaparecer: sin ancho mínimo, una campaña recién abierta
+     parece una barra rota en vez de una que todavía no arrancó. */
+  min-width: 3px;
+}
+
+.icamp-fill-done {
+  background: var(--ok);
+}
+
+.icamp-n {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.icamp-n b {
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+/* La advertencia de «cifra declarada». En gris y pequeña, pero SIEMPRE presente: es lo
+   que impide que la barra de arriba se lea como un saldo auditado. */
+.icamp-src,
+.icamp-until {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 7px 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--mut);
+}
+
+.icamp-src svg,
+.icamp-until svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  opacity: 0.75;
+}
+
+/* ── La agenda ────────────────────────────────────────────────────────── */
+
+.iact {
+  display: flex;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.iact:last-child {
+  border-bottom: 0;
+}
+
+/* El taco de fecha: el día grande y el mes debajo. Es lo que se escanea. */
+.iact-when {
+  flex: 0 0 auto;
+  width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 6px 0;
+  align-self: flex-start;
+}
+
+.iact-when b {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.iact-when span {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--mut);
+}
+
+.iact-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.iact-t {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.iact-meta {
+  font-size: 0.75rem;
+  color: var(--mut);
+}
+
+.iact-d {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--mut);
+}
+
+.iact-vol {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  margin-top: 5px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 10%, #fff);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.iact-vol svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ── Lo que ya hizo ───────────────────────────────────────────────────── */
+
+.ipost {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.ipost:last-child {
+  border-bottom: 0;
+}
+
+.ipost-img {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  margin-bottom: 9px;
+  background: var(--soft);
+}
+
+.ipost-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 5px;
+}
+
+.ipost-kind {
+  font-size: 0.625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--soft);
+  color: var(--mut);
+}
+
+/* Una entrega es la prueba de que lo recaudado se gastó en lo que se dijo. Se distingue
+   de un aviso cualquiera porque es la que sostiene la promesa de trazabilidad. */
+.ipost-entrega {
+  background: color-mix(in srgb, var(--ok) 12%, #fff);
+  color: var(--ok);
+}
+
+.ipost-necesidad {
+  background: color-mix(in srgb, #b45309 12%, #fff);
+  color: #b45309;
+}
+
+.ipost-ago {
+  font-size: 0.6875rem;
+  color: var(--mut);
+}
+
+.ipost-body {
+  margin: 0;
+  font-size: 0.8438rem;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-line;
+}
+
+.ipost-camp {
+  margin: 6px 0 0;
+  font-size: 0.6875rem;
+  color: var(--mut);
+  font-style: italic;
+}
+
+/* ─────────────────  Tu iniciativa: onboarding y gestión  ─────────────────
+   Lo que ve quien gestiona un punto. Va DENTRO del panel del mapa, como todo lo demás.
+   Los campos reusan `.fld` / `.flabel` / `.fhint` / `.finput`; aquí sólo va lo propio de
+   esta vista. Ver `src/features/initiative/InitiativePanel.tsx`. */
+
+.mine {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 28px;
+}
+
+.mine-head {
+  padding: 4px 0 10px;
+}
+
+.mine-kicker {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+
+.mine-name {
+  margin: 3px 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* ── El onboarding ────────────────────────────────────────────────────── */
+
+.onb {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Tres rayas y no «paso 2 de 3»: el progreso se ve de un vistazo, sin leerlo. El texto
+   sigue en el `aria-label`, para quien no ve las rayas. */
+.onb-steps {
+  display: flex;
+  gap: 5px;
+}
+
+.onb-step {
+  flex: 1 1 0;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--soft);
+}
+
+.onb-step-on {
+  background: var(--accent);
+}
+
+.onb-t {
+  margin: 4px 0 0;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.onb-p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+/* La regla del dinero, dicha a quien está publicando sus datos de cobro. Recuadrada y no
+   suelta: es lo único de este paso que no es un campo. */
+.onb-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--soft);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.onb-note svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  opacity: 0.8;
+}
+
+.onb-err {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--danger);
+}
+
+.onb-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 4px;
+}
+
+.onb-actions .btnp {
+  flex: 1 1 auto;
+}
+
+.onb-actions .btng {
+  flex: 0 0 auto;
+}
+
+.onb-skip {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--mut);
+  text-align: center;
+}
+
+/* ── La gestion ───────────────────────────────────────────────────────── */
+
+.mine-needs {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 2px 13px 13px;
+  margin-top: 4px;
+}
+
+.mine-needs .dsection {
+  margin-top: 13px;
+}
+
+.mine-needsval {
+  margin: 0 0 9px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.mine-none {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.mine-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mine-row-t {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.mine-row-m {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--mut);
+  white-space: nowrap;
+}
+
+/* El botón de añadir. Borde discontinuo: se lee como un hueco por llenar, no como una
+   acción más de la fila de arriba. */
+.mine-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 9px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mine-add:hover {
+  color: var(--ink);
+  border-color: #d9dce1;
+}
+
+.mine-add-on {
+  border-style: solid;
+  color: var(--ink);
+  background: var(--soft);
+}
+
+.mine-add svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mine-form {
+  margin-top: 11px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--soft);
+}
+
+.mine-form .finput,
+.mine-form .fselect {
+  background: #fff;
+}
+
+/* Cuánto y de qué, en una fila: son una sola respuesta partida en dos campos. */
+.mine-two {
+  display: flex;
+  gap: 10px;
+}
+
+.mine-two > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.mine-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+/* ── Cómo aportar, en la ficha pública ────────────────────────────────── */
+
+.idon {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 13px;
+  margin-bottom: 10px;
+}
+
+/* `pre-line`: los datos de cobro llegan en varias líneas —banco, titular, cédula— y
+   aplastarlos en un párrafo obliga a quien dona a separarlos a ojo. */
+.idon-info {
+  margin: 0 0 10px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.idon-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 9px 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--mut);
+}
+
+.idon-note svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  opacity: 0.75;
+}

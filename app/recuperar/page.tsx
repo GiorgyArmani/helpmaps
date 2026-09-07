@@ -2,27 +2,23 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import LoginForm from "@/features/admin/LoginForm";
+import ResetRequestForm from "@/features/account/ResetRequestForm";
 import { useI18n } from "@/i18n/context";
 import { useSite } from "@/features/app/SiteProvider";
 import "../inicio/entry.css";
 import "../auth.css";
 
 /**
- * Team sign-in as a standalone page.
+ * «Olvidé mi contraseña» — pedir el enlace.
  *
- * The everyday way in is the avatar in the header, which opens the panel — and this form
- * when there is no session — straight over the map, without leaving it. This page stays
- * for the links that already exist (bookmarks, the volunteer welcome email) and hands
- * over to the map view as soon as the sign-in succeeds.
+ * Es la tercera pantalla de la familia de acceso y comparte su frente con `/login` y
+ * `/registro`: quien llega aquí viene de no poder entrar, y una pantalla desconocida en
+ * ese momento se lee como que se equivocó de sitio.
  *
- * The form itself is the shared component, so there is one sign-in to keep correct.
- *
- * El aspecto es el mismo que el de `/registro`, y por la misma razón: son las dos
- * pantallas a las que se llega desde un enlace de correo, y una pantalla que pide una
- * contraseña tiene que decir de quién es antes de pedirla. Ver `app/auth.css`.
+ * `/reset` es la OTRA mitad y ya existía: allí aterriza el enlace de este correo y se
+ * elige la contraseña. Lo que faltaba era esto, la puerta para pedirlo.
  */
-export default function LoginPage() {
+export default function RecoverPage() {
   const site = useSite();
   const { t } = useI18n();
   const router = useRouter();
@@ -40,16 +36,14 @@ export default function LoginPage() {
             )}
           </Link>
           <div className="entry-brand">{site.country.host}</div>
-          <h1 className="entry-h1">{t("login.title")}</h1>
+          <h1 className="entry-h1">{t("forgot.title")}</h1>
+          <p className="entry-lead">{t("forgot.subtitle")}</p>
         </header>
 
         <div className="auth-card">
-          <LoginForm onSignedIn={() => router.replace("/?panel=1")} />
+          <ResetRequestForm onBack={() => router.push("/login")} />
         </div>
 
-        {/* Sin «¿no tienes cuenta?» aquí: `LoginForm` ya lo trae, porque también se usa
-            dentro del panel del mapa, donde no hay página que lo ponga. Repetirlo salían
-            dos veces seguidas. */}
         <p className="auth-foot">
           <Link className="auth-back" href="/">
             ← {t("register.backToMap", { name: site.brand.name })}

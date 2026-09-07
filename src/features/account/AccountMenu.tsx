@@ -41,6 +41,8 @@ export default function AccountMenu({
   onOpenVolunteer,
   onSignOut,
   volunteerEnabled,
+  managesInitiative = false,
+  onOpenInitiative,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -52,6 +54,12 @@ export default function AccountMenu({
   onOpenVolunteer: () => void;
   onSignOut: () => void;
   volunteerEnabled: boolean;
+  /**
+   * Gestiona algún punto: entonces le sale «Tu iniciativa», que es lo primero que abre
+   * quien tiene una. Casi nadie lo es, así que la entrada no existe para casi nadie.
+   */
+  managesInitiative?: boolean;
+  onOpenInitiative?: () => void;
 }) {
   const { t } = useI18n();
   const peek = useSessionPeek();
@@ -104,6 +112,20 @@ export default function AccountMenu({
                 </button>
 
                 <div className="usermenu-list">
+                  {managesInitiative && onOpenInitiative ? (
+                    <button
+                      type="button"
+                      className="useritem"
+                      role="menuitem"
+                      onClick={pick(onOpenInitiative)}
+                    >
+                      <span className="useritem-ic">
+                        <Icon.spark />
+                      </span>
+                      <span className="useritem-txt">{t("mine.kicker")}</span>
+                    </button>
+                  ) : null}
+
                   <button type="button" className="useritem" role="menuitem" onClick={pick(onOpenAccount)}>
                     <span className="useritem-ic">
                       <Icon.heart />

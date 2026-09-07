@@ -37,6 +37,23 @@ const pt: Partial<Dict> = {
   // primeira pergunta de quem abre isto na rua, e cair ao espanhol aqui seria cair
   // justamente na aba que pede uma permissão do navegador.
   "panel.tab.nearby": "Perto",
+
+  // O perfil de uma iniciativa. A ressalva de «cifra declarada» entra no português
+  // mesmo com o dicionário fino: não avisar que a plataforma não verifica o valor é a
+  // única omissão daqui que engana quem lê.
+  "campaign.title": "Está arrecadando",
+  "campaign.of": "de {goal} {unit}",
+  "campaign.reached": "Meta atingida",
+  "campaign.declared": "Valor declarado pela iniciativa. Não verificamos.",
+  "campaign.declaredAgo": "Valor declarado pela iniciativa {ago}. Não verificamos.",
+  "campaign.until": "Até {date}",
+  "activity.title": "O que vai fazer",
+  "activity.needsVolunteers": "Precisam de voluntários",
+  "post.title": "O que já fez",
+  "post.kind.avance": "Novidade",
+  "post.kind.entrega": "Entrega",
+  "post.kind.necesidad": "Necessidade",
+  "post.fromCampaign": "Da campanha «{name}»",
   "nearby.askTitle": "O que há perto de você?",
   "nearby.askBody":
     "Com a sua localização ordenamos os pontos do mais próximo ao mais distante, e mostramos as iniciativas que ajudam na sua zona.",

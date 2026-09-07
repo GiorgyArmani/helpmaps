@@ -164,6 +164,94 @@ const es = {
   "sheet.digital": "iniciativa digital",
   "sheet.digitals": "iniciativas digitales",
 
+  // ── Aportar directo a una iniciativa ────────────────────────────────────
+  "donate.direct": "Cómo aportar",
+  "donate.button": "Ir a donar",
+  // La misma regla que en el onboarding, dicha ahora a quien va a dar el dinero.
+  "donate.directNote":
+    "Estos datos son de la iniciativa y el aporte le llega directo. {platform} no lo recibe ni se queda con nada.",
+
+  // ── Mi iniciativa: onboarding y gestión ─────────────────────────────────
+  "mine.kicker": "Tu iniciativa",
+  "mine.needsNow": "Qué hace falta hoy",
+  "mine.noNeeds": "Todavía no has dicho qué hace falta.",
+  "mine.campaigns": "Tus campañas",
+  "mine.noCampaigns": "Ninguna campaña abierta.",
+  "mine.newCampaign": "Abrir una campaña",
+  "mine.activities": "Tu agenda",
+  "mine.noActivities": "Nada en la agenda.",
+  "mine.newActivity": "Añadir una actividad",
+  "mine.posts": "Novedades",
+  "mine.newPost": "Publicar una novedad",
+  "mine.publish": "Publicar",
+
+  "mine.f.title": "Nombre de la campaña",
+  "mine.f.titleHint": "Concreto: «120 colchonetas para el refugio», no «ayuda».",
+  "mine.f.purpose": "Para qué es",
+  "mine.f.goal": "Cuánto hace falta",
+  "mine.f.unit": "De qué",
+  "mine.f.unitHint": "Colchonetas, USD, almuerzos, kits…",
+  "mine.f.until": "Hasta cuándo",
+  "mine.f.actTitle": "Qué van a hacer",
+  "mine.f.when": "Cuándo",
+  "mine.f.place": "Dónde",
+  "mine.f.placeHint": "Si es en otro sitio que su sede. Vacío = en la sede.",
+  "mine.f.actDesc": "Detalles",
+  "mine.f.postKind": "Qué es",
+  "mine.f.postCampaign": "¿De qué campaña?",
+  "mine.f.postCampaignHint": "Atarlo a una campaña es lo que deja ver en qué se usó lo que dieron.",
+  "mine.f.noCampaign": "De ninguna en concreto",
+  "mine.f.postBody": "Qué quieres contar",
+
+  "onb.stepOf": "Paso {n} de {total}",
+  "onb.next": "Seguir",
+  "onb.back": "Atrás",
+  "onb.finish": "Listo",
+  "onb.savedAsYouGo": "Se guarda automáticamente en cada paso. Puedes salir y continuar después.",
+  "onb.s1.title": "Cuéntanos quiénes son",
+  "onb.s1.body": "Esto es lo primero que lee alguien que llega a tu ficha.",
+  "onb.s2.title": "Cuándo y qué hace falta",
+  "onb.s2.body": "Lo que más se mira, y lo que más cambia. Podrás cambiarlo cuando quieras.",
+  "onb.s3.title": "Cómo recibir aportes",
+  "onb.s3.body": "Tus propios datos. Quien quiera aportar los va a copiar de aquí.",
+  "onb.f.category": "Qué tipo de iniciativa son",
+  "onb.f.categoryHint": "Comedor, brigada médica, rescate animal, apoyo psicológico…",
+  "onb.f.description": "Qué hacen",
+  "onb.f.descriptionHint": "Dos o tres líneas. Qué hacen hoy, no su historia.",
+  "onb.f.schedule": "Horario",
+  "onb.f.scheduleHint": "Lunes a viernes de 8 a 4, por ejemplo.",
+  "onb.f.contact": "A quién preguntar",
+  "onb.f.contactHint": "Un nombre para que quien llame sepa por quién preguntar.",
+  "onb.f.needs": "Qué necesitan ahora",
+  "onb.f.needsHint": "Lo concreto: medicinas, agua, cobijas, manos.",
+  "onb.f.donateInfo": "Dónde recibir",
+  "onb.f.donateInfoHint": "Pago móvil, cuenta, Zelle… Tal cual, para que se pueda copiar y pegar.",
+  "onb.f.donateUrl": "Enlace de donación",
+  "onb.f.instagram": "Instagram",
+  // Lo tiene que leer justo quien está publicando sus datos de cobro.
+  "onb.moneyNote":
+    "El dinero va directo a ti. {platform} no lo recibe, no lo guarda y no se queda con nada.",
+
+  // ── El perfil de una iniciativa ─────────────────────────────────────────
+  "campaign.title": "Está recaudando",
+  "campaign.of": "de {goal} {unit}",
+  "campaign.reached": "Meta alcanzada",
+  // Estas dos son la letra pequeña que no es pequeña: la plataforma no cobra ni custodia,
+  // así que la cifra la declara la propia iniciativa. Sin decirlo, la barra de progreso
+  // se lee como un saldo auditado.
+  "campaign.declared": "Cifra declarada por la iniciativa. No la verificamos.",
+  "campaign.declaredAgo": "Cifra declarada por la iniciativa {ago}. No la verificamos.",
+  "campaign.until": "Hasta el {date}",
+
+  "activity.title": "Lo que va a hacer",
+  "activity.needsVolunteers": "Hacen falta voluntarios",
+
+  "post.title": "Lo que ya hizo",
+  "post.kind.avance": "Avance",
+  "post.kind.entrega": "Entrega",
+  "post.kind.necesidad": "Necesidad",
+  "post.fromCampaign": "De la campaña «{name}»",
+
   // ── Pestañas del panel e iniciativas digitales ──────────────────────────
   "panel.tab.nearby": "Cerca",
   "panel.tab.digital": "Digitales",
@@ -347,6 +435,7 @@ const es = {
   "register.errorName": "Elige un nombre de entre 2 y 40 caracteres.",
   "register.errorEmail": "Escribe un correo válido.",
   "register.haveAccount": "¿Ya tienes cuenta?",
+  "register.backToMap": "Volver a {name}",
 
   // ── Mi cuenta ───────────────────────────────────────────────────────────
   "account.title": "Mi cuenta",
@@ -574,12 +663,30 @@ const es = {
   "admin.role.admin": "Administra",
   "admin.role.volunteer": "Voluntariado",
   "admin.howItWorks": "Cómo funciona el panel",
-  "reset.title": "Crea tu contraseña",
-  "reset.subtitle": "Elige una contraseña para entrar al panel del equipo.",
+  // Esta pantalla es a donde ATERRIZA el enlace, y desde que existe «¿olvidaste tu
+  // contraseña?» le llega cualquiera, no sólo un voluntario recién aprobado. Por eso ya
+  // no dice «el panel del equipo» ni «pídeselo al equipo»: para una persona que sólo
+  // guarda refugios, las dos frases eran falsas.
+  "reset.title": "Elige tu contraseña",
+  "reset.subtitle": "Escribe una contraseña nueva para volver a entrar.",
   "reset.invalid":
-    "Este enlace ya se usó o caducó. Pídele al equipo que te envíe uno nuevo.",
+    "Este enlace ya se usó o caducó. Pide uno nuevo desde «¿olvidaste tu contraseña?».",
   "reset.submit": "Guardar y entrar",
-  "reset.done": "Listo. Entrando al panel…",
+  "reset.done": "Listo. Entrando…",
+
+  // ── Pedir el enlace ─────────────────────────────────────────────────────
+  // Prefijo propio: `reset.*` ya nombra la pantalla de arriba, que es la OTRA mitad.
+  "forgot.link": "¿Olvidaste tu contraseña?",
+  "forgot.title": "Recuperar tu contraseña",
+  "forgot.subtitle": "Te enviamos un enlace para elegir una nueva.",
+  "forgot.emailHint": "El correo con el que inicias sesión.",
+  "forgot.submit": "Enviarme el enlace",
+  "forgot.submitting": "Enviando…",
+  "forgot.remembered": "Volver a iniciar sesión",
+  // Nunca dice si esa cuenta existe. Ver `ResetRequestForm.tsx`.
+  "forgot.doneTitle": "Revisa tu correo",
+  "forgot.doneBody":
+    "Si esa dirección tiene una cuenta, recibirá un enlace para elegir una contraseña nueva. Sirve una sola vez y caduca en una hora.",
   "password.change": "Cambiar contraseña",
   "password.new": "Contraseña nueva",
   "password.confirm": "Repite la contraseña",

@@ -617,6 +617,63 @@ export async function sendAccountConfirm(input: {
 // seguir sugiriendo puntos sin ser del equipo.
 // ---------------------------------------------------------------------------
 
+/**
+ * El enlace para elegir una contraseña nueva.
+ *
+ * Hermano de `sendAccountConfirm`, y con sus mismas cautelas: sale hacia una dirección
+ * que teclea cualquiera, sin que ningún admin lo apruebe, así que NO interpola nada del
+ * formulario. Ver la nota junto a las cadenas en `src/lib/emailCopy.ts`.
+ *
+ * El texto está escrito para que también funcione cuando llega a quien NO lo pidió, que
+ * es el caso que hay que cubrir: alguien puede teclear la dirección de otra persona.
+ */
+export async function sendPasswordReset(input: {
+  /** La dirección que recupera. Único dato del formulario, y sólo como destinatario. */
+  to: string;
+  /** Enlace de un solo uso acuñado con el service role. */
+  resetUrl: string;
+  hours?: number;
+  lang?: Lang;
+  site?: string;
+}): Promise<boolean> {
+  if (!isEmail(input.to)) return false;
+
+  const t = emailT(input.lang);
+  const site = (input.site ?? siteUrl()).replace(/\/+$/, "");
+  const hours = input.hours ?? 1;
+
+  const html = emailShell({
+    site,
+    preheader: t("email.reset.preheader"),
+    footer: t("email.footer.note", { brand: BRAND.name }),
+    body: lines(
+      heading(t("email.reset.title")),
+      paragraph(t("email.reset.intro", { brand: BRAND.name })),
+      button(input.resetUrl, t("email.reset.cta")),
+      note(t("email.reset.expires", { hours })),
+      divider(),
+      note(t("email.reset.ignore")),
+    ),
+  });
+
+  return deliver({
+    to: input.to,
+    subject: t("email.reset.subject", { brand: BRAND.name }),
+    html,
+    text: lines(
+      t("email.reset.title"),
+      "",
+      t("email.reset.intro", { brand: BRAND.name }),
+      "",
+      `${t("email.reset.cta")}: ${input.resetUrl}`,
+      "",
+      t("email.reset.expires", { hours }),
+      "",
+      t("email.reset.ignore"),
+    ),
+  });
+}
+
 export async function sendVolunteerRejected(input: {
   to: string;
   name?: string | null;

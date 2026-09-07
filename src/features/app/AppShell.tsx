@@ -23,6 +23,13 @@ import AccountMenu from "@/features/account/AccountMenu";
 import AccountView from "@/features/account/AccountView";
 import { useAccount } from "@/features/account/useAccount";
 import { fetchDonations } from "@/data/donations";
+import {
+  EMPTY_PROFILE,
+  fetchInitiativeProfile,
+  fetchManagedLocations,
+  type InitiativeProfile,
+} from "@/data/initiatives";
+import InitiativePanel from "@/features/initiative/InitiativePanel";
 import { getSupabase } from "@/lib/supabase/client";
 import { useQuakes } from "@/features/hazard/useQuakes";
 import LayersPanel, { type HazardLayers } from "@/features/hazard/LayersPanel";
@@ -85,6 +92,14 @@ type View =
   | "contact"
   /** Mi cuenta: guardados, lo enviado, el nombre. Antes era la página `/cuenta`. */
   | "account"
+  /**
+   * «Tu iniciativa»: onboarding y gestión, para quien gestiona un punto.
+   *
+   * Se llama `mine` y no `initiative` porque `EntryAction` ya usa esa palabra para otra
+   * cosa —«registrar mi iniciativa», que lleva al formulario de sugerencias— y dos
+   * significados con el mismo nombre en el mismo archivo se confunden solos.
+   */
+  | "mine"
   | "admin";
 
 /**
@@ -185,6 +200,14 @@ export default function AppShell({
   // El radio se deriva más abajo, junto a la lista, para que la cuenta de la pestaña y
   // la lista hablen siempre del mismo número.
   const myLocation = useMyLocation();
+  // Los puntos que ESTA persona gestiona, con la sesión de la que son. Casi siempre
+  // vacío: gestionar un punto es raro. Ver el efecto de carga más abajo.
+  const [managedFor, setManaged] = useState<{ uid: string; ids: string[] } | null>(null);
+  // Campañas, agenda y entradas, con el punto del que son. Ver el efecto de carga abajo.
+  const [loadedProfile, setLoadedProfile] = useState<{
+    id: string;
+    profile: InitiativeProfile;
+  } | null>(null);
   const [view, setView] = useState<View>(() => {
     if (initialCenterId) return "detail";
     if (initialPanel) return "admin";
@@ -290,6 +313,7 @@ export default function AppShell({
     void fetchDonations(sb).then(setDonations);
   }, [view, donations]);
 
+
   function showToast(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(null), 3500);
@@ -377,6 +401,51 @@ export default function AppShell({
   // a frame showing an empty detail view.
   const activeView: View =
     view === "detail" && selectedId && !selected && !loading ? "list" : view;
+
+  // Lo que la iniciativa cuenta de sí misma, al abrir su ficha.
+  //
+  // LO CARGADO SE GUARDA JUNTO AL PUNTO AL QUE PERTENECE, y lo que se muestra se DERIVA
+  // de si ese punto sigue siendo el abierto. No es una filigrana: sin ello hay que vaciar
+  // el estado antes de cada petición, y vaciarlo desde dentro del efecto encadena un
+  // render de más —lo que aquí se resuelve solo— además de dejar dos agujeros abiertos:
+  //
+  //   • Tocar un pin y luego otro enseñaba las campañas del primero bajo el nombre del
+  //     segundo mientras cargaba. En la conexión que este proyecto da por supuesta, eso
+  //     es un rato largo atribuyéndole a alguien una meta de recaudación que no es suya.
+  //   • Dos respuestas en vuelo llegan en el orden que quieran, y la lenta pisaba a la
+  //     nueva.
+  //
+  // Con la pareja `{ id, profile }` las dos cosas se caen solas: una respuesta tardía se
+  // guarda con el id de SU punto, y el derivado de abajo la ignora por no coincidir.
+  useEffect(() => {
+    if (activeView !== "detail" || !selectedId) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    const id = selectedId;
+    void fetchInitiativeProfile(sb, id).then((p) => setLoadedProfile({ id, profile: p }));
+  }, [activeView, selectedId]);
+
+  const profile =
+    loadedProfile && loadedProfile.id === selectedId ? loadedProfile.profile : EMPTY_PROFILE;
+
+  // Qué puntos gestiona quien está dentro. Una consulta por sesión, no por ficha: quien
+  // gestiona algo gestiona uno o dos puntos, y preguntarlo en cada pin que se toca sería
+  // una petición por toque.
+  //
+  // Guardado junto al dueño y derivado, igual que el perfil de arriba y por lo mismo:
+  // vaciar la lista al cerrar sesión desde dentro del efecto encadena un render, y deja
+  // abierto que la respuesta de la sesión anterior llegue tarde y le enseñe a la nueva
+  // los puntos de otra persona. Con el `uid` dentro, esa respuesta ya no coincide.
+  useEffect(() => {
+    const uid = account.userId;
+    if (!uid) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    void fetchManagedLocations(sb, uid).then((ids) => setManaged({ uid, ids }));
+  }, [account.userId]);
+
+  const managed =
+    managedFor && account.userId && managedFor.uid === account.userId ? managedFor.ids : [];
 
   const openCenter = useCallback((id: string) => {
     setSelectedId(id);
@@ -727,6 +796,17 @@ export default function AppShell({
               onOpenAccount={() => setView("account")}
               onOpenPanel={() => setView("admin")}
               onOpenVolunteer={() => setView("volunteer")}
+              managesInitiative={managed.length > 0}
+              onOpenInitiative={() => {
+                // El primero de la lista: gestionar varios puntos es raro dentro de lo
+                // raro, y un selector antes de haber visto ninguno sobra. El día que
+                // alguien tenga tres, la lista va aquí.
+                const primero = managed[0];
+                if (primero) {
+                  setSelectedId(primero);
+                  setView("mine");
+                }
+              }}
               onSignOut={() => void signOut()}
             />
           </div>
@@ -823,7 +903,7 @@ export default function AppShell({
               <Icon.back />
               <span>{t("common.back")}</span>
             </button>
-            <CenterDetail center={selected} />
+            <CenterDetail center={selected} profile={profile} />
           </div>
         ) : (
         <div className="list">
@@ -1029,6 +1109,16 @@ export default function AppShell({
                 onVolunteer={() => setView("volunteer")}
                 justConfirmed={justConfirmed}
               />
+            ) : null}
+            {/* «Tu iniciativa». El punto sale de `selectedId`, que la entrada del menú
+                acaba de fijar; mientras los centros no hayan cargado no hay nada que
+                dibujar, y una pantalla a medias es peor que un «cargando». */}
+            {activeView === "mine" ? (
+              selected ? (
+                <InitiativePanel center={selected} onClose={back} />
+              ) : (
+                <p className="empty">{t("common.loading")}</p>
+              )
             ) : null}
             {activeView === "admin" ? (
               staff.session ? (
