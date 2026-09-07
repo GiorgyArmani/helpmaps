@@ -33,6 +33,31 @@ const pt: Partial<Dict> = {
   "map.pointsCount": "{n} pontos",
   "map.noResults": "Nenhum ponto corresponde ao filtro",
 
+  // «Perto» entra no português apesar de este dicionário ser fino a propósito: é a
+  // primeira pergunta de quem abre isto na rua, e cair ao espanhol aqui seria cair
+  // justamente na aba que pede uma permissão do navegador.
+  "panel.tab.nearby": "Perto",
+  "nearby.askTitle": "O que há perto de você?",
+  "nearby.askBody":
+    "Com a sua localização ordenamos os pontos do mais próximo ao mais distante, e mostramos as iniciativas que ajudam na sua zona.",
+  "nearby.use": "Usar minha localização",
+  "nearby.locating": "Procurando…",
+  "nearby.retry": "Tentar de novo",
+  "nearby.privacy": "Fica no seu telefone. Não enviamos nem guardamos.",
+  "nearby.altHint": "Prefiro buscar por {region}",
+  "nearby.denied": "Seu navegador não nos deu permissão para ver onde você está.",
+  "nearby.unavailable": "Não conseguimos a sua localização. Pode ser o GPS ou o sinal.",
+  "nearby.radius": "No raio de",
+  "nearby.zone": "Você está perto de {region}",
+  "nearby.zoneUnknown": "Não conseguimos situar a sua zona",
+  "nearby.forget": "Esquecer minha localização",
+  "nearby.countOne": "1 ponto perto",
+  "nearby.count": "{n} pontos perto",
+  "nearby.straightLine": "em linha reta",
+  "nearby.empty": "Nada a {radius} de onde você está.",
+  "nearby.emptyHint": "Tente um raio maior, ou veja a lista completa em «Pontos».",
+  "nearby.digitalTitle": "Sem sede, mas ajudam na sua zona",
+
   "type.digital": "Iniciativa digital",
   "type.digital.plural": "Iniciativas digitais",
   "type.shelter": "Abrigo",

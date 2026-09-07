@@ -27,6 +27,7 @@ import { intensityBand } from "@/domain/hazard";
 import { clusterPinHtml, glyphSvg } from "@/features/map/pinGlyphs";
 import { alertColor, quakePopupHtml, quakeRadius } from "@/features/hazard/quakeMarkers";
 import { Icon } from "@/ui/icons";
+import { rememberFix } from "@/features/nearby/useMyLocation";
 import { useI18n } from "@/i18n/context";
 import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
@@ -701,6 +702,9 @@ export default function MapCanvas({
       (pos) => {
         setLocating(false);
         const here: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        // La misma posición le sirve a la pestaña «Cerca». Sin esto había dos dueños del
+        // dato: tocar este botón y luego abrir «Cerca» pedía el permiso dos veces.
+        rememberFix(here[0], here[1]);
         meRef.current?.remove();
         meRef.current = L.marker(here, {
           icon: L.divIcon({ className: "mkwrap", html: `<span class="me"></span>`, iconSize: [0, 0] }),

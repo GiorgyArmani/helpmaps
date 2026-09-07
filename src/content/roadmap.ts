@@ -64,8 +64,8 @@ export interface Phase {
 export const ROADMAP_TITLE: LS = { es: "Roadmap", en: "Roadmap", pt: "Roteiro" };
 
 export const ROADMAP_INTRO: LS = {
-  es: "{platform} es una plataforma cívica abierta para emergencias: por un lado, quien necesita ayuda encuentra dónde conseguirla; por otro, quien quiere ayudar ve exactamente qué hace falta y dónde. Nació de una respuesta ciudadana real y hoy se despliega país por país. Abajo, lo que ya funciona y hacia dónde vamos.",
-  en: "{platform} is an open civic platform for emergencies: on one side, someone who needs help finds where to get it; on the other, someone who wants to help sees exactly what is needed and where. It came out of a real citizen response and today it is deployed country by country. Below, what already works and where we are going.",
+  es: "{platform} es una plataforma cívica abierta para emergencias: por un lado, quien necesita ayuda encuentra dónde conseguirla —sin cuenta y sin dar su nombre—; por otro, quien quiere ayudar ve exactamente qué hace falta, dónde, y a quién le llega lo que da. Nació de una respuesta ciudadana real y hoy se despliega país por país. Abajo, lo que ya funciona y hacia dónde vamos.",
+  en: "{platform} is an open civic platform for emergencies: on one side, someone who needs help finds where to get it — no account, no name given; on the other, someone who wants to help sees exactly what is needed, where, and who receives what they give. It came out of a real citizen response and today it is deployed country by country. Below, what already works and where we are going.",
 };
 
 export const ROADMAP_NOW: LS = {
@@ -175,6 +175,124 @@ export const ROADMAP_PHASES: Phase[] = [
     ],
   },
   {
+    id: "cerca",
+    status: "current",
+    title: { es: "Cerca de ti", en: "Near you", pt: "Perto de você" },
+    note: {
+      es: "Un mapa de todo el país responde a una pregunta que nadie hace. La pregunta real es «¿qué hay cerca de mí, ahora mismo?», y se contesta sin pedir cuenta ni nombre.",
+      en: "A map of the whole country answers a question nobody asks. The real question is “what is near me, right now?”, and it is answered without asking for an account or a name.",
+    },
+    items: [
+      {
+        es: "Pestaña «Cerca»: los puntos ordenados por distancia real, con el radio a elegir.",
+        en: "A “Near” tab: points sorted by real distance, with the radius you choose.",
+      },
+      {
+        es: "Las iniciativas sin sede que cubren tu zona salen en la misma lista, marcadas como cobertura y no como sitio al que ir.",
+        en: "Initiatives with no seat that cover your area appear in the same list, marked as coverage and not as a place to travel to.",
+      },
+      {
+        es: "Tu ubicación se queda en tu teléfono: sirve para ordenar la lista y no se manda a ningún servidor ni se guarda.",
+        en: "Your location stays on your phone: it is used to sort the list and is never sent to a server or stored.",
+      },
+      {
+        // Sin artículo antes de `{region}`: el sustantivo lo pone cada país y no siempre
+        // tiene el mismo género — «la estado» y «la departamento» estaban saliendo así.
+        es: "Sin permiso de ubicación la lista no se rompe: se sigue pudiendo filtrar por {region} como siempre.",
+        en: "With no location permission the list does not break: filtering by {region} still works as it always did.",
+      },
+    ],
+  },
+  {
+    id: "comunidad",
+    status: "next",
+    title: { es: "Cuentas y comunidad", en: "Accounts and community", pt: "Contas e comunidade" },
+    note: {
+      es: "La cuenta no es un peaje: consultar el mapa sigue siendo anónimo para siempre. La cuenta es para quien vuelve — para seguir a una iniciativa y enterarse de lo suyo sin tener que ir a buscarla.",
+      en: "An account is not a toll: reading the map stays anonymous forever. The account is for whoever comes back — to follow an initiative and hear from it without having to go looking.",
+    },
+    items: [
+      {
+        es: "Seguir una iniciativa y ver lo que publica en tu feed, junto a lo que hay cerca.",
+        en: "Follow an initiative and see what it posts in your feed, next to what is nearby.",
+      },
+      {
+        es: "Publican sólo las iniciativas verificadas: avances, entregas hechas y lo que hace falta hoy. Sin comentarios abiertos en esta etapa — lo que no se abre no hay que moderarlo.",
+        en: "Only vetted initiatives post: progress, deliveries made, what is needed today. No open comments at this stage — what is not opened does not need moderating.",
+      },
+      {
+        es: "Perfil de voluntario: en qué puede ayudar y cuándo, para que una iniciativa cercana pueda pedírselo.",
+        en: "A volunteer profile: what they can help with and when, so a nearby initiative can ask.",
+      },
+      {
+        es: "La regla de privacidad no se mueve: el correo nunca sale de donde vive, y lo que revela por dónde anda una persona no lo ve nadie más que ella.",
+        en: "The privacy rule does not move: an email never leaves where it lives, and what reveals where a person goes is seen by nobody but them.",
+      },
+    ],
+  },
+  {
+    id: "iniciativas",
+    status: "next",
+    title: {
+      es: "Lo que gana una iniciativa",
+      en: "What an initiative gets out of this",
+      pt: "O que uma iniciativa ganha",
+    },
+    note: {
+      es: "Un mapa al que las iniciativas no ganan nada por entrar se queda sin iniciativas. Su perfil deja de ser una ficha que otros llenan y pasa a ser su espacio: lo que están recaudando, lo que van a hacer y lo que ya entregaron.",
+      en: "A map initiatives gain nothing by joining ends up with no initiatives. Their profile stops being a record other people fill in and becomes their own space: what they are raising, what they are about to do, and what they already delivered.",
+    },
+    items: [
+      {
+        es: "Campañas con una meta concreta: para qué es, cuánto hace falta, cuánto lleva y hasta cuándo. Recaudar «para el comedor» no mueve a nadie; «120 colchonetas antes del viernes» sí.",
+        en: "Campaigns with a concrete goal: what it is for, how much is needed, how much is in, and until when. Raising “for the kitchen” moves nobody; “120 mattresses before Friday” does.",
+      },
+      {
+        es: "Agenda de lo que van a hacer en su comunidad, para que la gente de al lado pueda ir, llevar algo o sumarse como voluntaria.",
+        en: "A calendar of what they will do in their community, so the people next door can show up, bring something, or join as volunteers.",
+      },
+      {
+        es: "Trazabilidad: cada entrega hecha queda publicada junto a la campaña que la pagó. Es lo que convierte «confía en nosotros» en algo que se puede mirar.",
+        en: "Traceability: every delivery made is published next to the campaign that paid for it. That is what turns “trust us” into something you can look at.",
+      },
+      {
+        es: "Visibilidad: aparecer en «Cerca» de su zona, en el feed de quien las sigue y con enlace propio para compartir por WhatsApp.",
+        en: "Visibility: showing up in “Near” for their area, in the feed of whoever follows them, and with their own link to share on WhatsApp.",
+      },
+    ],
+  },
+  {
+    id: "dar",
+    status: "next",
+    title: { es: "Dar, y que se note", en: "Giving, and being seen", pt: "Doar, e que apareça" },
+    note: {
+      es: "El piloto arranca por lo simple y lo comprobable: donas a la iniciativa que tú elijas, con los datos que ella misma publicó. {platform} todavía no se pone en medio del dinero.",
+      en: "The pilot starts with the simple, checkable thing: you donate to the initiative you choose, with the details it published itself. {platform} does not sit in the middle of the money yet.",
+    },
+    items: [
+      {
+        es: "Donar directo a una iniciativa desde su ficha, con sus propios datos de cobro y su enlace verificable.",
+        en: "Donate straight to an initiative from its card, with its own payment details and a checkable link.",
+      },
+      {
+        es: "Al lado, y aparte: la opción de aportar a {platform} para sostenerla. Aparte de verdad —otros datos de cobro, otra decisión— porque lo que se da a una iniciativa tiene que llegarle entero. Así es como se paga esto mientras el fondo común no exista.",
+        en: "Beside it, and separate: the option to chip in to {platform} to keep it running. Genuinely separate — different payment details, a different decision — because what is given to an initiative has to reach it whole. This is how this gets paid for while the common fund does not exist.",
+      },
+      {
+        es: "Medallas por lo que hiciste —donar, reportar un punto, salir a voluntariar— y una tabla de posiciones para quien quiera aparecer en ella.",
+        en: "Badges for what you did — donate, report a point, show up to volunteer — and a leaderboard for whoever wants to be on it.",
+      },
+      {
+        es: "Aparecer es opcional: se puede donar y voluntariar sin figurar en ninguna lista.",
+        en: "Appearing is optional: you can donate and volunteer without showing up in any list.",
+      },
+      {
+        es: "Las medallas se canjean por beneficios en comercios patrocinantes: el comercio pone el beneficio, {platform} pone la constancia de que esa persona ayudó.",
+        en: "Badges are redeemed for perks at sponsoring businesses: the business puts up the perk, {platform} puts up the proof that this person helped.",
+      },
+    ],
+  },
+  {
     id: "p5",
     status: "next",
     title: { es: "Personas afectadas", en: "Affected people", pt: "Pessoas afetadas" },
@@ -198,6 +316,37 @@ export const ROADMAP_PHASES: Phase[] = [
       {
         es: "Reporte privado de personas buscadas, visible solo para el equipo.",
         en: "Private missing-person reports, visible to the team only.",
+      },
+    ],
+  },
+  {
+    id: "fondo",
+    status: "later",
+    title: {
+      es: "Fondo común, y de qué vive {platform}",
+      en: "The common fund, and what keeps {platform} alive",
+      pt: "Fundo comum, e do que vive {platform}",
+    },
+    note: {
+      es: "Una plataforma que no dice de qué vive acaba viviendo de algo que no cuenta. Aquí está dicho: una sola aportación mensual que llega repartida a TODAS las iniciativas, y una comisión declarada que sostiene la plataforma. Implica mover dinero de terceros, así que no se lanza hasta que el reparto se pueda auditar desde fuera y el riel de cobro exista de verdad en el país del piloto.",
+      en: "A platform that does not say what keeps it alive ends up living off something it does not mention. Here it is stated: one monthly contribution that arrives split across EVERY initiative, and a declared fee that sustains the platform. It means handling other people's money, so it does not ship until the split can be audited from outside and a payment rail actually exists in the pilot country.",
+    },
+    items: [
+      {
+        es: "Voluntario+: aportación mensual de la que un 5–10% sostiene {platform} y el resto entra al fondo.",
+        en: "Volunteer+: a monthly contribution of which 5–10% sustains {platform} and the rest goes into the fund.",
+      },
+      {
+        es: "Reparto equitativo entre las iniciativas activas: con una sola aportación ayudas a todas a la vez.",
+        en: "An equitable split across active initiatives: one contribution helps all of them at once.",
+      },
+      {
+        es: "Transparencia absoluta y por defecto: cuánto entró, cuánto se quedó la plataforma, cuánto le tocó a cada iniciativa y en qué fecha. Público, sin que nadie lo pida.",
+        en: "Absolute transparency by default: how much came in, how much the platform kept, how much each initiative got and on what date. Public, without anyone having to ask.",
+      },
+      {
+        es: "El cobro: en Venezuela el débito recurrente no está resuelto, así que la vía es una alianza con una entidad financiera local que lo opere. Hasta que exista, Voluntario+ se queda apagado y vale lo de la fase anterior: donación directa.",
+        en: "The charge: recurring debit is not a solved problem in Venezuela, so the route is a partnership with a local financial institution that operates it. Until that exists, Volunteer+ stays off and the previous phase stands: direct donation.",
       },
     ],
   },

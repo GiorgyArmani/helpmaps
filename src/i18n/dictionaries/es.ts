@@ -165,7 +165,30 @@ const es = {
   "sheet.digitals": "iniciativas digitales",
 
   // ── Pestañas del panel e iniciativas digitales ──────────────────────────
+  "panel.tab.nearby": "Cerca",
   "panel.tab.digital": "Digitales",
+
+  // ── Cerca de ti ─────────────────────────────────────────────────────────
+  "nearby.askTitle": "¿Qué hay cerca de ti?",
+  "nearby.askBody":
+    "Con tu ubicación te ordenamos los puntos del más cercano al más lejano, y te mostramos las iniciativas que ayudan en tu zona.",
+  "nearby.use": "Usar mi ubicación",
+  "nearby.locating": "Buscando…",
+  "nearby.retry": "Intentar de nuevo",
+  "nearby.privacy": "Se queda en tu teléfono. No la enviamos ni la guardamos.",
+  "nearby.altHint": "Prefiero buscar por {region}",
+  "nearby.denied": "Tu navegador no nos dio permiso para ver dónde estás.",
+  "nearby.unavailable": "No pudimos obtener tu ubicación. Puede ser el GPS o la señal.",
+  "nearby.radius": "A la redonda",
+  "nearby.zone": "Estás cerca de {region}",
+  "nearby.zoneUnknown": "No pudimos ubicar tu zona",
+  "nearby.forget": "Olvidar mi ubicación",
+  "nearby.countOne": "1 punto cerca",
+  "nearby.count": "{n} puntos cerca",
+  "nearby.straightLine": "en línea recta",
+  "nearby.empty": "Nada a {radius} de donde estás.",
+  "nearby.emptyHint": "Prueba con un radio más amplio, o mira la lista completa en «Puntos».",
+  "nearby.digitalTitle": "Sin sede, pero ayudan en tu zona",
   "digital.noSeat": "Sin sede física",
   "digital.coverageTitle": "Dónde ayuda",
   "digital.national": "Todo el país",

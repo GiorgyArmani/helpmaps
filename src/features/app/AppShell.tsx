@@ -33,6 +33,16 @@ import TypeChips from "@/features/centers/TypeChips";
 import CenterCard from "@/features/centers/CenterCard";
 import DigitalCard from "@/features/centers/DigitalCard";
 import PanelTabs, { type PanelTab } from "@/features/centers/PanelTabs";
+import NearbyPanel from "@/features/nearby/NearbyPanel";
+import { useMyLocation } from "@/features/nearby/useMyLocation";
+import {
+  DEFAULT_RADIUS,
+  RADIUS_CHOICES,
+  digitalCovering,
+  nearbyPoints,
+  nearestRegion,
+  type RadiusKm,
+} from "@/domain/nearby";
 import CenterDetail from "@/features/centers/CenterDetail";
 import SuggestForm from "@/features/suggest/SuggestForm";
 import DonateView from "@/features/donate/DonateView";
@@ -171,6 +181,10 @@ export default function AppShell({
   // Which of the two lists the panel shows: places, or initiatives with no seat. The
   // map does not depend on it — digital markers are drawn either way — only the list.
   const [panelTab, setPanelTab] = useState<PanelTab>("points");
+  // «Cerca»: la posición. NO sale del teléfono — ver `features/nearby/useMyLocation.ts`.
+  // El radio se deriva más abajo, junto a la lista, para que la cuenta de la pestaña y
+  // la lista hablen siempre del mismo número.
+  const myLocation = useMyLocation();
   const [view, setView] = useState<View>(() => {
     if (initialCenterId) return "detail";
     if (initialPanel) return "admin";
@@ -292,6 +306,63 @@ export default function AppShell({
     [digitalAll, filter],
   );
   const listed = panelTab === "digital" ? visibleDigital : visible;
+
+  // ── «Cerca» ─────────────────────────────────────────────────────────────
+  //
+  // Su fuente NO es `visible`: de todos los filtros sólo hereda el buscador, que es el
+  // único control que sigue a la vista en esta pestaña. Los chips de tipo se ocultan
+  // aquí, y un filtro escondido que vacía una lista se lee como «no hay nada cerca de
+  // ti» cuando lo que pasa es que quedó marcado «refugios» tres pestañas atrás. El
+  // filtro de {region} sobra por la misma razón al revés: la posición ya dice la zona,
+  // mejor que un desplegable.
+  const nearSource = useMemo(
+    () => filterCenters(centers, { ...EMPTY_FILTER, query: filter.query }),
+    [centers, filter.query],
+  );
+  // Una sola pasada de distancias, ordenada. El radio no vuelve a medir nada: recorta.
+  const nearAll = useMemo(
+    () => (myLocation.fix ? nearbyPoints(nearSource, myLocation.fix, Infinity) : []),
+    [nearSource, myLocation.fix],
+  );
+
+  // EL RADIO ES DERIVADO, NO UN ESTADO QUE UN EFECTO CORRIGE.
+  //
+  // Un radio en el que no hay nada no es un resultado, es un callejón: si a 2 km no
+  // aparece nada y a 15 sí, la pestaña tiene que abrirse en el primero que tiene algo.
+  // La forma obvia —un `useEffect` que hace `setNearRadius`— encadena un render de más
+  // por cada posición nueva y deja el valor bueno un fotograma después del que se pinta.
+  //
+  // En vez de eso, lo elegido a mano se guarda JUNTO A LA POSICIÓN para la que se
+  // eligió: mientras esa posición siga vigente manda la elección, y una posición nueva
+  // vuelve sola al automático sin que nadie tenga que acordarse de reiniciarlo.
+  const [radiusPick, setRadiusPick] = useState<{ km: RadiusKm; at: number } | null>(null);
+  const autoRadius = useMemo<RadiusKm>(
+    () => RADIUS_CHOICES.find((km) => nearAll.some((n) => n.km <= km)) ?? DEFAULT_RADIUS,
+    [nearAll],
+  );
+  const fixAt = myLocation.fix?.at ?? 0;
+  const nearRadius = radiusPick?.at === fixAt ? radiusPick.km : autoRadius;
+  const pickRadius = useCallback(
+    (km: RadiusKm) => setRadiusPick({ km, at: fixAt }),
+    [fixAt],
+  );
+
+  const near = useMemo(
+    () => nearAll.filter((n) => n.km <= nearRadius),
+    [nearAll, nearRadius],
+  );
+
+  // La {region} más próxima decide qué iniciativas sin sede salen. Aproximación
+  // deliberada —un centroide no es una frontera— y sin consecuencias: sólo elige a quién
+  // mostrar. Los puntos físicos se filtran por distancia real, que no tiene ese error.
+  const nearZone = useMemo(
+    () => (myLocation.fix ? nearestRegion(site.country.regions, myLocation.fix) : null),
+    [myLocation.fix, site.country.regions],
+  );
+  const nearDigital = useMemo(
+    () => digitalCovering(nearSource, nearZone?.code ?? null),
+    [nearSource, nearZone],
+  );
   const needing = useMemo(
     () => pointsNeedingHelp(filter.region ? visible : physical),
     [visible, physical, filter.region],
@@ -312,8 +383,14 @@ export default function AppShell({
     setView("detail");
     // Opening a digital initiative — from its ring on the map, a saved list, a shared
     // link — lands "Back" on the list it belongs to, not on the points list.
+    //
+    // Salvo desde «Cerca», que ya lista digitales: ahí «Volver» tiene que devolver a la
+    // lista de la que se salió. Cambiar de pestaña bajo el dedo pierde la posición y el
+    // radio que esa persona acababa de elegir.
     const target = centersRef.current.find((c) => c.id === id);
-    if (target && isDigital(target)) setPanelTab("digital");
+    setPanelTab((tab) =>
+      tab !== "nearby" && target && isDigital(target) ? "digital" : tab,
+    );
     // Abrir el panel si estaba plegado.
     //
     // Tocar un pin con el panel cerrado no hacía nada visible: la ficha se pintaba dentro
@@ -725,7 +802,13 @@ export default function AppShell({
             puntos; la búsqueda y la región valen para las dos. */}
         <PanelTabs
           tab={panelTab}
-          counts={{ points: visible.length, digital: visibleDigital.length }}
+          counts={{
+            // `null` hasta que hay posición: un 0 ahí se lee «no hay nada cerca de ti»
+            // cuando lo que pasa es que nadie ha pedido la ubicación todavía.
+            nearby: myLocation.fix ? near.length : null,
+            points: visible.length,
+            digital: visibleDigital.length,
+          }}
           onChange={switchTab}
         />
 
@@ -744,6 +827,25 @@ export default function AppShell({
           </div>
         ) : (
         <div className="list">
+          {/* «Cerca» sustituye el cuerpo de la lista, no el panel: el pie con privacidad y
+              términos se queda: es la pestaña que pide la ubicación, y esconder ahí el
+              enlace de privacidad sería justo al revés de lo que hay que hacer. */}
+          {panelTab === "nearby" && activeView === "list" ? (
+            <NearbyPanel
+              located={myLocation.fix !== null}
+              status={myLocation.status}
+              near={near}
+              digital={nearDigital}
+              zone={nearZone}
+              radius={nearRadius}
+              onRadius={pickRadius}
+              onRequest={myLocation.request}
+              onForget={myLocation.forget}
+              onSelect={openCenter}
+              onBrowseAll={() => switchTab("points")}
+            />
+          ) : (
+          <>
           {/* Los dos contadores en una fila: cuántos puntos se están viendo y cuántos de
               ellos piden algo. Son la misma pregunta a dos niveles de detalle y estaban
               separados por toda la cabecera y la rejilla de filtros. */}
@@ -795,6 +897,8 @@ export default function AppShell({
             ) : (
               <CenterCard key={center.id} center={center} onSelect={openCenter} />
             ),
+          )}
+          </>
           )}
 
           <nav className="wrapline sheetfoot">

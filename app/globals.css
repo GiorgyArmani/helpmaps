@@ -4460,14 +4460,20 @@ fieldset.fieldset {
 
 .counters .needbar .chev { flex: 0 0 auto; }
 
-/* ── Las dos pestañas del panel ───────────────────────────────────────────
-   "Puntos" (sitios a los que ir) y "Digitales" (iniciativas sin sede). Mismo lenguaje
-   que las pestañas del panel del equipo (`.admtabs` / `.atab`): una fila de pastillas,
-   la activa rellena. Van encima de los chips, que sólo acompañan a la lista de puntos. */
+/* ── Las tres pestañas del panel ──────────────────────────────────────────
+   «Cerca» (lo que tienes a la redonda), «Puntos» (sitios a los que ir) y «Digitales»
+   (iniciativas sin sede). Mismo lenguaje que las pestañas del panel del equipo
+   (`.admtabs` / `.atab`): una fila de pastillas, la activa rellena. Van encima de los
+   chips, que sólo acompañan a la lista de puntos.
+
+   SÓLO ICONO. Con tres pestañas las palabras dejaron de caber en un teléfono de 390px
+   —«Puntos» perdía cuatro letras por un desajuste de medio píxel— y cada idioma y cada
+   ancho de contador era una palabra más de romperlo otra vez. Tres iconos caben siempre.
+   El nombre va en `aria-label` y `title`. */
 
 .ptabs {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   padding: 6px 12px 8px;
   border-bottom: 1px solid var(--line);
   flex: 0 0 auto;
@@ -4476,11 +4482,11 @@ fieldset.fieldset {
 .ptab {
   flex: 1 1 0;
   min-width: 0;
-  height: 36px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   border: 1px solid var(--line);
   background: #fff;
   border-radius: 11px;
@@ -4509,18 +4515,19 @@ fieldset.fieldset {
 }
 
 .ptab-ic svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   display: block;
 }
 
 .ptab-n {
+  flex: 0 0 auto;
   font-size: 0.6875rem;
   font-weight: 700;
   line-height: 1;
   background: var(--soft);
   border-radius: 999px;
-  padding: 3px 6px;
+  padding: 3px 5px;
 }
 
 .ptab-on .ptab-n {
@@ -4530,6 +4537,271 @@ fieldset.fieldset {
 
 /* Plegado el panel, las pestañas se van con la lista, igual que los chips. */
 .sheet.sheet-min .ptabs { display: none; }
+
+/* La distancia en la tarjeta, sólo en la lista «Cerca». Encima de la insignia de estado:
+   se lee primero «a qué distancia» y luego «en qué estado», que es el orden en el que se
+   decide a dónde ir. */
+.cdist {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--soft);
+  border-radius: 999px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────  Cerca de ti  ─────────────────────────────────
+   La invitación primero, la lista después. El permiso de ubicación se pide con un
+   botón, nunca al abrir: ver `features/nearby/NearbyPanel.tsx`.
+
+   Columna propia y no `display: contents`: `.list > *` da `flex: 0 0 auto` a los hijos
+   DIRECTOS del panel, y con `contents` las tarjetas dejaban de ser hijos directos y la
+   columna con scroll se las comprimía —justo lo que avisa el comentario de `.list`. */
+
+.nearby {
+  display: flex;
+  flex-direction: column;
+}
+
+.nearby > * {
+  flex: 0 0 auto;
+}
+
+.nb-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 28px 22px 22px;
+}
+
+.nb-askic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--accent);
+}
+
+.nb-askic svg {
+  width: 22px;
+  height: 22px;
+}
+
+.nb-askt {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.nb-askp {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.nb-err {
+  margin: 0;
+  max-width: 32ch;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, #fff);
+  border: 1px solid color-mix(in srgb, var(--danger) 22%, #fff);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+}
+
+/* 44px de alto: es un botón que se toca de pie y con una mano. */
+.nb-go {
+  margin-top: 2px;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nb-go:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.nb-priv {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  max-width: 32ch;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--mut);
+}
+
+.nb-priv svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  opacity: 0.8;
+}
+
+.nb-alt {
+  margin-top: 4px;
+  border: 0;
+  background: none;
+  padding: 6px;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.nb-alt:hover {
+  color: var(--ink);
+}
+
+/* La fila del radio. Se desliza en horizontal en pantallas estrechas en vez de
+   apretujar cuatro pastillas hasta que dejan de poder tocarse. */
+.nb-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nb-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.nb-radlbl {
+  flex: 0 0 auto;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mut);
+  padding-right: 2px;
+}
+
+.nb-rad {
+  flex: 0 0 auto;
+  min-height: 34px;
+  /* 11px y no 13: con 13 los cuatro radios más el rótulo se pasaban 9px de un teléfono
+     de 390 y «50 km» quedaba cortado por el borde. La fila sigue pudiendo desplazarse
+     —hace falta en pantallas más estrechas— pero en el caso normal no hace falta. */
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nb-rad:not(.nb-rad-on):hover {
+  color: var(--ink);
+  border-color: #d9dce1;
+}
+
+.nb-rad-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.nb-zone {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px 8px;
+}
+
+.nb-zonet {
+  font-size: 0.75rem;
+  color: var(--mut);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nb-forget {
+  flex: 0 0 auto;
+  border: 0;
+  background: none;
+  padding: 2px;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.75rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.nb-forget:hover {
+  color: var(--ink);
+}
+
+.nb-count {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  padding: 0 14px 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* «en línea recta» no es un adorno: es la diferencia entre 600 m y cruzar un río. Va
+   siempre, en gris y pequeño, pegado al número al que matiza. */
+.nb-straight {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--mut);
+}
+
+.nb-sect {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 2px;
+  padding: 10px 14px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mut);
+}
+
+.nb-sect svg {
+  width: 13px;
+  height: 13px;
+}
+
 
 /* ── La tarjeta de una iniciativa digital ─────────────────────────────────
    Misma anatomía que `.card`, pero el cuerpo tocable es un botón propio y los enlaces

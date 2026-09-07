@@ -18,9 +18,16 @@ import { useSiteHelpers } from "@/features/app/SiteProvider";
 export default function CenterCard({
   center,
   onSelect,
+  distanceLabel,
 }: {
   center: Center;
   onSelect: (id: string) => void;
+  /**
+   * «600 m», «4,2 km». Sólo lo pasa la pestaña «Cerca», que es la única lista ordenada
+   * por distancia; en las demás no habría un desde-dónde y el número sería decorativo.
+   * Ya viene formateado: la tarjeta no sabe de kilómetros ni de idiomas.
+   */
+  distanceLabel?: string;
 }) {
   const { regionLabel } = useSiteHelpers();
   const { t } = useI18n();
@@ -49,6 +56,7 @@ export default function CenterCard({
       </span>
 
       <span className="cend">
+        {distanceLabel ? <span className="cdist">{distanceLabel}</span> : null}
         {status === "cerrado" ? (
           <Badge tone="danger">{t("status.cerrado")}</Badge>
         ) : status === "lleno" ? (
