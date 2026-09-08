@@ -9,6 +9,7 @@ import { getSupabase } from "@/lib/supabase/client";
 import { createPointReport, toggleFavourite } from "@/data/account";
 import { REPORT_KINDS, type ReportKind } from "@/domain/account";
 import { useAccount } from "@/features/account/useAccount";
+import { useMyLocation } from "@/features/nearby/useMyLocation";
 
 /**
  * Lo que una persona con cuenta puede hacer sobre un punto concreto: guardarlo, y avisar
@@ -40,6 +41,11 @@ export default function PointActions({ locationId }: { locationId: string }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<"sent" | "duplicate" | "error" | null>(null);
+  // El check-in: reusa la misma posición que ya pudo pedir «Cerca» o el botón del mapa,
+  // así que estando en la pestaña de proximidad esto no vuelve a preguntar nada.
+  const here = useMyLocation();
+  const [checkin, setCheckin] = useState<"idle" | "sending" | "done" | "far" | "error">("idle");
+  const [farKm, setFarKm] = useState<number | null>(null);
 
   const saved = account.favourites.has(locationId);
 
@@ -85,6 +91,47 @@ export default function PointActions({ locationId }: { locationId: string }) {
     }
   }, [busy, kind, locationId, note]);
 
+  /**
+   * «Estoy aquí».
+   *
+   * La posición se manda al servidor, que comprueba la distancia y la DESCARTA — no se
+   * guarda en ningún sitio. Ver `app/api/checkin/route.ts`, donde está el porqué largo.
+   *
+   * Se pide aquí y no se asume: `useMyLocation` sólo devuelve algo si esta persona ya dio
+   * permiso en esta pestaña, y un botón que dispara el diálogo del navegador sin avisar
+   * es cómo se consigue que alguien lo bloquee para siempre.
+   */
+  const doCheckin = useCallback(async () => {
+    if (checkin === "sending") return;
+    setCheckin("sending");
+    // Un solo toque: si no hay posición se pide aquí y se sigue en cuanto llega. Antes
+    // hacían falta dos —uno para el permiso y otro para volver a pulsar— y eso es fricción
+    // justo en la acción que este producto más quiere provocar.
+    const fix = here.fix ?? (await here.ensure());
+    if (!fix) {
+      setCheckin("idle");
+      return;
+    }
+    try {
+      const res = await fetch("/api/checkin", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ locationId, lat: fix.lat, lng: fix.lng }),
+      });
+      const data: { error?: string; km?: number } = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setCheckin("done");
+      } else if (data.error === "too_far") {
+        setFarKm(data.km ?? null);
+        setCheckin("far");
+      } else {
+        setCheckin("error");
+      }
+    } catch {
+      setCheckin("error");
+    }
+  }, [checkin, here, locationId]);
+
   if (!account.checked) return null;
 
   if (!account.userId) {
@@ -116,7 +163,36 @@ export default function PointActions({ locationId }: { locationId: string }) {
           <Icon.alert />
           {t("point.report")}
         </button>
+
+        {/* «Estoy aquí». Es la acción que más experiencia da, y la única que exige haber
+            salido de casa — de ahí que sea la que este producto quiere provocar. */}
+        <button
+          type="button"
+          className={checkin === "done" ? "btnp" : "btng"}
+          onClick={() => void doCheckin()}
+          disabled={checkin === "sending" || checkin === "done"}
+        >
+          <Icon.target />
+          {checkin === "done"
+            ? t("point.checkedIn")
+            : checkin === "sending" || here.status === "locating"
+              ? t("nearby.locating")
+              : t("point.checkin")}
+        </button>
       </div>
+
+      {/* Lo que hay que saber ANTES de tocarlo: se comprueba dónde estás y no se guarda. */}
+      {checkin === "idle" && here.status !== "denied" ? (
+        <p className="small mut">{t("point.checkinHint")}</p>
+      ) : null}
+      {checkin === "far" ? (
+        <p className="lerr">
+          {farKm !== null ? t("point.tooFarKm", { km: farKm }) : t("point.tooFar")}
+        </p>
+      ) : null}
+      {checkin === "error" ? <p className="lerr">{t("error.generic")}</p> : null}
+      {here.status === "denied" ? <p className="small mut">{t("nearby.denied")}</p> : null}
+      {checkin === "done" ? <p className="small mut">{t("point.checkedInHint")}</p> : null}
 
       {saved ? <p className="small mut">{t("point.saveHint")}</p> : null}
 

@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import {
+  ACTION_POINTS,
   BADGES,
   countContributions,
-  earnedBadges,
   levelFor,
+  type ContributionKind,
   type Counts,
 } from "@/domain/badges";
 import {
-  awardBadge,
   fetchMyBadges,
   fetchMyContributions,
   setLeaderboardOptIn,
@@ -74,16 +74,10 @@ export default function Recognition({ userId }: { userId: string }) {
       setMine(badges);
       setOptIn(Boolean((perfil.data as { leaderboard_opt_in?: boolean } | null)?.leaderboard_opt_in));
 
-      // Otorgar lo que se haya ganado y no esté registrado. `award_badge` es idempotente,
-      // así que esto no puede duplicar nada ni mover una fecha ya puesta.
-      const tiene = new Set(badges.map((b) => b.badge));
-      const nuevas = earnedBadges(c).filter((b) => !tiene.has(b.code));
-      if (nuevas.length === 0) return;
-      void Promise.all(nuevas.map((b) => awardBadge(sb, b.code))).then(() =>
-        fetchMyBadges(sb).then((frescas) => {
-          if (vivo) setMine(frescas);
-        }),
-      );
+      // Aquí NO se otorga nada. Las medallas las da un trigger sobre `contributions` en
+      // el momento en que pueden cambiar, así que cuando esta pantalla las lee ya están
+      // puestas. Antes se calculaban aquí y se pedían con `award_badge`, y eso dejaba
+      // pedirse cualquiera desde la consola del navegador.
     });
     return () => {
       vivo = false;
@@ -149,6 +143,22 @@ export default function Recognition({ userId }: { userId: string }) {
           </span>
         </div>
       )}
+
+      {/* CÓMO SE SUBE, con los números a la vista.
+          Es la pieza que hace que la escala signifique algo: sin verla, «te faltan 30»
+          no dice si eso son treinta toques de botón o dos visitas. Ordenado de más a
+          menos, para que lo primero que se lea sea lo que de verdad mueve el nivel. */}
+      <h4 className="rec-sub">{t("rec.how")}</h4>
+      <ul className="rec-how">
+        {(Object.keys(ACTION_POINTS) as ContributionKind[])
+          .sort((a, b) => ACTION_POINTS[b] - ACTION_POINTS[a])
+          .map((kind) => (
+            <li key={kind} className="rec-how-row">
+              <span className="rec-how-txt">{t(`action.${kind}` as const)}</span>
+              <span className="rec-how-pts">+{ACTION_POINTS[kind]}</span>
+            </li>
+          ))}
+      </ul>
 
       <h4 className="rec-sub">{t("rec.badges")}</h4>
       {ganadas.size === 0 ? <p className="rec-empty">{t("rec.noBadges")}</p> : null}

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Activity, Campaign, InitiativePost } from "@/domain/types";
+import { shrinkImage } from "@/lib/image";
 
 // Lecturas y escrituras contra `campaigns`, `activities` e `initiative_posts`.
 // Una lista de columnas explícita, como en el resto de módulos de datos: nunca
@@ -136,6 +137,18 @@ export interface InitiativeProfile {
   posts: InitiativePost[];
   /** Por dónde recibe ESTE punto. Vacío = no lo ha puesto, y entonces no se ofrece. */
   donate: { info: string | null; url: string | null };
+  /**
+   * Las imágenes del perfil público: portada y foto.
+   *
+   * Viven aquí y NO en `CenterInfo` a propósito. `CenterInfo` es dato de mapa: lo trae la
+   * consulta que descarga los quinientos y pico puntos de una vez, y esa consulta cae
+   * entera al juego de columnas antiguo en cuanto pide una que la base no tiene (ver el
+   * respaldo por error 42703 en `data/centers.ts`). Añadir ahí dos columnas nuevas
+   * significaba que, en una base sin la migración 08, el mapa perdía además la web y el
+   * Instagram de todos los puntos. Aquí sólo se piden en el perfil, y si faltan, faltan
+   * las imágenes y nada más.
+   */
+  images: { banner: string | null; photo: string | null };
 }
 
 export const EMPTY_PROFILE: InitiativeProfile = {
@@ -143,6 +156,7 @@ export const EMPTY_PROFILE: InitiativeProfile = {
   activities: [],
   posts: [],
   donate: { info: null, url: null },
+  images: { banner: null, photo: null },
 };
 
 /**
@@ -166,6 +180,32 @@ export async function fetchDonateInfo(
   if (error || !data) return { info: null, url: null };
   const row = data as unknown as Row;
   return { info: text(row.donate_info), url: text(row.donate_url) };
+}
+
+/**
+ * Las dos imágenes del perfil.
+ *
+ * Consulta aparte y con su propio interruptor: en una base sin `db/08_perfil_publico.sql`
+ * esto devuelve vacío y el perfil se dibuja sin portada, que es exactamente como se ve un
+ * punto que todavía no ha subido ninguna. Un fallo que no se distingue de un caso normal
+ * es el que no rompe nada.
+ */
+let columnasImagenAusentes = false;
+
+export async function fetchImages(
+  sb: SupabaseClient,
+  locationId: string,
+): Promise<InitiativeProfile["images"]> {
+  if (columnasImagenAusentes) return { banner: null, photo: null };
+  const { data, error } = await sb
+    .from("center_info")
+    .select("banner_url,photo_url")
+    .eq("location_id", locationId)
+    .maybeSingle();
+  if (faltaLaColumna(error)) columnasImagenAusentes = true;
+  if (error || !data) return { banner: null, photo: null };
+  const row = data as unknown as Row;
+  return { banner: text(row.banner_url), photo: text(row.photo_url) };
 }
 
 /**
@@ -241,13 +281,14 @@ export async function fetchInitiativeProfile(
   sb: SupabaseClient,
   locationId: string,
 ): Promise<InitiativeProfile> {
-  const [campaigns, activities, posts, donate] = await Promise.all([
+  const [campaigns, activities, posts, donate, images] = await Promise.all([
     fetchCampaigns(sb, locationId),
     fetchActivities(sb, locationId),
     fetchPosts(sb, locationId),
     fetchDonateInfo(sb, locationId),
+    fetchImages(sb, locationId),
   ]);
-  return { campaigns, activities, posts, donate };
+  return { campaigns, activities, posts, donate, images };
 }
 
 /**
@@ -415,6 +456,113 @@ export async function saveCenterProfile(
   };
   if (markOnboarded) row.onboarded_at = new Date().toISOString();
   const { error } = await sb.from("center_info").upsert(row, { onConflict: "location_id" });
+  if (error) throw error;
+}
+
+/**
+ * Subir la portada o la foto del perfil.
+ *
+ * ── LA RUTA ES EL PERMISO ───────────────────────────────────────────────────
+ *
+ * El archivo va a `<location_id>/<tipo>-<sello>.<ext>` y la política de Storage decide
+ * mirando el PRIMER TRAMO de esa ruta (ver `db/08_perfil_publico.sql`). O sea: aquí no se
+ * comprueba nada, y no es un descuido — comprobarlo en el navegador sería teatro, porque
+ * quien quiera saltárselo no pasa por este código. La frontera está en la base.
+ *
+ * ── POR QUÉ UN NOMBRE NUEVO CADA VEZ ───────────────────────────────────────
+ *
+ * Podría sobrescribirse `banner.jpg` y quedarse una sola ruta para siempre. No se hace: la
+ * imagen es pública y la cachean el navegador, el CDN y el previsualizador de enlaces de
+ * WhatsApp. Con la ruta fija, cambiar la portada dejaba la vieja en pantalla durante horas
+ * y sin forma de explicarlo. Un nombre nuevo es una dirección nueva, y se ve al instante.
+ *
+ * El coste es que la anterior se queda en el bucket. Es aceptable: son dos imágenes por
+ * punto y se cambian cada varios meses.
+ */
+/**
+ * Sube un archivo y devuelve su dirección pública.
+ *
+ * ⚠️ TODA imagen pasa por aquí, y aquí se REDUCE Y SE COMPRIME SIEMPRE (`shrinkImage`).
+ *
+ * La compresión vive en este punto y no en cada formulario a propósito: es la única forma
+ * de que no se pueda olvidar. Un formulario nuevo que suba una foto la comprime porque no
+ * tiene otro camino, sin que nadie tenga que acordarse.
+ *
+ * Lo que evita, en números: una foto de teléfono son 4000px y 3–8 MB, y el bucket corta en
+ * 3 — o sea que buena parte fallaría, y fallaría tras un minuto de espera. Reducida ronda
+ * los 200 KB. Ver `lib/image.ts` para el porqué de cada número.
+ */
+async function subirImagen(
+  sb: SupabaseClient,
+  locationId: string,
+  prefijo: string,
+  file: File,
+): Promise<string> {
+  const listo = await shrinkImage(file);
+  const ext = (listo.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const path = `${locationId}/${prefijo}-${Date.now()}.${ext || "jpg"}`;
+
+  const { error } = await sb.storage
+    .from("initiatives")
+    .upload(path, listo, { contentType: listo.type, upsert: false });
+  if (error) throw error;
+
+  return sb.storage.from("initiatives").getPublicUrl(path).data.publicUrl;
+}
+
+export async function uploadProfileImage(
+  sb: SupabaseClient,
+  locationId: string,
+  kind: "banner" | "photo",
+  file: File,
+): Promise<string> {
+  const url = await subirImagen(sb, locationId, kind, file);
+
+  // La columna se escribe DESPUÉS de que el archivo exista. Al revés, un fallo de subida
+  // dejaba el perfil apuntando a una imagen que no está — y una foto rota se lee como que
+  // la iniciativa abandonó el sitio.
+  const { error } = await sb
+    .from("center_info")
+    .update({ [`${kind}_url`]: url })
+    .eq("location_id", locationId);
+  if (error) throw error;
+
+  return url;
+}
+
+/**
+ * La foto de una publicación.
+ *
+ * Sólo sube y devuelve la dirección: aquí no hay ninguna columna que actualizar, porque la
+ * foto viaja dentro de la propia publicación cuando se crea. Va al mismo bucket y a la
+ * misma carpeta que la portada —`<location_id>/…`— para que la cubra la misma política de
+ * Storage sin escribir una segunda.
+ *
+ * ── POR QUÉ UNA FOTO CAMBIA LO QUE ESTO ES ─────────────────────────────────
+ *
+ * «Entregamos 60 almuerzos» es una afirmación. La misma frase con la foto de la olla es lo
+ * que un donante puede enseñarle a quien le dio el dinero. La trazabilidad de la que habla
+ * el plan no se sostiene sobre un texto que escribe la propia iniciativa: se sostiene sobre
+ * lo que se ve.
+ */
+export async function uploadPostImage(
+  sb: SupabaseClient,
+  locationId: string,
+  file: File,
+): Promise<string> {
+  return subirImagen(sb, locationId, "post", file);
+}
+
+/** Quitar la portada o la foto. El archivo se queda; lo que se retira es el enlace. */
+export async function clearProfileImage(
+  sb: SupabaseClient,
+  locationId: string,
+  kind: "banner" | "photo",
+): Promise<void> {
+  const { error } = await sb
+    .from("center_info")
+    .update({ [`${kind}_url`]: null })
+    .eq("location_id", locationId);
   if (error) throw error;
 }
 
@@ -615,4 +763,158 @@ export async function revokeCenterManager(
 export async function cancelInvite(sb: SupabaseClient, id: string): Promise<void> {
   const { error } = await sb.from("center_invites").delete().eq("id", id);
   if (error) throw error;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Aportes declarados y su confirmacion.
+//
+// La plataforma no cobra ni custodia, así que no hay ningún momento en que se entere de
+// que un aporte ocurrió. Quien sí se entera es la iniciativa cuando le llega. Por eso el
+// aporte se DECLARA y queda pendiente hasta que ella lo confirma — y es esa confirmación
+// la que otorga experiencia, por un trigger. Ver `db/07_aportes.sql`.
+// ───────────────────────────────────────────────────────────────────────────
+
+export type ClaimStatus = "pending" | "confirmed" | "rejected";
+
+export interface DonationClaim {
+  id: string;
+  user_id: string;
+  location_id: string;
+  campaign_id: string | null;
+  note: string | null;
+  status: ClaimStatus;
+  created_at: string;
+  /** El nombre de quien lo declaró. Nunca su correo: ése no sale de `auth.users`. */
+  donor_name?: string | null;
+}
+
+const CLAIM_COLUMNS = "id,user_id,location_id,campaign_id,note,status,created_at";
+
+/**
+ * Declarar que se aportó a una iniciativa.
+ *
+ * Lanza si falla, y aquí SÍ importa: quien acaba de transferir dinero y pulsa «ya aporté»
+ * tiene que enterarse si no quedó registrado. El caso de «ya tienes uno pendiente» llega
+ * como violación de índice único (23505) y se distingue, porque no es un fallo: es que ya
+ * está hecho.
+ */
+export async function declareDonation(
+  sb: SupabaseClient,
+  input: { locationId: string; userId: string; campaignId?: string | null; note?: string },
+): Promise<{ ok: boolean; duplicate?: boolean }> {
+  const { error } = await sb.from("donation_claims").insert({
+    user_id: input.userId,
+    location_id: input.locationId,
+    campaign_id: input.campaignId ?? null,
+    note: input.note?.trim() || null,
+  });
+  if (error) {
+    if (error.code === "23505") return { ok: false, duplicate: true };
+    throw error;
+  }
+  return { ok: true };
+}
+
+/** Lo que esta persona ha declarado, para poder ver en qué quedó. */
+export async function fetchMyClaims(sb: SupabaseClient, userId: string): Promise<DonationClaim[]> {
+  if (tablasAusentes) return [];
+  const { data, error } = await sb
+    .from("donation_claims")
+    .select(CLAIM_COLUMNS)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (faltaLaTabla(error)) tablasAusentes = true;
+  if (error || !data) return [];
+  return (data as unknown as Row[]).map(mapClaim);
+}
+
+/**
+ * Los aportes que le declararon a un punto, con el nombre de quien los declaró.
+ *
+ * DOS consultas, como en `fetchCenterManagers` y por lo mismo: no hay clave foránea entre
+ * `donation_claims` y `profiles`, así que PostgREST no puede resolver el embed.
+ */
+export async function fetchClaimsForLocation(
+  sb: SupabaseClient,
+  locationId: string,
+): Promise<DonationClaim[]> {
+  if (tablasAusentes) return [];
+  const { data, error } = await sb
+    .from("donation_claims")
+    .select(CLAIM_COLUMNS)
+    .eq("location_id", locationId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (faltaLaTabla(error)) tablasAusentes = true;
+  if (error || !data || data.length === 0) return [];
+
+  const rows = (data as unknown as Row[]).map(mapClaim);
+  const ids = [...new Set(rows.map((r) => r.user_id))];
+  const { data: perfiles } = await sb
+    .from("profiles")
+    .select("user_id,display_name")
+    .in("user_id", ids);
+  const nombres = new Map(
+    ((perfiles ?? []) as unknown as Row[]).map((p) => [String(p.user_id), text(p.display_name)]),
+  );
+  return rows.map((r) => ({ ...r, donor_name: nombres.get(r.user_id) ?? null }));
+}
+
+/** Confirmar o descartar. El portero es RLS: sólo quien gestiona ese punto. */
+export async function resolveClaim(
+  sb: SupabaseClient,
+  id: string,
+  status: "confirmed" | "rejected",
+): Promise<void> {
+  const { error } = await sb.from("donation_claims").update({ status }).eq("id", id);
+  if (error) throw error;
+}
+
+function mapClaim(row: Row): DonationClaim {
+  return {
+    id: String(row.id),
+    user_id: String(row.user_id),
+    location_id: String(row.location_id),
+    campaign_id: text(row.campaign_id),
+    note: text(row.note),
+    status: (row.status as ClaimStatus) ?? "pending",
+    created_at: String(row.created_at ?? ""),
+  };
+}
+
+/**
+ * Las publicaciones y campañas RECIENTES de todo el despliegue, para el feed.
+ *
+ * Sin filtro de punto y sin filtro geográfico: el feed cruza esto en el cliente con los
+ * centros que ya tiene en memoria, y ahí calcula la cercanía. Una consulta «qué hay cerca
+ * de estas coordenadas» le contaría al servidor dónde está quien mira — la misma razón por
+ * la que `domain/nearby.ts` tampoco la hace.
+ *
+ * El límite es generoso pero acotado: el feed ordena y pagina en el cliente sobre este
+ * material, que es lo que permite que el scroll no dispare una consulta por página.
+ */
+export async function fetchFeedPosts(sb: SupabaseClient, limit = 120): Promise<InitiativePost[]> {
+  if (tablasAusentes) return [];
+  const { data, error } = await sb
+    .from("initiative_posts")
+    .select(POST_COLUMNS)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (faltaLaTabla(error)) tablasAusentes = true;
+  if (error || !data) return [];
+  return (data as unknown as Row[]).map(mapPost);
+}
+
+export async function fetchFeedCampaigns(sb: SupabaseClient, limit = 60): Promise<Campaign[]> {
+  if (tablasAusentes) return [];
+  const { data, error } = await sb
+    .from("campaigns")
+    .select(CAMPAIGN_COLUMNS)
+    .in("status", ["active", "reached"])
+    .order("starts_on", { ascending: false })
+    .limit(limit);
+  if (faltaLaTabla(error)) tablasAusentes = true;
+  if (error || !data) return [];
+  return (data as unknown as Row[]).map(mapCampaign);
 }

@@ -69,9 +69,11 @@ const base: BrandConfig = {
 
   radius: { sm: 9, md: 12, lg: 18 },
 
+  // `--font-jakarta` la define `app/layout.tsx` con `next/font`. El respaldo queda detrás
+  // por si un clon sirve la página sin ese layout.
   font: {
-    sans: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-    display: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+    sans: "var(--font-jakarta), 'Helvetica Neue', Helvetica, Arial, sans-serif",
+    display: "var(--font-jakarta), 'Helvetica Neue', Helvetica, Arial, sans-serif",
   },
 
   contact: {

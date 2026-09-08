@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import type { LocationType } from "@/domain/types";
 import type { CenterFilter } from "@/domain/center";
 import { typeStyle } from "@/config";
@@ -48,8 +50,13 @@ export default function TypeChips({
             className={`chip${on ? " chip-on" : ""}`}
             onClick={() => toggle(type)}
             aria-pressed={on}
+            // El color del tipo viaja al CSS como variable para que el relleno de la ficha
+            // puesta sea el de SU tipo. Antes la ficha puesta se pintaba de negro y el
+            // icono de blanco, y eso borraba justo lo único que distingue un refugio de un
+            // acopio de un vistazo: su color, el mismo que llevan los pines del mapa.
+            style={{ "--tc": typeStyle(type).color } as React.CSSProperties}
           >
-            <span className="tico" style={{ color: on ? "#fff" : typeStyle(type).color }}>
+            <span className="tico" style={{ color: typeStyle(type).color }}>
               <TypeGlyph name={typeStyle(type).icon} size={15} />
             </span>
             {t(`type.${type}.plural` as DictKey)}

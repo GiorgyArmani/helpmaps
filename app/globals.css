@@ -11,6 +11,135 @@
  * this one, and porting the remaining screens is copy-and-adjust rather than re-invent.
  */
 
+/* ─────────────────────────  Esqueletos de carga  ─────────────────────────
+ *
+ * Lo que tarda se dibuja PRIMERO como el hueco que va a ocupar, nunca como una pantalla en
+ * blanco ni como una ruleta girando.
+ *
+ * No es adorno. Una ruleta no dice cuánto falta ni qué va a salir, y una pantalla en blanco
+ * se lee como que la aplicación se rompió — que en una conexión de barra y media es la
+ * conclusión razonable. El esqueleto dice dos cosas a la vez: «está llegando» y «va a tener
+ * esta forma». Y como ocupa el sitio exacto, cuando llega el contenido no empuja lo que la
+ * persona ya estaba leyendo.
+ *
+ * El brillo se apaga solo con `prefers-reduced-motion`, que está más abajo.
+ */
+.skel {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--soft);
+}
+
+.skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  animation: skel-shine 1.4s infinite;
+}
+
+@keyframes skel-shine {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Una tarjeta del feed mientras llega. Las medidas son las de `.fitem` de verdad: un
+   esqueleto que no mide lo mismo que lo que sustituye provoca justo el salto que venía a
+   evitar. */
+.skel-card {
+  padding: 13px 14px 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--e-1);
+}
+
+.skel-line {
+  height: 11px;
+  margin-bottom: 8px;
+}
+
+.skel-title {
+  height: 15px;
+  width: 62%;
+  margin-bottom: 10px;
+}
+
+.skel-line-short {
+  width: 45%;
+  margin-bottom: 0;
+}
+
+/* La fila de la lista de puntos: círculo del icono y dos líneas. */
+.skel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px var(--gut);
+}
+
+.skel-av {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.skel-rowtext {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ─────────────────  Escala de elevación, ritmo y movimiento  ─────────────────
+ *
+ * Lo que faltaba no era color: los colores ya salían de la marca. Faltaba una ESCALA. Cada
+ * tarjeta se dibujaba con su propio borde de 1px y su propia sombra inventada, y un montón
+ * de rectángulos con el mismo peso no tienen jerarquía — se leen como una hoja de cálculo.
+ *
+ * Tres niveles y no más, porque tres es lo que esta aplicación necesita: lo que está PLANO
+ * sobre el panel, lo que FLOTA por encima (una tarjeta, un menú) y lo que se despega del
+ * todo (el panel sobre el mapa). Las sombras son de dos capas —un contacto corto y muy
+ * tenue más una difusa— que es lo que hace que una sombra parezca luz y no una mancha gris.
+ *
+ * Las duraciones son las del estándar de Material y de Apple: 120ms para un toque, 200ms
+ * para un cambio de estado. Por encima de 300ms el interfaz se siente lento en un teléfono
+ * modesto, que es el aparato de referencia de este proyecto.
+ */
+:root {
+  --e-1: 0 1px 2px rgba(16, 20, 28, 0.04), 0 1px 3px rgba(16, 20, 28, 0.06);
+  --e-2: 0 1px 2px rgba(16, 20, 28, 0.04), 0 4px 12px rgba(16, 20, 28, 0.08);
+  --e-3: 0 2px 4px rgba(16, 20, 28, 0.04), 0 12px 28px rgba(16, 20, 28, 0.12);
+
+  /* El canalón del panel. Una sola medida para todo lo que va dentro: mezclar 12, 13, 14 y
+     15px —que es lo que había— se ve como un borde que tiembla al bajar por la pantalla. */
+  --gut: 16px;
+
+  /* El gris de lo apagado CUANDO ESTÁ SOBRE LA PISTA CLARA. `--mut` sobre `--soft` da
+     3,4:1 y a 13px hace falta 4,5:1 — el estado «no elegido» no puede costar la lectura
+     a quien tiene poca visión. Este ronda 4,8:1 y sigue leyéndose como apagado. */
+  --mut-track: color-mix(in srgb, var(--ink) 62%, #fff);
+
+  --t-tap: 120ms;
+  --t-ui: 200ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Quien pide menos movimiento no recibe ninguno. No es un extra: para parte de la gente
+   una transición es un mareo, y esto se usa mientras se camina. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1211,7 +1340,14 @@ a {
   color: #c9a87a;
 }
 
+/* La fila de la lista.
+   Se queda DENSA a propósito: son quinientos y pico puntos y convertir cada uno en una
+   tarjeta con sombra alarga la lista al triple y la vuelve pesada de recorrer. Lo que sí
+   cambia es la separación: la raya empezaba en el borde de la pantalla y cortaba la
+   pantalla entera de lado a lado. Ahora arranca donde arranca el texto, que es lo que
+   hace que se lea como «lo siguiente de esta lista» y no como «otra sección». */
 .card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1219,10 +1355,24 @@ a {
   text-align: left;
   background: #fff;
   border: none;
-  border-bottom: 1px solid var(--line);
-  padding: 13px 15px;
+  padding: 13px var(--gut);
   cursor: pointer;
   font-family: inherit;
+  transition: background var(--t-tap) var(--ease);
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  left: var(--gut);
+  right: var(--gut);
+  bottom: 0;
+  height: 1px;
+  background: var(--line);
+}
+
+.card:last-child::after {
+  display: none;
 }
 
 .card:hover {
@@ -1415,11 +1565,101 @@ a {
 .ovbody {
   flex: 1;
   overflow-y: auto;
-  padding: 18px calc(16px + env(safe-area-inset-right))
-    calc(30px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  /* El mismo canalón que la ficha dentro del panel: era 16px escrito a mano, y una
+     medida repetida a mano es una medida que se separa en cuanto alguien toca una. */
+  padding: 18px calc(var(--gut) + env(safe-area-inset-right))
+    calc(30px + env(safe-area-inset-bottom)) calc(var(--gut) + env(safe-area-inset-left));
 }
 
 /* ─────────────────────────────  Detail card  ───────────────────────────── */
+
+/* ── Las pestañas del perfil de un punto ────────────────────────────────────
+ *
+ * Subrayado y no pastillas, a diferencia de las pestañas del panel (`.ptabs`). No es
+ * capricho: aquellas conmutan entre CUATRO LISTAS DISTINTAS y por eso pesan; éstas
+ * recorren secciones de una misma ficha, y darles el mismo peso haría que la ficha
+ * pareciera cuatro pantallas en vez de una.
+ *
+ * Se queda pegada arriba: en una lista larga de publicaciones, perder la fila obliga a
+ * subir del todo para cambiar de sección — el scroll que estas pestañas venían a quitar.
+ */
+.ptabs2 {
+  display: flex;
+  gap: 2px;
+  margin: 18px calc(var(--gut) * -1) 0;
+  padding: 0 var(--gut);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fff;
+}
+
+.ptabs2::-webkit-scrollbar {
+  display: none;
+}
+
+.ptab2 {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--mut-track);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--t-ui) var(--ease),
+    border-color var(--t-ui) var(--ease);
+}
+
+.ptab2:hover {
+  color: var(--ink);
+}
+
+.ptab2-on {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* El contador va como número suelto, sin píldora.
+   Con pastilla, las cuatro pestañas medían 463px en una columna de 417 y «Novedades»
+   quedaba cortada por el borde — que se lee como que la ficha está rota, no como que hay
+   más si arrastras. El fondo y el relleno del contador costaban 18px por pestaña; el dato
+   se sigue viendo igual y ahora caben las cuatro. */
+.ptab2-n {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--mut);
+}
+
+.ptab2-on .ptab2-n {
+  color: var(--ink);
+}
+
+/* La primera sección de una pestaña no necesita su margen de arriba: la fila de pestañas
+   ya la separa de lo anterior, y sumados dejaban un hueco que parecía un fallo. */
+[role="tabpanel"] > :first-child,
+[role="tabpanel"] > * > .dsection:first-child {
+  margin-top: 14px;
+}
+
+/* El cuerpo de la ficha. Ver la nota en `AppShell.tsx`: todo lo de dentro
+   —`.dhero`, `.dsection`, `.icamp`, `.idon`— se dibuja sin margen lateral propio
+   porque lo pone este envoltorio, una sola vez y con la misma medida. */
+.dbody {
+  padding: 0 var(--gut) 22px;
+}
 
 .dhero {
   display: flex;
@@ -1627,11 +1867,54 @@ a {
   margin: 20px 0 9px;
 }
 
+/* ── La fila de acciones de la ficha ────────────────────────────────────────
+ *
+ * Eran botones a lo ancho, apilados uno bajo otro: cuatro rectángulos idénticos que
+ * ocupaban media pantalla antes de dejar ver un solo dato del punto, y en los que además
+ * no se distinguía el que importa —cómo llegar— de los otros tres.
+ *
+ * Ahora es una fila de botones compactos con el icono encima del nombre, del ancho que
+ * les toque. Ocupa una franja en vez de media pantalla, y en una fila el ojo compara: se
+ * ve de un golpe qué se puede hacer aquí. Es la forma en que lo resuelven los mapas
+ * grandes, y no por copiar: es lo que cabe en el pulgar de una mano.
+ *
+ * `auto-fit` con mínimo de 76px reparte lo que haya —hay puntos con dos acciones y otros
+ * con seis— sin que ninguno baje de los 44px de alto que exige poder tocarlo.
+ */
 .dactions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dactions .btnp,
+.dactions .btng {
   flex-direction: column;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 6px;
+  min-height: 64px;
+  padding: 10px 6px;
+  border-radius: var(--r-md);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* En la página pública estas acciones son enlaces de verdad (`<a>`), no botones: se
+   comparten, se abren en otra pestaña. Sin esto llegaban con el subrayado del navegador,
+   que dentro de un botón se lee como un fallo de estilo. */
+.dactions a {
+  text-decoration: none;
+}
+
+.dactions .btnp svg,
+.dactions .btng svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
 }
 
 /* ─────────────────────────────  Buttons  ───────────────────────────── */
@@ -1726,26 +2009,52 @@ a {
   width: 100%;
 }
 
+/* Compartir: cuatro en fila, no dos columnas de botones grandes. Compartir es lo último
+   que hace alguien en esta pantalla y ocupaba cuatro filas enteras — más sitio que los
+   datos del punto. Misma gramática que `.dactions`: icono encima, nombre debajo. */
 .targets {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
   margin-top: 8px;
 }
 
 .tgt {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 6px;
+  min-height: 64px;
   border: 1px solid var(--line);
-  border-radius: 13px;
-  padding: 13px;
+  border-radius: var(--r-md);
+  padding: 10px 4px;
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
   cursor: pointer;
   background: #fff;
   color: var(--ink);
+  transition:
+    border-color var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
+}
+
+.tgt:hover {
+  border-color: #dfe2e7;
+  box-shadow: var(--e-1);
+}
+
+.ti-os {
+  background: var(--soft2);
+  color: var(--ink);
+}
+
+.tgt .ti {
+  width: 26px;
+  height: 26px;
 }
 
 .ti {
@@ -4320,11 +4629,17 @@ fieldset.fieldset {
    aplicaciones. En línea con el texto al lado se partían en dos filas desparejas —tres
    arriba y dos abajo— y una rejilla dice mejor que son cinco opciones del mismo rango. */
 
+/* Los cinco filtros de tipo, DENTRO del panel.
+   Eran cinco cajas blancas con borde de 1px, del mismo peso visual que la fila de
+   pestañas justo encima: dos controles distintos dibujados igual. Ahora son fichas
+   apagadas sobre el fondo del panel —sin borde y sin sombra— y la que está puesta se
+   rellena. Así el ojo distingue de un vistazo qué es «en qué lista estoy» (arriba, la
+   pastilla blanca elevada) de «qué estoy filtrando» (aquí, lo relleno). */
 .sheet .chips {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 4px;
-  padding: 8px 10px 10px;
+  gap: 6px;
+  padding: 2px var(--gut) 12px;
   overflow: visible;
   border-bottom: 1px solid var(--line);
 }
@@ -4334,14 +4649,35 @@ fieldset.fieldset {
   justify-content: flex-start;
   gap: 6px;
   box-shadow: none;
+  border: 1px solid transparent;
+  background: var(--soft);
   border-radius: 13px;
-  padding: 9px 3px 8px;
+  padding: 10px 3px 9px;
   font-size: 0.64rem;
+  font-weight: 600;
   line-height: 1.15;
+  /* Tinta, no gris: a 10px sobre el fondo suave, `--mut` da 3,4:1 y el mínimo legible es
+     4,5:1. Lo puesto y lo no puesto se distinguen por el RELLENO, no por aclarar el
+     texto — que es la forma de marcar un estado que deja a alguien sin poder leerlo. */
+  color: var(--ink);
   text-align: center;
   white-space: normal;
   overflow-wrap: anywhere;
   min-width: 0;
+  transition:
+    background var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease);
+}
+
+.sheet .chips .chip:hover {
+  background: var(--soft2);
+}
+
+/* Puesto: el color del propio tipo, tenue. `--tc` la pone el componente. Rellenarlo de
+   negro —lo que hacía— borraba el color por el que se reconoce ese tipo en el mapa. */
+.sheet .chips .chip-on {
+  background: color-mix(in srgb, var(--tc) 12%, #fff);
+  border-color: color-mix(in srgb, var(--tc) 30%, transparent);
 }
 
 .sheet .chips .tico { width: 24px; height: 24px; }
@@ -4471,47 +4807,80 @@ fieldset.fieldset {
    ancho de contador era una palabra más de romperlo otra vez. Tres iconos caben siempre.
    El nombre va en `aria-label` y `title`. */
 
+/* ── Las pestañas del panel: un control segmentado ──────────────────────────
+ *
+ * Antes eran cuatro botones sueltos, cada uno con su borde de 1px y su relleno oscuro al
+ * activarse. Cuatro rectángulos del mismo peso no dicen que sean UNA sola elección: se
+ * leen como cuatro botones que hacen cuatro cosas distintas.
+ *
+ * Ahora hay una PISTA —un solo bloque hundido— y dentro una pastilla blanca elevada que se
+ * mueve. Eso sí dice «esto es un conmutador, y estás aquí». Es la misma gramática del
+ * conmutador del feed («Necesito ayuda» / «Quiero ayudar»), a propósito: dos controles que
+ * hacen lo mismo tienen que parecerse.
+ *
+ * La pastilla activa CRECE para caber su nombre. Ver la nota de `PanelTabs.tsx`.
+ */
 .ptabs {
   display: flex;
-  gap: 5px;
-  padding: 6px 12px 8px;
-  border-bottom: 1px solid var(--line);
+  gap: 2px;
+  margin: 8px var(--gut) 10px;
+  padding: 3px;
+  background: var(--soft);
+  border-radius: 13px;
   flex: 0 0 auto;
 }
 
 .ptab {
-  flex: 1 1 0;
+  flex: 0 1 auto;
   min-width: 0;
-  height: 40px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1px solid var(--line);
-  background: #fff;
+  padding: 0 10px;
+  border: 0;
+  background: none;
   border-radius: 11px;
-  color: var(--mut);
+  color: var(--mut-track);
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    background var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
+}
+
+/* Las que NO están abiertas se reparten el resto del ancho a partes iguales; la abierta
+   toma lo que necesite su nombre. Así la pastilla se ensancha y las demás ceden, en vez de
+   que la fila entera se descoloque. */
+.ptab:not(.ptab-on) {
+  flex: 1 1 0;
+  padding: 0 4px;
 }
 
 .ptab:not(.ptab-on):hover {
   color: var(--ink);
-  border-color: #d9dce1;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.ptab:active {
+  transform: scale(0.97);
 }
 
 .ptab-on {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-1);
 }
 
 .ptab-ic {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
 }
 
 .ptab-ic svg {
@@ -4520,19 +4889,37 @@ fieldset.fieldset {
   display: block;
 }
 
+/* El nombre existe en el marcado siempre y aquí se colapsa. `max-width` y no `display` para
+   que la anchura se pueda animar: un `none` salta de golpe. */
+.ptab-lb {
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  transition:
+    max-width var(--t-ui) var(--ease),
+    opacity var(--t-ui) var(--ease);
+}
+
+.ptab-on .ptab-lb {
+  max-width: 9rem;
+  opacity: 1;
+}
+
 .ptab-n {
   flex: 0 0 auto;
   font-size: 0.6875rem;
   font-weight: 700;
   line-height: 1;
-  background: var(--soft);
+  font-variant-numeric: tabular-nums;
+  background: rgba(16, 20, 28, 0.06);
   border-radius: 999px;
-  padding: 3px 5px;
+  padding: 3px 6px;
+  color: var(--mut);
 }
 
 .ptab-on .ptab-n {
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  background: var(--soft2);
+  color: var(--ink);
 }
 
 /* Plegado el panel, las pestañas se van con la lista, igual que los chips. */
@@ -5855,10 +6242,18 @@ fieldset.fieldset {
   border-bottom: 0;
 }
 
+/* `aspect-ratio` RESERVA el sitio antes de que la foto llegue.
+   Con `max-height` solamente, el hueco medía cero hasta que la imagen cargaba y entonces
+   empujaba de golpe todo lo que había debajo: quien estaba leyendo el texto de la
+   publicación se lo encontraba doscientos píxeles más abajo a media frase. Con la
+   proporción declarada el sitio ya está hecho y sólo cambia el contenido. Es el CLS de
+   Core Web Vitals, y en una lista con scroll infinito es la diferencia entre fluido y
+   dando tumbos. */
 .ipost-img {
   display: block;
   width: 100%;
-  max-height: 240px;
+  aspect-ratio: 16 / 10;
+  max-height: 320px;
   object-fit: cover;
   border-radius: var(--r-sm);
   margin-bottom: 9px;
@@ -6577,3 +6972,988 @@ fieldset.fieldset {
   line-height: 1.4;
   color: var(--mut);
 }
+
+/* Atajo para el campo de texto de «qué necesita ahora»: los mismos insumos, pero añaden
+   la palabra al texto en vez de marcar una casilla. Ver `SupplyQuickAdd.tsx` para por qué
+   no es el mismo componente que el de «qué recibe». */
+
+.supq {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: -4px;
+}
+
+.supq-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* Más pequeños y discretos que los de `.sup-chip`: aquí no son la respuesta, son un
+   atajo para escribirla. El campo de texto sigue siendo el control principal. */
+.supq-chip {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.supq-chip:hover {
+  color: var(--ink);
+  border-color: #d9dce1;
+  border-style: solid;
+}
+
+/* «Cómo sube tu nivel»: las acciones con su valor al lado, de más a menos. Es lo que
+   convierte la escala en un incentivo — sin los números a la vista, «te faltan 30» no
+   dice si eso son treinta toques de botón o dos visitas. */
+
+.rec-how {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rec-how-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rec-how-row:last-child {
+  border-bottom: 0;
+}
+
+.rec-how-txt {
+  font-size: 0.8125rem;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.rec-how-pts {
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Aportes por confirmar, en el panel de la iniciativa. Va arriba del todo cuando hay
+   alguno: es lo único de ese panel donde hay una persona esperando respuesta. */
+
+.claims {
+  border: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line));
+  border-radius: var(--r-md);
+  padding: 2px 13px 13px;
+  margin-bottom: 12px;
+  background: color-mix(in srgb, var(--brand) 5%, #fff);
+}
+
+.claim {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.claim-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.claim-who b {
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.claim-note {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--mut);
+}
+
+.claim-acts {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
+
+/* Los dos botones tienen el MISMO peso visual a propósito: confirmar no es la respuesta
+   «correcta». Si «me llegó» fuera el botón bonito y «no me llegó» un enlace gris, se
+   confirmarían aportes que no llegaron por no llevar la contraria. */
+.claim-yes,
+.claim-no {
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.claim-yes {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 40%, #fff);
+}
+
+.claim-no {
+  color: var(--mut);
+}
+
+.claim-yes:hover {
+  background: color-mix(in srgb, var(--ok) 10%, #fff);
+}
+
+.claim-no:hover {
+  color: var(--ink);
+}
+
+/* «Ya aporté», en la ficha pública. */
+.idon-claim {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.idon-claimed {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--ok) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--ok) 28%, #fff);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.idon-claimed svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: var(--ok);
+}
+
+/* ─────────────────  El feed  ─────────────────────────────────────────────
+   «Qué está pasando cerca», en scroll. Tiene su propia pestaña porque contesta otra
+   pregunta que la lista de puntos: allí se busca una puerta, aquí se mira qué ocurre.
+   Ver `src/features/feed/FeedPanel.tsx`. */
+
+/* ── El feed ────────────────────────────────────────────────────────────────
+ *
+ * Era una lista de filas separadas por una raya. Una raya de 1px agrupa por vecindad, no
+ * por pertenencia: al bajar deprisa no se ve dónde acaba una publicación y empieza otra, y
+ * todo pesa lo mismo. Ahora cada cosa es una TARJETA con su aire alrededor, que es lo que
+ * un scroll infinito necesita para que el pulgar sepa dónde está.
+ *
+ * Elevación 1, la más baja de la escala: una tarjeta de feed reposa, no flota. Reservar la
+ * sombra fuerte para lo que de verdad se despega —el panel sobre el mapa— es lo que impide
+ * que «elevado» deje de significar nada.
+ */
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 var(--gut) 18px;
+}
+
+.feed > * {
+  flex: 0 0 auto;
+}
+
+/* Las dos caras. Mismo control segmentado que las pestañas del panel: dos conmutadores que
+   hacen lo mismo tienen que parecerse. Antes uno era negro relleno y el otro píldoras con
+   borde, y no se leían como parientes. */
+.feed-modes {
+  display: flex;
+  gap: 2px;
+  margin: 10px 0 4px;
+  padding: 3px;
+  background: var(--soft);
+  border-radius: 13px;
+}
+
+.feed-mode {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--mut-track);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
+}
+
+.feed-mode-on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-1);
+}
+
+.fitem {
+  padding: 13px 14px 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--e-1);
+  transition:
+    box-shadow var(--t-ui) var(--ease),
+    border-color var(--t-ui) var(--ease);
+}
+
+.fitem:hover {
+  box-shadow: var(--e-2);
+  border-color: #dfe2e7;
+}
+
+/* La cabecera es el botón que abre la ficha: toda la fila, no un enlace pequeño. */
+/* Es un `<a>` de verdad (ver `FeedPanel`), así que llega con el subrayado del navegador.
+   Una lista entera de titulares subrayados se lee como una página de resultados de 1998, y
+   además compite con la única cosa que aquí sí debe parecer un enlace: nada. La tarjeta
+   completa es el destino. */
+.fitem-head {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 0 0 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fitem-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.fitem-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+
+.fitem-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.fitem-saved svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* Igual que `.ipost-img`: la proporción reserva el hueco. Ver la nota de allí. */
+.fitem-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 300px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  margin-bottom: 9px;
+  background: var(--soft);
+}
+
+.fitem-body {
+  margin: 0;
+  font-size: 0.8438rem;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-line;
+}
+
+/* La campaña dentro de la tarjeta: bloque hundido y SIN borde propio. Una caja con borde
+   dentro de otra caja con borde son dos marcos discutiendo; el fondo basta para decir que
+   esto es otra cosa. */
+.fitem-camp {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 12px;
+  border-radius: var(--r-sm);
+  background: var(--soft);
+}
+
+.fitem-camp b {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.fitem-goal {
+  font-size: 0.75rem;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+
+.fitem-goal b {
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+.fitem-need,
+.fitem-open {
+  margin: 0;
+  font-size: 0.8438rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+/* La etiqueta va DENTRO del párrafo, en línea: una necesidad es una frase, y separarla
+   de su rótulo la parte en dos cosas que se leen por separado. */
+.fitem-tag {
+  display: inline-block;
+  margin-right: 7px;
+  font-size: 0.625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #b45309;
+  background: color-mix(in srgb, #b45309 10%, #fff);
+  border-radius: 999px;
+  padding: 3px 8px;
+  vertical-align: 1px;
+}
+
+.feed-more {
+  padding: 14px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--mut);
+}
+
+/* Lo que un punto OFRECE, en la cara de «necesito ayuda». Verde y no ámbar: aquí la
+   noticia es que está abierto, no que le falte algo. El párrafo lo comparte con
+   `.fitem-need` más arriba; lo único propio es el color de la etiqueta. */
+.fitem-tag-open {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, #fff);
+}
+
+/* El panel diario del gestor. El orden de la pantalla está explicado en `ManagePanel.tsx`:
+   primero lo que otra persona espera, luego lo que caduca antes. */
+
+/* El aviso ocupa el sitio de la pista, no se añade debajo: así el bloque no da un salto
+   bajo el dedo justo cuando hay que volver a tocar el botón. */
+/* La portada y la foto del perfil, en el panel del gestor. */
+.mine-img {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.mine-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* La etiqueta hace de botón y esconde el `input` de archivo: el control de fábrica no se
+   puede estilar y se dibuja distinto en cada navegador. */
+.mine-drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  aspect-ratio: 1;
+  margin-top: 8px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  background: var(--soft);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color var(--t-ui) var(--ease);
+}
+
+.mine-drop-wide {
+  width: 100%;
+  aspect-ratio: 16 / 6;
+}
+
+.mine-drop:hover {
+  border-color: #c9ced6;
+}
+
+.mine-drop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mine-drop input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.mine-drop-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--mut);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.mine-drop-empty svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mine-slot .mine-camp-btn {
+  align-self: flex-start;
+}
+
+.mine-status-fail {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #b42318;
+}
+
+.mine-status {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 2px 13px 12px;
+  margin-bottom: 10px;
+}
+
+.mine-status-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* Los tres estados, del mismo tamaño: ninguno es «el bueno». Y 40px de alto porque esto
+   se toca de pie, con una mano, varias veces al día. */
+.mine-st {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mine-st:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.mine-st-on {
+  color: #fff;
+}
+
+/* Cada estado con su color, el mismo con el que se pinta en la ficha pública: quien lo
+   marca tiene que reconocer lo que va a ver la gente. */
+.mine-st-abierto {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+
+.mine-st-lleno {
+  background: #b45309;
+  border-color: #b45309;
+}
+
+.mine-st-cerrado {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.mine-camp {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mine-camp .mine-row {
+  border-bottom: 0;
+  padding-top: 0;
+}
+
+.mine-camp .icamp-bar {
+  margin-top: 2px;
+}
+
+/* Del mismo idioma que `.mine-add`, no un enlace azul subrayado: en una columna de
+   botones punteados, el único enlace de la pantalla se lee como si llevara a otro sitio
+   —y no lleva, abre el editor ahí mismo—. Va a media anchura porque cuelga de UNA campaña
+   y no del bloque entero, que es lo que distingue de un vistazo a qué se aplica. */
+.mine-camp-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin-top: 8px;
+  padding: 0 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Cerrar no compite con guardar: pierde el relleno oscuro y se queda en texto apagado,
+   para que el gesto de todos los días sea el que salta a la vista. */
+.mine-camp-close {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: none;
+  padding: 0 14px;
+  min-height: 38px;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mine-camp-sure-q {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--fg);
+}
+
+.mine-camp-edit {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: var(--r-sm);
+  background: var(--soft);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mine-post {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mine-post-when {
+  font-size: 0.6875rem;
+  color: var(--mut);
+}
+
+.mine-post-body {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* El aviso de lo que el gestor NO puede tocar. En línea, con su icono. */
+.mine-form .fhint svg {
+  width: 12px;
+  height: 12px;
+  vertical-align: -2px;
+  margin-right: 3px;
+}
+
+
+/* ═══════════════  El perfil público de un punto (`/c/<id>`)  ═══════════════
+ *
+ * Es la única pantalla del producto que se ve FUERA del mapa, y por eso tiene su propia
+ * caja: aquí no hay panel flotando sobre nada, hay una página. Reusa todo lo demás
+ * —`.dneed`, `.drows`, `.dtags`, `.dactions`, `.ptabs2`, las secciones de iniciativa—
+ * porque es la misma información y tiene que leerse igual en los dos sitios.
+ */
+/* La PÁGINA: fondo apagado detrás de la tarjeta.
+   Sin esto, en una pantalla ancha la columna de 720px flotaba sobre blanco infinito y se
+   leía como un documento a medio maquetar — no se distinguía dónde acababa el contenido de
+   dónde empezaba el hueco. Con un fondo detrás, la columna es una tarjeta con principio y
+   final, y el espacio de abajo pasa a ser margen en vez de parecer un fallo. */
+.profpage {
+  background: var(--soft);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.prof {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+  background: #fff;
+  flex: 1 1 auto;
+}
+
+/* En móvil la tarjeta ocupa la pantalla entera: recuadrar una columna que ya es del ancho
+   del teléfono sólo roba píxeles a la lectura. Los bordes redondeados y la sombra son una
+   idea de escritorio, donde SÍ hay un fondo alrededor que los justifique. */
+@media (min-width: 768px) {
+  .prof {
+    margin: 28px auto;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: var(--e-2);
+    flex: 0 0 auto;
+  }
+
+  /* Con sitio de sobra, la portada respira. 150px en una pantalla de 1400 se ven como una
+     franja olvidada, no como la portada de un perfil. */
+  .prof-cover {
+    height: 210px;
+  }
+
+  .prof-id {
+    margin-top: -42px;
+  }
+
+  .prof-photo {
+    width: 92px;
+    height: 92px;
+    border-radius: 26px;
+  }
+}
+
+/* El pie: cierra la página y dice de dónde sale esto. Quien llega por un enlace compartido
+   no tiene otra forma de saber que hay un mapa detrás, y es justo a quien le interesa. */
+.proffoot {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 22px var(--gut) calc(28px + env(safe-area-inset-bottom));
+  font-size: 0.75rem;
+  color: var(--mut);
+}
+
+.proffoot a {
+  color: var(--mut);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.proffoot a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* La portada. Sin imagen se pinta un degradado del color del tipo: un perfil recién
+   creado tiene que verse ACABADO, no roto, porque es el estado en el que va a estar la
+   mayoría el día que esto se abra. */
+.prof-cover {
+  position: relative;
+  height: 150px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 26%, #fff), var(--soft));
+}
+
+.prof-cover-img {
+  background-size: cover;
+  background-position: center;
+}
+
+/* Sólo el chevron. El nombre de la plataforma no pinta nada aquí: quien está mirando el
+   perfil de un comedor no necesita que se lo recuerden, y ese botón compite por atención con
+   lo único que importa arriba, que es de quién es este sitio. La marca ya está en el pie, y
+   el destino sigue anunciado en `aria-label` para quien navega a ciegas. */
+.prof-back {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--e-1);
+  color: var(--ink);
+  text-decoration: none;
+  backdrop-filter: blur(6px);
+  transition: background var(--t-ui) var(--ease);
+}
+
+.prof-back:hover {
+  background: #fff;
+}
+
+/* El chevron sustituye a la flecha «←» escrita a mano. Un carácter de flecha no se puede
+   alinear con la línea base —cada fuente lo dibuja a una altura distinta— y cambia de forma
+   según qué tipografía acabe usando el sistema. El icono es el mismo en todas partes. */
+.prof-back svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+
+
+.prof-body {
+  padding: 0 var(--gut);
+}
+
+/* La foto monta sobre la portada, como en cualquier perfil: es lo que ata las dos piezas
+   y evita que se lean como dos bloques sin relación. */
+/* ⚠️ `position: relative` NO es decorativo: sin él la portada tapa la foto.
+ *
+ * `.prof-cover` está posicionada (lleva dentro el botón de volver, que es `absolute`). Un
+ * elemento posicionado se pinta POR ENCIMA de los que no lo están, sin importar el orden del
+ * marcado — así que la foto, que va después y debería montar sobre la portada, quedaba
+ * debajo y su mitad superior aparecía cortada por una línea recta justo en el borde de la
+ * portada. Se leía como una imagen rota, no como un fallo de capas.
+ *
+ * Posicionar este bloque lo devuelve a la misma liga que la portada, y ahí sí manda el orden
+ * del marcado: va después, luego encima. */
+.prof-id {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: -34px;
+}
+
+/* El marco blanco la separa de la portada, PERO en cuanto la foto baja del borde de la
+   portada ese marco blanco cae sobre fondo blanco y la mitad de abajo desaparece: se lee
+   como un recuadro cortado por el borde de la tarjeta. La línea fina de fuera la vuelve a
+   cerrar sobre los dos fondos. */
+.prof-photo {
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  background: #fff;
+  border: 3px solid #fff;
+  outline: 1px solid var(--line);
+  outline-offset: -4px;
+  box-shadow: var(--e-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.prof-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.prof-name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.prof-meta {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--mut);
+}
+
+.prof-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: var(--soft);
+  color: var(--mut);
+}
+
+.prof-status-abierto {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, #fff);
+}
+
+.prof-status-lleno {
+  color: #b45309;
+  background: color-mix(in srgb, #b45309 10%, #fff);
+}
+
+.prof-status-cerrado {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, #fff);
+}
+
+.prof-warn {
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  border: 1px solid #f3cba0;
+  background: #fff8ef;
+  color: #6b4a1c;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.prof-note {
+  margin: 18px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--mut);
+}
+
+/* La publicación a la que apunta un enlace del feed. `:target` la resuelve el navegador
+   solo: sin JavaScript, sin estado y sin que el servidor tenga que saber cuál era. El
+   resaltado se desvanece —queda el sitio, no una marca permanente— porque su trabajo es
+   decir «es ésta» durante los dos segundos en los que hace falta. */
+.ipost:target {
+  border-radius: var(--r-md);
+  animation: post-target 2.4s var(--ease) forwards;
+}
+
+@keyframes post-target {
+  0%,
+  55% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 24%, transparent);
+    background: color-mix(in srgb, var(--brand) 5%, #fff);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+    background: transparent;
+  }
+}
+
+@media (max-width: 520px) {
+  .prof-name {
+    font-size: 1.3125rem;
+  }
+}
+
+
+/* ──────────────────────  Áreas tocables  ──────────────────────────────────
+ *
+ * Medido a 390px: la cabecera y varios controles del mapa quedaban entre 29 y 40px de
+ * alto. El mínimo para acertar con el pulgar es 44 (Apple) / 48 (Material), y por debajo de
+ * eso el fallo no es «se ve pequeño»: es que la gente toca dos veces, toca el de al lado, o
+ * abandona.
+ *
+ * Se agranda el ÁREA, no el dibujo. Estos controles conviven en una barra estrecha sobre el
+ * mapa y engordarlos de verdad obligaría a rehacer la cabecera entera para ganar lo mismo
+ * que gana un rectángulo invisible.
+ *
+ * ⚠️ LA LISTA VA UNA SOLA VEZ, Y NO ES UN CAPRICHO DE ESTILO.
+ *
+ * Esto empezó siendo dos reglas: una que ponía `position: relative` en los anfitriones y
+ * otra que dibujaba el `::after`. Se desincronizaron —`.handle` salió de la primera y se
+ * quedó en la segunda— y el resultado fue que su `::after`, al no encontrar antepasado
+ * posicionado, se ancló AL PANEL ENTERO: `left:0; right:0; bottom:-22px` dejó de ser un
+ * margen alrededor de una barra y pasó a ser una lámina invisible sobre todo el menú. En
+ * escritorio no se podía pulsar nada: ni pestañas, ni filtros, ni tarjetas, y sin ningún
+ * síntoma visual que lo delatara.
+ *
+ * Por eso las dos declaraciones van juntas en el MISMO bloque: no se puede añadir un
+ * selector a una y olvidarlo en la otra.
+ *
+ * ⚠️ La extensión es SÓLO VERTICAL. Estos botones van pegados en la misma fila; extenderlos
+ * a los lados solaparía sus áreas y el toque se lo llevaría el vecino.
+ */
+.avatar,
+.langbtn,
+.needbar,
+.cpick-btn,
+.brand,
+.gear,
+.fab {
+  position: relative;
+}
+
+.avatar::after,
+.langbtn::after,
+.needbar::after,
+.cpick-btn::after,
+.brand::after,
+.gear::after,
+.fab::after,
+/* `.hfold` va aparte porque YA es `absolute`: escribirle `relative` lo sacó de su esquina
+   y lo mandó al flujo. Su `::after` se ancla a él mismo, que es lo correcto. */
+.hfold::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -8px;
+  bottom: -8px;
+}
+
+/* La pestaña de arrastre del panel NO se agranda, y es deliberado.
+   Mide 22px de alto pero ocupa los 460 de ancho del panel: como diana es enorme y nadie la
+   falla — la regla de los 44px habla de la dimensión menor de un objetivo PUNTUAL, no de
+   una barra que cruza la pantalla. Y no hay hacia dónde crecer sin romper algo: hacia abajo
+   tapa la fila de pestañas, y hacia arriba le roba al mapa una franja del ancho completo,
+   con lo que el pin más cercano al panel abriría el panel en vez de abrirse él.
+
+   Un enlace dentro de un párrafo (`.small a`) tampoco se agranda: se solaparía con las
+   líneas de arriba y de abajo, y un párrafo por el que se navega sin querer al rozarlo es
+   peor que un enlace pequeño. Su tamaño es el del texto porque es texto. */

@@ -314,7 +314,9 @@ a.doc-tile-feature:hover .doc-tile-chev { background: var(--accent); color: #fff
 }
 .doc-primary { background: #15181d; color: #fff; }
 .doc-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(16, 20, 28, 0.22); }
-.doc-secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+.doc-secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; gap: 7px; }
+/* El icono en vez de la flecha «←» que llevaba el texto. Ver la nota de `BACK_DOCS`. */
+.doc-secondary svg { width: 16px; height: 16px; flex: 0 0 auto; }
 .doc-secondary:hover { border-color: #d4d7de; background: #fafbfc; }
 .doc-single { margin-top: 20px; }
 .doc-single .doc-primary { display: block; }

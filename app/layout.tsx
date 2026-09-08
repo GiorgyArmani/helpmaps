@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { BRAND, IS_HUB } from "@/config";
 import { currentEmergency, getSite } from "@/server/emergency";
@@ -8,6 +9,29 @@ import { SiteProvider } from "@/features/app/SiteProvider";
 import ServiceWorkerRegister from "@/features/app/ServiceWorkerRegister";
 import Analytics from "@/features/app/Analytics";
 import RecoveryRedirect from "@/features/account/RecoveryRedirect";
+
+/**
+ * La tipografía de la plataforma.
+ *
+ * Hasta ahora la marca pedía `'Helvetica Neue', Helvetica, Arial`, que en Android y en
+ * Windows no existe: caía en Arial y en Roboto. Ese es el motivo real de que la interfaz
+ * «pareciera sin diseñar» — no los colores ni los bordes, sino que cada sistema la
+ * dibujaba con una letra distinta y ninguna elegida.
+ *
+ * Va por `next/font`, que la sirve desde nuestro propio dominio con la fuente ya
+ * subsetada: no hay petición a Google desde el navegador de nadie —que además es un dato
+ * de tráfico que este proyecto no tiene por qué repartir— ni salto de texto al cargar,
+ * porque Next reserva la métrica con una fuente de respaldo ajustada.
+ *
+ * `--font-jakarta` la lee `config/brand.ts` dentro de `font.sans`, así que un país que
+ * quiera otra letra sigue cambiándola en su preset y no aquí.
+ */
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-jakarta",
+});
 
 /**
  * Metadata is generated rather than exported as a constant because the title, the
@@ -75,7 +99,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     : null;
 
   return (
-    <html lang={site.language.default} data-country={site.country.slug}>
+    <html lang={site.language.default} data-country={site.country.slug} className={jakarta.variable}>
       <head>
         {/* Brand tokens from the resolved config, so a clone re-skins without touching CSS. */}
         <style dangerouslySetInnerHTML={{ __html: themeCss(site.brand) }} />

@@ -164,9 +164,12 @@ export default async function EntryPage({
         ) : null}
 
         {/* An escape hatch for anyone who just wants the map, without reading a word. */}
-        <Link href={app()} className="entry-skip">
-          {t("entry.enter")} →
-        </Link>
+        <div className="entry-skipwrap">
+          <Link href={app()} className="entry-skip">
+            {t("entry.enter")}
+            <Icon.chevron />
+          </Link>
+        </div>
 
         <footer className="entry-foot">
           {/* The tagline is a config string, written in this deployment's language: showing

@@ -200,18 +200,64 @@ drop policy if exists user_badges_staff_update on public.user_badges;
 
 
 -- ===========================================================================
--- 5) Cómo se anota una contribución
+-- 5) Cuánto vale cada cosa, y quién lo decide
 --
--- `security definer` porque `contributions` no tiene política de INSERT: ésta es la única
--- puerta, y por eso valida aquí dentro en vez de confiar en quien llama.
+-- ── LA ESCALA, Y POR QUÉ ES TAN DESIGUAL ───────────────────────────────────
 --
--- Devuelve el total nuevo para que la app pueda decir «+2» sin volver a preguntar.
+-- Confirmar desde el sofá que un punto sigue abierto vale 1. Presentarse allí, escanear su
+-- código y que quede constancia vale 10. Aportar a una iniciativa, 15.
+--
+-- La diferencia es el producto entero. Lo que se quiere provocar es que alguien SALGA:
+-- que visite un punto, vea lo que hace falta de verdad y ayude a varias causas por el
+-- camino. Una escala plana premia por igual pulsar un botón cincuenta veces y cruzar la
+-- ciudad, y entonces el nivel deja de significar «esta persona apareció» — que es
+-- exactamente lo que un comercio aliado va a querer saber antes de dar un beneficio.
+--
+-- Con esta escala, llegar arriba sólo confirmando exigiría 250 confirmaciones y es
+-- inviable a propósito. Con acciones físicas son unas veinte, que es una temporada de
+-- alguien que de verdad está ayudando.
+--
+-- ── EL VALOR NO VIAJA EN LA LLAMADA ────────────────────────────────────────
+--
+-- La primera versión recibía `p_points` de quien llamaba. Con todo valiendo 1 era
+-- tolerable; con un check-in valiendo 10 es un formulario para regalarse el nivel. Ahora
+-- el valor sale de aquí dentro, y el que llama sólo dice QUÉ hizo.
 -- ===========================================================================
 
+create or replace function public.contribution_points(p_kind text)
+returns int
+language sql
+immutable
+as $pts$
+  select case p_kind
+    -- Desde el teléfono, sin moverse. Cuenta, pero poco.
+    when 'report'     then 1
+    when 'suggestion' then 3
+    -- Hay que estar allí. Éstas son las que mueven el nivel.
+    when 'checkin'    then 10
+    when 'volunteer'  then 10
+    when 'donation'   then 15
+    else 0
+  end;
+$pts$;
+
+/**
+ * Anotar algo que alguien hizo.
+ *
+ * ── YA NO LA PUEDE LLAMAR EL CLIENTE ────────────────────────────────────────
+ *
+ * El `grant` a `authenticated` se retira más abajo. Mientras todo valía 1, que la app
+ * llamara a esto era discutible; ahora que un check-in vale 10 y una donación 15, dejarlo
+ * abierto sería poner el nivel a la venta por el precio de abrir la consola del navegador.
+ *
+ * Quien la llama es un TRIGGER (como `reward_applied_report`, que corre cuando el equipo
+ * aplica un aviso) o el servidor con el service role, después de comprobar que la acción
+ * ocurrió. Ésa es la única forma de que el nivel signifique algo comprobado.
+ */
 create or replace function public.record_contribution(
   p_kind        text,
   p_location_id text default null,
-  p_points      int default 1
+  p_user_id     uuid default null
 )
 returns int
 language plpgsql
@@ -219,111 +265,116 @@ security definer
 set search_path = public
 as $rec$
 declare
+  v_user  uuid := coalesce(p_user_id, auth.uid());
   v_total int;
 begin
-  if auth.uid() is null then
-    raise exception 'Hay que iniciar sesión.';
-  end if;
-  -- Los puntos NO los elige quien llama por encima de un tope: sin esto, la firma de la
-  -- función sería un formulario para regalarse la tabla de posiciones.
-  if p_points is null or p_points < 0 or p_points > 5 then
-    raise exception 'Valor de contribución fuera de rango.';
+  if v_user is null then
+    raise exception 'Falta a quién anotárselo.';
   end if;
 
   insert into public.contributions (user_id, kind, location_id, points, emergency_id)
   values (
-    auth.uid(),
+    v_user,
     p_kind,
     p_location_id,
-    p_points,
+    public.contribution_points(p_kind),
     (select emergency_id from public.locations where id = p_location_id)
   )
   -- Repetir la misma acción el mismo día no falla: simplemente no suma. Un error aquí
-  -- obligaría a la app a distinguir «ya lo hiciste» de «algo se rompió», y para quien
-  -- escanea un QR dos veces las dos cosas son «ya está».
+  -- obligaría a quien llama a distinguir «ya lo hiciste» de «algo se rompió», y para
+  -- quien escanea un QR dos veces las dos cosas son «ya está».
   on conflict do nothing;
 
   select coalesce(sum(points), 0)::int into v_total
-    from public.contributions where user_id = auth.uid();
+    from public.contributions where user_id = v_user;
   return v_total;
 end
 $rec$;
 
-revoke all on function public.record_contribution(text, text, int) from public;
-grant execute on function public.record_contribution(text, text, int) to authenticated;
+-- La firma vieja, con `p_points`, se retira: mientras exista, existe el agujero.
+drop function if exists public.record_contribution(text, text, int);
 
--- Otorgar una medalla. Idempotente: pedirla dos veces no la duplica ni cambia su fecha.
-create or replace function public.award_badge(p_badge text)
-returns boolean
+revoke all on function public.record_contribution(text, text, uuid) from public;
+-- Sin `grant` a `authenticated`: ver la nota de arriba. Sólo triggers y service role.
+
+-- ===========================================================================
+-- 7) Las medallas las decide la BASE, no la aplicación
+--
+-- La primera versión las evaluaba en el cliente y llamaba a `award_badge` con el código
+-- que hiciera falta. Como las medallas no dan permisos, parecía proporcionado — y no lo
+-- era: cualquiera podía pedirse «Vigía» desde la consola del navegador sin haber
+-- confirmado nada, y una distinción que se puede reclamar sola no distingue nada.
+--
+-- Ahora se otorgan solas, desde un trigger, contando lo que hay en `contributions`. El
+-- cliente no participa: ni elige la medalla, ni el momento, ni puede pedirla.
+--
+-- ⚠️ ESTE BLOQUE Y `src/domain/badges.ts` SON LA MISMA REGLA ESCRITA DOS VECES. Aquí se
+-- decide quién la tiene; allí sólo se dibuja. Si dejan de coincidir manda ésta, y lo que
+-- se vería en pantalla sería una promesa que la base no cumple. Se cambian juntos.
+-- ===========================================================================
+
+create or replace function public.evaluate_badges(p_user uuid)
+returns void
 language plpgsql
 security definer
 set search_path = public
-as $award$
+as $ev$
 declare
-  -- `row_count` es un ENTERO. Asignarlo a un boolean directamente es un error de tipos y
-  -- plpgsql lo rechaza al ejecutarse, no al crear la función — así que habría pasado
-  -- desapercibido hasta que alguien ganara su primera medalla.
-  v_rows int := 0;
+  v_total     int;
+  v_reports   int;
+  v_donations int;
+  v_volunteer int;
+  v_days      int;
 begin
-  if auth.uid() is null then
-    raise exception 'Hay que iniciar sesión.';
-  end if;
-  insert into public.user_badges (user_id, badge)
-  values (auth.uid(), p_badge)
-  on conflict (user_id, badge) do nothing;
-  get diagnostics v_rows = row_count;
-  -- true sólo la primera vez: pedirla de nuevo no la duplica ni mueve su fecha.
-  return v_rows > 0;
+  select
+    count(*),
+    count(*) filter (where kind = 'report'),
+    count(*) filter (where kind = 'donation'),
+    count(*) filter (where kind = 'volunteer'),
+    count(distinct (created_at at time zone 'UTC')::date)
+  into v_total, v_reports, v_donations, v_volunteer, v_days
+  from public.contributions
+  where user_id = p_user;
+
+  -- `on conflict do nothing` en cada una: otorgar dos veces no duplica ni mueve la fecha
+  -- de cuando se ganó, que es lo único que esa fila cuenta.
+  if v_total     >= 1  then insert into public.user_badges (user_id, badge) values (p_user, 'first')     on conflict do nothing; end if;
+  if v_reports   >= 5  then insert into public.user_badges (user_id, badge) values (p_user, 'confirmer') on conflict do nothing; end if;
+  if v_reports   >= 25 then insert into public.user_badges (user_id, badge) values (p_user, 'lookout')   on conflict do nothing; end if;
+  if v_donations >= 1  then insert into public.user_badges (user_id, badge) values (p_user, 'giver')     on conflict do nothing; end if;
+  if v_volunteer >= 3  then insert into public.user_badges (user_id, badge) values (p_user, 'hands')     on conflict do nothing; end if;
+  if v_days      >= 7  then insert into public.user_badges (user_id, badge) values (p_user, 'steady')    on conflict do nothing; end if;
 end
-$award$;
+$ev$;
 
-revoke all on function public.award_badge(text) from public;
-grant execute on function public.award_badge(text) to authenticated;
-
-
-
--- ===========================================================================
--- 6) La experiencia se gana por lo COMPROBADO, no por lo declarado
---
--- Este bloque es la respuesta a un agujero real. La primera versión sumaba experiencia al
--- ENVIAR un aviso sobre un punto, y eso deja abierto lo obvio: alguien pulsa «sigue
--- abierto» en cincuenta puntos distintos en una tarde y sube de nivel sin haber
--- comprobado nada. Con niveles que valdrán un beneficio en un comercio aliado, una
--- experiencia que se puede fabricar así no vale nada.
---
--- Así que la experiencia por un aviso se otorga cuando el EQUIPO lo aplica. Es el mismo
--- principio que `010_accounts` fijó para los avisos mismos —«un reporte es una SEÑAL, no
--- una escritura»— llevado a su consecuencia: si la señal sólo cuenta cuando alguien la
--- confirma, el reconocimiento tampoco puede contar antes.
---
--- Va en un TRIGGER y no en el panel del equipo a propósito. Si lo hiciera la aplicación
--- al resolver, se perdería en cuanto alguien resolviera un aviso desde otro sitio —un
--- script, la consola de Supabase, un panel futuro— y nadie se enteraría de que dejó de
--- funcionar. Aquí cuelga del hecho, no de la pantalla.
--- ===========================================================================
-
-create or replace function public.reward_applied_report()
+-- Se evalúan al anotar una contribución, que es el único momento en que pueden cambiar.
+create or replace function public.evaluate_badges_on_contribution()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
-as $reward$
+as $evc$
 begin
-  -- Sólo al PASAR a aplicado, no cada vez que se guarde una fila que ya lo estaba.
-  if new.status = 'applied' and old.status is distinct from 'applied' then
-    insert into public.contributions (user_id, kind, location_id, points, emergency_id)
-    values (new.user_id, 'report', new.location_id, 1, new.emergency_id)
-    -- El índice de una-vez-al-día sigue mandando: dos avisos de la misma persona sobre el
-    -- mismo punto, aplicados el mismo día, suman una vez.
-    on conflict do nothing;
-  end if;
+  perform public.evaluate_badges(new.user_id);
   return new;
 end
-$reward$;
+$evc$;
 
-drop trigger if exists trg_point_reports_reward on public.point_reports;
-create trigger trg_point_reports_reward after update on public.point_reports
-  for each row execute function public.reward_applied_report();
+drop trigger if exists trg_contributions_badges on public.contributions;
+create trigger trg_contributions_badges after insert on public.contributions
+  for each row execute function public.evaluate_badges_on_contribution();
+
+-- `award_badge` se retira. Mientras exista y sea llamable, existe el agujero.
+drop function if exists public.award_badge(text);
+
+-- Y `evaluate_badges` se cierra también. No podría otorgar nada indebido —cuenta lo que
+-- de verdad hay en `contributions`— pero `create function` regala EXECUTE a PUBLIC, y una
+-- función que nadie de fuera necesita llamar no tiene por qué estar expuesta.
+revoke all on function public.evaluate_badges(uuid) from public;
+
+-- Nadie las escribe a mano: sin políticas de INSERT ni UPDATE sobre `user_badges`, la
+-- única vía es el trigger de arriba, que corre como definer.
+drop policy if exists user_badges_insert on public.user_badges;
 
 
 -- ---------------------------------------------------------------------------

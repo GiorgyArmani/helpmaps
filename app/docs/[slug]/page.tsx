@@ -6,6 +6,7 @@ import { BRAND } from "@/config";
 import { DocTopbar } from "../DocTopbar";
 import { tr } from "@/content/roadmap";
 import { DOCS, getDoc } from "@/content/docs-content";
+import { Icon } from "@/ui/icons";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -22,7 +23,8 @@ const KICKER = {
 };
 const BACK_APP = { es: "Volver a la app", en: "Back to the app", pt: "Voltar ao app" };
 const NEED_HELP = { es: "¿Necesitas algo o quieres colaborar? ", en: "Need something or want to collaborate? ", pt: "Precisa de algo ou quer colaborar? " };
-const BACK_DOCS = { es: "← Documentación", en: "← Documentation", pt: "← Documentação" };
+// Sin flecha en el texto: la pone `<Icon.back />` al lado.
+const BACK_DOCS = { es: "Documentación", en: "Documentation", pt: "Documentação" };
 const GO_MAP = { es: "Ir al mapa", en: "Go to the map", pt: "Ir para o mapa" };
 const DOCS_LABEL = { es: "Documentación", en: "Documentation", pt: "Documentação" };
 
@@ -123,6 +125,7 @@ export default async function DocPage({ params, searchParams }: Props) {
 
           <div className="doc-actions">
             <Link href={docsHref} className="doc-secondary">
+              <Icon.back />
               {BACK_DOCS[lang]}
             </Link>
             <Link href="/" className="doc-primary">

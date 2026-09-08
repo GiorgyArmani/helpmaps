@@ -103,6 +103,12 @@
   text-decoration: none;
 }
 
+.auth-back svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
 .auth-back:hover {
   color: var(--e-fg);
 }

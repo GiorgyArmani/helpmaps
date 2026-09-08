@@ -10,6 +10,7 @@ import { useI18n } from "@/i18n/context";
 import { useSite } from "@/features/app/SiteProvider";
 import "../inicio/entry.css";
 import "../auth.css";
+import { Icon } from "@/ui/icons";
 
 type Phase = "checking" | "needsAccount" | "ready" | "working" | "done" | "failed";
 
@@ -161,7 +162,8 @@ function InviteBody() {
 
         <p className="auth-foot">
           <Link className="auth-back" href="/">
-            ← {t("register.backToMap", { name: site.brand.name })}
+            <Icon.back />
+            {t("register.backToMap", { name: site.brand.name })}
           </Link>
         </p>
       </div>

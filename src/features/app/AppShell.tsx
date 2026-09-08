@@ -23,12 +23,18 @@ import AccountMenu from "@/features/account/AccountMenu";
 import AccountView from "@/features/account/AccountView";
 import { useAccount } from "@/features/account/useAccount";
 import { fetchDonations } from "@/data/donations";
+import { fetchCenterById } from "@/data/centers";
 import {
   EMPTY_PROFILE,
+  fetchFeedCampaigns,
+  fetchFeedPosts,
   fetchInitiativeProfile,
   fetchManagedLocations,
   type InitiativeProfile,
 } from "@/data/initiatives";
+import { buildFeed, type FeedMode } from "@/domain/feed";
+import FeedPanel from "@/features/feed/FeedPanel";
+import type { Campaign, InitiativePost } from "@/domain/types";
 import InitiativePanel from "@/features/initiative/InitiativePanel";
 import { getSupabase } from "@/lib/supabase/client";
 import { useQuakes } from "@/features/hazard/useQuakes";
@@ -51,6 +57,7 @@ import {
   type RadiusKm,
 } from "@/domain/nearby";
 import CenterDetail from "@/features/centers/CenterDetail";
+import { PanelSkeleton } from "@/ui/Skeleton";
 import SuggestForm from "@/features/suggest/SuggestForm";
 import DonateView from "@/features/donate/DonateView";
 import ContactForm from "@/features/donate/ContactForm";
@@ -204,6 +211,20 @@ export default function AppShell({
   // Which of the two lists the panel shows: places, or initiatives with no seat. The
   // map does not depend on it — digital markers are drawn either way — only the list.
   const [panelTab, setPanelTab] = useState<PanelTab>("points");
+  // El feed: publicaciones y campañas de todo el despliegue. Se ordenan y paginan en el
+  // cliente — ver `domain/feed.ts` para por qué la cercanía no se calcula en el servidor.
+  const [feedPosts, setFeedPosts] = useState<InitiativePost[]>([]);
+  const [feedCampaigns, setFeedCampaigns] = useState<Campaign[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [feedMode, setFeedMode] = useState<FeedMode>("help");
+  /**
+   * El punto que gestiona esta persona, cuando NO está en `centers`.
+   *
+   * `centers` sólo trae los activos, así que un gestor cuyo punto acaba de desactivar el
+   * equipo se quedaba con «Tu iniciativa» en blanco y sin explicación — justo cuando más
+   * necesita entrar, a arreglar lo que haga falta para que vuelva.
+   */
+  const [managedCenter, setManagedCenter] = useState<Center | null>(null);
   // «Cerca»: la posición. NO sale del teléfono — ver `features/nearby/useMyLocation.ts`.
   // El radio se deriva más abajo, junto a la lista, para que la cuenta de la pestaña y
   // la lista hablen siempre del mismo número.
@@ -339,6 +360,25 @@ export default function AppShell({
   );
   const listed = panelTab === "digital" ? visibleDigital : visible;
 
+  // El material del feed se pide UNA vez, al abrir su pestaña, y a partir de ahí el
+  // scroll sólo revela lo que ya está en memoria. Ver `FeedPanel` para por qué no pagina
+  // contra el servidor.
+  useEffect(() => {
+    if (panelTab !== "feed") return;
+    const sb = getSupabase();
+    if (!sb) return;
+    let vivo = true;
+    void Promise.all([fetchFeedPosts(sb), fetchFeedCampaigns(sb)]).then(([p, c]) => {
+      if (!vivo) return;
+      setFeedPosts(p);
+      setFeedCampaigns(c);
+      setFeedLoading(false);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [panelTab]);
+
   // ── «Cerca» ─────────────────────────────────────────────────────────────
   //
   // Su fuente NO es `visible`: de todos los filtros sólo hereda el buscador, que es el
@@ -395,14 +435,50 @@ export default function AppShell({
     () => digitalCovering(nearSource, nearZone?.code ?? null),
     [nearSource, nearZone],
   );
+  // El feed, ordenado. `account.favourites` sube lo guardado al principio y la posición
+  // —si la hay— pesa la cercanía. Todo aquí, con lo que ya está en memoria.
+  const feedItems = useMemo(
+    () =>
+      buildFeed({
+        centers,
+        posts: feedPosts,
+        campaigns: feedCampaigns,
+        from: myLocation.fix,
+        saved: account.favourites,
+        mode: feedMode,
+      }),
+    [centers, feedPosts, feedCampaigns, myLocation.fix, account.favourites, feedMode],
+  );
+
   const needing = useMemo(
     () => pointsNeedingHelp(filter.region ? visible : physical),
     [visible, physical, filter.region],
   );
   const selected: Center | null = useMemo(
-    () => centers.find((x) => x.id === selectedId) ?? null,
-    [centers, selectedId],
+    () =>
+      centers.find((x) => x.id === selectedId) ??
+      // El respaldo para un punto gestionado que ya no está activo. Sólo entra si el id
+      // coincide, así que nunca sustituye a otro punto.
+      (managedCenter?.id === selectedId ? managedCenter : null),
+    [centers, selectedId, managedCenter],
   );
+
+  // Se pide sólo si hace falta: se gestiona algo, se está mirando, y no salió en la carga
+  // general. En el caso normal —punto activo— esto no dispara ninguna petición.
+  useEffect(() => {
+    if (view !== "mine" || !selectedId) return;
+    if (centers.some((c) => c.id === selectedId)) return;
+    if (managedCenter?.id === selectedId) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    let vivo = true;
+    void fetchCenterById(sb, selectedId).then((c) => {
+      if (vivo && c) setManagedCenter(c);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [view, selectedId, centers, managedCenter]);
 
   // A shared link naming a point we cannot find (deleted, or a bad id) lands on the map
   // rather than on an empty panel. Derived, not corrected in an effect, so there is never
@@ -924,6 +1000,9 @@ export default function AppShell({
           counts={{
             // `null` hasta que hay posición: un 0 ahí se lee «no hay nada cerca de ti»
             // cuando lo que pasa es que nadie ha pedido la ubicación todavía.
+            // El feed sin contador: un número ahí invita a «vaciarlo», y esto no es una
+            // bandeja de entrada. Cuando no hay nada, la lista ya lo dice.
+            feed: null,
             nearby: myLocation.fix ? near.length : null,
             points: visible.length,
             digital: visibleDigital.length,
@@ -933,8 +1012,13 @@ export default function AppShell({
 
         {/* Los filtros por tipo viven DENTRO del panel de puntos, no sobre el mapa.
             Acotan exactamente lo que ese panel lista, y tenerlos flotando aparte obligaba
-            a mirar a dos sitios para entender por qué la lista mostraba lo que mostraba. */}
-        {panelTab === "points" ? <TypeChips filter={filter} onChange={changeFilter} /> : null}
+            a mirar a dos sitios para entender por qué la lista mostraba lo que mostraba.
+            Y desaparecen al abrir una ficha: seguían ahí encima del detalle, acotando una
+            lista que en ese momento no está en pantalla — cinco controles que no hacen
+            nada visible y que empujan la ficha media pantalla hacia abajo. */}
+        {panelTab === "points" && !showingDetail ? (
+          <TypeChips filter={filter} onChange={changeFilter} />
+        ) : null}
 
         {showingDetail && selected ? (
           <div className="list">
@@ -942,14 +1026,31 @@ export default function AppShell({
               <Icon.back />
               <span>{t("common.back")}</span>
             </button>
-            <CenterDetail center={selected} profile={profile} />
+            {/* El canalón de la ficha vive AQUÍ, en un envoltorio, y no en `.list`.
+                `.list` lo comparten la ficha y la lista de tarjetas, y esas tarjetas van a
+                sangre de lado a lado por diseño. Sin este envoltorio la ficha no tenía
+                margen lateral ninguno: los títulos de sección salían pegados al borde de
+                la pantalla mientras las tarjetas parecían metidas hacia dentro —era su
+                relleno interior— y el resultado era un borde izquierdo que temblaba al
+                bajar. La barra de «Volver» se queda fuera a propósito: es una franja de
+                lado a lado con su propia línea inferior. */}
+            <div className="dbody">
+              <CenterDetail center={selected} profile={profile} />
+            </div>
           </div>
         ) : (
         <div className="list">
           {/* «Cerca» sustituye el cuerpo de la lista, no el panel: el pie con privacidad y
               términos se queda: es la pestaña que pide la ubicación, y esconder ahí el
               enlace de privacidad sería justo al revés de lo que hay que hacer. */}
-          {panelTab === "nearby" && activeView === "list" ? (
+          {panelTab === "feed" && activeView === "list" ? (
+            <FeedPanel
+              items={feedItems}
+              mode={feedMode}
+              onMode={setFeedMode}
+              loading={feedLoading}
+            />
+          ) : panelTab === "nearby" && activeView === "list" ? (
             <NearbyPanel
               located={myLocation.fix !== null}
               status={myLocation.status}
@@ -1158,7 +1259,7 @@ export default function AppShell({
               selected ? (
                 <InitiativePanel center={selected} onClose={back} />
               ) : (
-                <p className="empty">{t("common.loading")}</p>
+                <PanelSkeleton />
               )
             ) : null}
             {activeView === "admin" ? (
@@ -1180,7 +1281,7 @@ export default function AppShell({
                   onVolunteer={() => setView("volunteer")}
                 />
               ) : (
-                <p className="empty">{t("common.loading")}</p>
+                <PanelSkeleton />
               )
             ) : null}
           </div>

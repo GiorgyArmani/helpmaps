@@ -10,6 +10,7 @@ import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
 import CenterManagers from "@/features/admin/CenterManagers";
 import SupplyPicker from "@/features/centers/SupplyPicker";
+import SupplyQuickAdd from "@/features/centers/SupplyQuickAdd";
 import { geocode, matchRegion, type GeoResult } from "@/features/admin/geocode";
 import type { DictKey } from "@/i18n";
 import { useSite } from "@/features/app/SiteProvider";
@@ -421,6 +422,7 @@ export default function CenterForm({
         <Field label={t("form.needs")}>
           <TextArea value={form.needs} onChange={(e) => set("needs", e.target.value)} />
         </Field>
+        <SupplyQuickAdd value={form.needs} onChange={(next) => set("needs", next)} />
 
         <Field label={t("form.receives")}>
           <SupplyPicker value={form.receives} onChange={(next) => set("receives", next)} />

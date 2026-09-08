@@ -23,3 +23,5 @@ logs/
 # excepción, un archivo nuevo ahí se ignora en silencio: los que ya existen sobreviven sólo
 # porque git los rastreaba desde antes de que se agregara la regla de arriba.
 !db/**/*.sql
+docs/plan
+*.md

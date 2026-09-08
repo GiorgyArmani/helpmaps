@@ -355,13 +355,29 @@
 
 /* ── Pie ────────────────────────────────────────────────────────────────── */
 
+/* El chevron va DETRÁS del texto, donde estaba la flecha «→».
+   `inline-flex` centrado dentro de un contenedor a lo ancho: `display:block` con
+   `text-align:center` no alinea un SVG con la línea base del texto —lo deja flotando medio
+   píxel arriba— y con un carácter de flecha el desajuste dependía además de la fuente. */
 .entry-skip {
-  display: block;
-  text-align: center;
-  margin-top: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 22px auto 0;
   font-size: 13px;
   color: var(--e-mut);
   text-decoration: none;
+}
+
+.entry-skipwrap {
+  display: flex;
+  justify-content: center;
+}
+
+.entry-skip svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
 }
 
 .entry-skip:hover {

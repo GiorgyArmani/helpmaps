@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Lang } from "@/i18n/types";
 import { BRAND } from "@/config";
 import { DocTopbar } from "../DocTopbar";
+import { Icon } from "@/ui/icons";
 import {
   ROADMAP_PHASES,
   ROADMAP_INTRO,
@@ -26,7 +27,8 @@ const DESC = {
 };
 const BACK_APP = { es: "Volver a la app", en: "Back to the app", pt: "Voltar ao app" };
 const FEEDBACK = { es: "¿Comentarios o quieres colaborar? ", en: "Feedback or want to collaborate? ", pt: "Comentários ou quer colaborar? " };
-const BACK_DOCS = { es: "← Documentación", en: "← Documentation", pt: "← Documentação" };
+// Sin flecha en el texto: la pone `<Icon.back />` al lado.
+const BACK_DOCS = { es: "Documentación", en: "Documentation", pt: "Documentação" };
 const GO_MAP = { es: "Ir al mapa", en: "Go to the map", pt: "Ir para o mapa" };
 const DOCS_LABEL = { es: "Documentación", en: "Documentation", pt: "Documentação" };
 
@@ -106,6 +108,7 @@ export default async function RoadmapPage({ searchParams }: SearchParams) {
 
           <div className="doc-actions">
             <Link href={docsHref} className="doc-secondary">
+              <Icon.back />
               {BACK_DOCS[lang]}
             </Link>
             <Link href="/" className="doc-primary">

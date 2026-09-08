@@ -293,3 +293,32 @@ export async function closeCenter(sb: SupabaseClient, id: string): Promise<void>
     );
   if (error) throw error;
 }
+
+/**
+ * UN punto por su id, ESTÉ ACTIVO O NO.
+ *
+ * ── POR QUÉ EXISTE ──────────────────────────────────────────────────────────
+ *
+ * `fetchCenters()` pide `active = true`, que es lo correcto para el mapa: un punto
+ * retirado no debe salir en ninguna lista pública. Pero eso dejaba fuera un caso que sí
+ * importa — quien GESTIONA un punto que el equipo acaba de desactivar.
+ *
+ * Sin esto, «Tu iniciativa» se quedaba en blanco para esa persona: el punto no estaba en
+ * memoria, así que el panel no encontraba nada que dibujar y no había forma de saber por
+ * qué. Y desactivar un punto es justo el momento en que su gestor necesita entrar — a
+ * corregir lo que haga falta para que vuelva.
+ *
+ * La política RLS de `locations` es `using (true)`, así que el filtro por `active` siempre
+ * fue del cliente y esto no abre nada nuevo: lee lo mismo que ya podía leer.
+ */
+export async function fetchCenterById(
+  sb: SupabaseClient,
+  id: string,
+): Promise<Center | null> {
+  const intento = await sb.from("locations").select(SELECT).eq("id", id).maybeSingle();
+  const { data, error } = isMissingColumn(intento.error)
+    ? await sb.from("locations").select(LEGACY_SELECT).eq("id", id).maybeSingle()
+    : intento;
+  if (error || !data) return null;
+  return mapCenter(data as Record<string, unknown>);
+}

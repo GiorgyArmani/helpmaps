@@ -103,21 +103,43 @@ export const BADGES: Badge[] = [
 /**
  * Los niveles, y los umbrales de experiencia que los abren.
  *
- * Los saltos se separan cada vez más porque el primero tiene que llegar pronto —quien
- * hace dos cosas y sigue en cero abandona— y los de arriba tienen que costar. Cinco
- * niveles y no veinte: una escalera que no se acaba nunca deja de leerse como progreso.
+ * ── ESTÁN CALIBRADOS PARA QUE HAGA FALTA SALIR DE CASA ──────────────────────
  *
- * Es el número que ve un comercio aliado cuando alguien pide su beneficio, así que subir
- * de nivel tiene que significar algo comprobable. Cada punto de experiencia sale de una
- * fila de `contributions`, y esa tabla no se puede escribir desde el cliente.
+ * Con la escala de `ACTION_POINTS`, llegar al último nivel sólo confirmando puntos desde
+ * el teléfono exigiría 250 confirmaciones: inviable, y a propósito. Haciendo lo que este
+ * producto quiere provocar —visitar puntos, escanear su código, aportar— son unas veinte
+ * acciones, que es una temporada de alguien que de verdad está ayudando.
+ *
+ * Cinco niveles y no veinte: una escalera que no se acaba nunca deja de leerse como
+ * progreso. Y es el número que verá un comercio aliado antes de dar un beneficio, así que
+ * subir tiene que significar algo comprobado — por eso ninguna de las acciones caras se
+ * puede reclamar desde el cliente.
  */
 export const LEVELS: { level: number; from: number; label: DictKey }[] = [
   { level: 1, from: 0, label: "level.1" },
-  { level: 2, from: 5, label: "level.2" },
-  { level: 3, from: 20, label: "level.3" },
-  { level: 4, from: 60, label: "level.4" },
-  { level: 5, from: 150, label: "level.5" },
+  // El primer salto es UNA acción física: quien va a un punto y escanea su código sube de
+  // nivel esa misma tarde. Es el momento en el que se decide si vuelve.
+  { level: 2, from: 10, label: "level.2" },
+  { level: 3, from: 40, label: "level.3" },
+  { level: 4, from: 100, label: "level.4" },
+  { level: 5, from: 250, label: "level.5" },
 ];
+
+/**
+ * Lo que vale cada acción. ESPEJO de `contribution_points()` en
+ * `db/06_reconocimiento.sql`, que es la fuente de verdad — aquí sólo se usa para poder
+ * decirle a alguien cuánto suma algo ANTES de hacerlo.
+ *
+ * Si los dos dejan de coincidir manda la base, y lo que se vería aquí es una promesa
+ * incumplida. Se cambian juntos.
+ */
+export const ACTION_POINTS: Record<ContributionKind, number> = {
+  report: 1,
+  suggestion: 3,
+  checkin: 10,
+  volunteer: 10,
+  donation: 15,
+};
 
 export function levelFor(xp: number) {
   let current = LEVELS[0]!;

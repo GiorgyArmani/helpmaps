@@ -4,6 +4,9 @@ import { useState } from "react";
 import type { Activity, Campaign, InitiativePost } from "@/domain/types";
 import type { InitiativeProfile } from "@/data/initiatives";
 import { Icon } from "@/ui/icons";
+import { declareDonation } from "@/data/initiatives";
+import { getSupabase } from "@/lib/supabase/client";
+import { useAccount } from "@/features/account/useAccount";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import { BRAND } from "@/config";
 
@@ -22,7 +25,23 @@ import { BRAND } from "@/config";
  * todavía no ha publicado». Un hueco con forma de ausencia se lee como abandono, y el
  * 90% de los puntos de este mapa no van a tener campaña nunca.
  */
-export default function InitiativeSections({ profile }: { profile: InitiativeProfile }) {
+/**
+ * Las cuatro secciones seguidas, para quien las quiera en un solo rollo.
+ *
+ * La ficha dentro del mapa ya NO usa esto: las reparte en pestañas (ver `ProfileTabs`).
+ * Se mantiene porque cada sección se exporta suelta y este envoltorio sigue siendo la
+ * forma correcta de pintarlas todas donde no hay pestañas —una impresión, un correo, la
+ * página servida sin JavaScript— y porque borrarlo obligaría a reescribir el orden en el
+ * que van, que está pensado: la campaña primero y el «cómo aportar» justo debajo.
+ */
+export default function InitiativeSections({
+  profile,
+  locationId,
+}: {
+  profile: InitiativeProfile;
+  /** Hace falta para declarar un aporte: la ficha sabe de qué punto habla, esto no. */
+  locationId: string;
+}) {
   const { campaigns, activities, posts, donate } = profile;
   const hayDonacion = Boolean(donate.info || donate.url);
   if (campaigns.length === 0 && activities.length === 0 && posts.length === 0 && !hayDonacion) {
@@ -34,7 +53,7 @@ export default function InitiativeSections({ profile }: { profile: InitiativePro
       {campaigns.length > 0 ? <CampaignList campaigns={campaigns} /> : null}
       {/* Debajo de las campañas: quien acaba de leer una meta concreta es justo quien
           quiere saber por dónde aportar. */}
-      {hayDonacion ? <DonateBox donate={donate} /> : null}
+      {hayDonacion ? <DonateBox donate={donate} locationId={locationId} /> : null}
       {activities.length > 0 ? <ActivityList activities={activities} /> : null}
       {posts.length > 0 ? <PostList posts={posts} campaigns={campaigns} /> : null}
     </>
@@ -48,9 +67,39 @@ export default function InitiativeSections({ profile }: { profile: InitiativePro
  * datos son de la iniciativa, el dinero va directo a ella, y aquí sólo se muestran para
  * que se puedan pegar en el banco. La línea que lo dice va debajo y no es opcional.
  */
-function DonateBox({ donate }: { donate: InitiativeProfile["donate"] }) {
+export function DonateBox({
+  donate,
+  locationId,
+}: {
+  donate: InitiativeProfile["donate"];
+  locationId: string;
+}) {
   const { t } = useI18n();
+  const account = useAccount(true);
   const [copiado, setCopiado] = useState(false);
+  const [claim, setClaim] = useState<"idle" | "sending" | "done" | "already" | "error">("idle");
+
+  /**
+   * «Ya aporté».
+   *
+   * No suma nada por sí solo, y ésa es la pieza que hace que valga: queda PENDIENTE hasta
+   * que la iniciativa confirme que le llegó. Aportar da más experiencia que ninguna otra
+   * cosa, así que darla por declarada sería quince puntos por pulsar un botón.
+   *
+   * El texto lo dice antes de pulsar, no después: quien lo toca tiene que saber que va a
+   * pedirle una confirmación a alguien.
+   */
+  async function declarar() {
+    const sb = getSupabase();
+    if (!sb || !account.userId || claim === "sending") return;
+    setClaim("sending");
+    try {
+      const r = await declareDonation(sb, { locationId, userId: account.userId });
+      setClaim(r.duplicate ? "already" : "done");
+    } catch {
+      setClaim("error");
+    }
+  }
 
   async function copiar() {
     if (!donate.info) return;
@@ -85,13 +134,38 @@ function DonateBox({ donate }: { donate: InitiativeProfile["donate"] }) {
         <Icon.alert />
         {t("donate.directNote", { platform: BRAND.platform })}
       </p>
+
+      {/* Sólo con cuenta: sin ella no hay a quién reconocerle nada, y el botón sería una
+          promesa que no se puede cumplir. */}
+      {account.userId ? (
+        claim === "done" || claim === "already" ? (
+          <p className="idon-claimed">
+            <Icon.check />
+            {t("donate.claimed")}
+          </p>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="btng idon-claim"
+              onClick={() => void declarar()}
+              disabled={claim === "sending"}
+            >
+              <Icon.heart />
+              {claim === "sending" ? t("common.saving") : t("donate.claim")}
+            </button>
+            <p className="idon-note">{t("donate.claimHint")}</p>
+            {claim === "error" ? <p className="lerr">{t("error.generic")}</p> : null}
+          </>
+        )
+      ) : null}
     </section>
   );
 }
 
 // ── Campañas ───────────────────────────────────────────────────────────────
 
-function CampaignList({ campaigns }: { campaigns: Campaign[] }) {
+export function CampaignList({ campaigns }: { campaigns: Campaign[] }) {
   const { t } = useI18n();
   return (
     <section className="isec">
@@ -168,7 +242,7 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
 
 // ── Agenda ─────────────────────────────────────────────────────────────────
 
-function ActivityList({ activities }: { activities: Activity[] }) {
+export function ActivityList({ activities }: { activities: Activity[] }) {
   const { t, lang } = useI18n();
   return (
     <section className="isec">
@@ -201,7 +275,7 @@ function ActivityList({ activities }: { activities: Activity[] }) {
 
 // ── Lo que ya hizo ─────────────────────────────────────────────────────────
 
-function PostList({ posts, campaigns }: { posts: InitiativePost[]; campaigns: Campaign[] }) {
+export function PostList({ posts, campaigns }: { posts: InitiativePost[]; campaigns: Campaign[] }) {
   const { t } = useI18n();
   const ago = useTimeAgo();
   return (
@@ -215,13 +289,17 @@ function PostList({ posts, campaigns }: { posts: InitiativePost[]; campaigns: Ca
           ? campaigns.find((c) => c.id === p.campaign_id)?.title
           : undefined;
         return (
-          <article key={p.id} className="ipost">
+          // El `id` es lo que convierte una publicación en algo enlazable: el feed manda
+          // a `/c/<punto>#p-<publicación>` y el navegador la deja en pantalla él solo.
+          // Resaltarla es cosa del CSS con `:target` — sin JavaScript, sin estado y sin
+          // que haya que saber cuál era desde el servidor.
+          <article key={p.id} id={`p-${p.id}`} className="ipost">
             {p.photo_url ? (
               // Sin `next/image`: la URL viene de un bucket que cada país configura por su
               // cuenta, y un dominio no declarado en `next.config.ts` haría fallar el
               // render entero de la ficha en vez de dejar una foto rota.
               // eslint-disable-next-line @next/next/no-img-element
-              <img className="ipost-img" src={p.photo_url} alt="" loading="lazy" />
+              <img className="ipost-img" src={p.photo_url} alt="" loading="lazy" decoding="async" />
             ) : null}
             <p className="ipost-meta">
               <span className={`ipost-kind ipost-${p.kind}`}>{t(kindKey(p.kind))}</span>
@@ -251,8 +329,11 @@ function kindKey(kind: InitiativePost["kind"]) {
 /**
  * Sin decimales cuando no los hay: «120 colchonetas», no «120,00 colchonetas». La unidad
  * la pone la iniciativa y la mitad de las veces no es dinero.
+ *
+ * Se exporta porque el feed pinta la misma cifra: dos formatos distintos para el mismo
+ * número —«78» aquí y «78,00» allí— se leen como dos datos distintos.
  */
-function formatAmount(value: number, lang: string): string {
+export function formatAmount(value: number, lang: string): string {
   const entero = Number.isInteger(value);
   return new Intl.NumberFormat(locale(lang), {
     minimumFractionDigits: entero ? 0 : 2,

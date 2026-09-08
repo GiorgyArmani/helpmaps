@@ -73,6 +73,13 @@ export interface MyLocation {
   status: LocateStatus;
   /** Pide una posición. Si hay una fresca en el caché, no molesta al navegador. */
   request: () => void;
+  /**
+   * Lo mismo, pero se puede esperar: resuelve con la posición o con `null` si no se
+   * pudo. Existe para las acciones que hacen algo EN CUANTO hay posición —el check-in de
+   * un punto— y que sin esto costaban dos toques: uno para dar el permiso y otro para
+   * volver a pulsar el botón que ya se había pulsado.
+   */
+  ensure: () => Promise<Fix | null>;
   /** La descarta y vuelve al estado inicial. */
   forget: () => void;
 }
@@ -120,10 +127,32 @@ export function useMyLocation(): MyLocation {
     );
   }, []);
 
+  const ensure = useCallback((): Promise<Fix | null> => {
+    if (cached && Date.now() - cached.at < FRESH_MS) return Promise.resolve(cached);
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setStatus("unavailable");
+      return Promise.resolve(null);
+    }
+    setStatus("locating");
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          rememberFix(pos.coords.latitude, pos.coords.longitude);
+          resolve(cached);
+        },
+        (err) => {
+          setStatus(err.code === 1 ? "denied" : "unavailable");
+          resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: FRESH_MS },
+      );
+    });
+  }, []);
+
   const forget = useCallback(() => {
     forgetFix();
     setStatus("idle");
   }, []);
 
-  return { fix, status, request, forget };
+  return { fix, status, request, ensure, forget };
 }

@@ -8,6 +8,7 @@ import { useSite } from "@/features/app/SiteProvider";
 import { Suspense } from "react";
 import "../inicio/entry.css";
 import "../auth.css";
+import { Icon } from "@/ui/icons";
 
 /**
  * Team sign-in as a standalone page.
@@ -75,7 +76,8 @@ function LoginBody() {
             dos veces seguidas. */}
         <p className="auth-foot">
           <Link className="auth-back" href="/">
-            ← {t("register.backToMap", { name: site.brand.name })}
+            <Icon.back />
+            {t("register.backToMap", { name: site.brand.name })}
           </Link>
         </p>
       </div>

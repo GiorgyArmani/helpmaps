@@ -7,6 +7,7 @@ import { useI18n } from "@/i18n/context";
 import { useSite } from "@/features/app/SiteProvider";
 import "../inicio/entry.css";
 import "../auth.css";
+import { Icon } from "@/ui/icons";
 
 /**
  * Crear una cuenta, como página propia.
@@ -60,7 +61,8 @@ export default function RegisterPage() {
 
         <p className="auth-foot">
           <Link className="auth-back" href="/">
-            ← {t("register.backToMap", { name: site.brand.name })}
+            <Icon.back />
+            {t("register.backToMap", { name: site.brand.name })}
           </Link>
         </p>
       </div>

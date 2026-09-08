@@ -90,6 +90,22 @@ export default function ShareRow({ center }: { center: Center }) {
           </span>
           {copied ? t("share.linkCopied") : t("share.copyLink")}
         </button>
+
+        {/* La hoja del sistema alcanza TODAS las apps que tenga la persona, incluidas las
+            que no publican un enlace para compartir. Va aquí dentro, como una baldosa más:
+            suelto debajo de la fila y con estilo de enlace se leía como el pie de la
+            sección —un rótulo «Compartir» repetido bajo un bloque que ya se titula
+            «Compartir»— y nadie iba a tocar lo que parece un título. */}
+        <button
+          type="button"
+          className="tgt"
+          onClick={() => void nativeShare(center.name, text, url)}
+        >
+          <span className="ti ti-os">
+            <Icon.share width={16} height={16} />
+          </span>
+          {t("share.more")}
+        </button>
       </div>
 
       {igOpen ? (
@@ -117,15 +133,6 @@ export default function ShareRow({ center }: { center: Center }) {
         </div>
       ) : null}
 
-      {/* The OS sheet reaches every app the person has, including the ones with no share
-          URL. Offered as a secondary action because it does not exist on desktop. */}
-      <button
-        type="button"
-        className="linkbtn"
-        onClick={() => void nativeShare(center.name, text, url)}
-      >
-        {t("center.share")}
-      </button>
     </>
   );
 }

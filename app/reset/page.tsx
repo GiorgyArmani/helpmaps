@@ -11,6 +11,7 @@ import { useSite } from "@/features/app/SiteProvider";
 import { rememberResetEmail } from "@/features/account/resetHandoff";
 import "../inicio/entry.css";
 import "../auth.css";
+import { Icon } from "@/ui/icons";
 
 type Phase = "checking" | "code" | "ready" | "done";
 
@@ -280,7 +281,8 @@ export default function ResetPasswordPage() {
 
         <p className="auth-foot">
           <Link className="auth-back" href="/">
-            ← {t("register.backToMap", { name: site.brand.name })}
+            <Icon.back />
+            {t("register.backToMap", { name: site.brand.name })}
           </Link>
         </p>
       </div>

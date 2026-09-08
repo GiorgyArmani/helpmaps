@@ -13,7 +13,13 @@ import { telHref, whatsappHref } from "@/features/share/share";
 import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 import { coverageNames, instagramUrl } from "@/features/centers/coverage";
-import InitiativeSections from "@/features/centers/InitiativeSections";
+import {
+  ActivityList,
+  CampaignList,
+  DonateBox,
+  PostList,
+} from "@/features/centers/InitiativeSections";
+import ProfileTabs, { type ProfileTab } from "@/features/centers/ProfileTabs";
 import { EMPTY_PROFILE, type InitiativeProfile } from "@/data/initiatives";
 
 /**
@@ -52,9 +58,192 @@ export default function CenterDetail({
   const touched = lastTouched(center);
   const confirmed = info?.last_confirmed_at;
 
+  // Qué pestañas tiene ESTE punto. Se construyen con lo que hay: ver la nota larga en
+  // `ProfileTabs`. Un acopio importado sin nada de esto no recibe ninguna y la ficha se
+  // dibuja en una sola columna, igual que siempre.
+  const { campaigns, activities, posts, donate } = profile;
+  const hayAporte = Boolean(donate.info || donate.url);
+
+  const tabs: ProfileTab[] = [
+    {
+      id: "info",
+      label: t("tab.info"),
+      count: null,
+      content: (
+        <>
+              {info?.needs?.trim() ? (
+                <div className="dneed">
+                  <span className="dneed-l">{t("center.needsTitle")}</span>
+                  <p className="dneed-t">{info.needs}</p>
+                </div>
+              ) : null}
+
+              {digital ? (
+                <>
+                  <h3 className="dsection">{t("digital.coverageTitle")}</h3>
+                  <div className="dtags">
+                    {served.length > 0 ? (
+                      served.map((name) => (
+                        <span key={name} className="dtag">
+                          {name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="dtag">{t("digital.national")}</span>
+                    )}
+                  </div>
+                  {center.coverage_municipalities.length > 0 ? (
+                    <p className="sdesc">{center.coverage_municipalities.join(" · ")}</p>
+                  ) : null}
+                  <p className="small mut dcov-hint">
+                    {t("digital.mapHint", { region: site.country.regionNoun.one })}
+                  </p>
+                </>
+              ) : null}
+
+              {info && info.help.length > 0 ? (
+                <>
+                  <h3 className="dsection">{t("center.helpTitle")}</h3>
+                  <div className="dtags">
+                    {info.help.map((h) => (
+                      <span key={h} className="dtag">
+                        {t(`help.${h}` as DictKey)}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+
+              {info && info.receives.length > 0 ? (
+                <>
+                  <h3 className="dsection">{t("center.receivesTitle")}</h3>
+                  <div className="dtags">
+                    {info.receives.map((r) => (
+                      <span key={r} className="dtag">
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+
+              {info?.description ? <p className="sdesc">{info.description}</p> : null}
+
+              <div className="drows">
+                <div className="drow">
+                  <span className="dlabel">{t("form.type")}</span>
+                  <span className="dval dval-type">
+                    <span className="dval-type-ic" style={{ color: style.color }}>
+                      <TypeGlyph name={style.icon} size={14} />
+                    </span>
+                    {t(`type.${center.type}` as DictKey)}
+                  </span>
+                </div>
+                {place ? (
+                  <div className="drow">
+                    <span className="dlabel">{t("form.region")}</span>
+                    <span className="dval">{place}</span>
+                  </div>
+                ) : null}
+                {center.address && !digital ? (
+                  <div className="drow">
+                    <span className="dlabel">{t("form.address")}</span>
+                    <span className="dval">{center.address}</span>
+                  </div>
+                ) : null}
+                {info?.schedule ? (
+                  <div className="drow">
+                    <span className="dlabel">{t("center.scheduleTitle")}</span>
+                    <span className="dval">{info.schedule}</span>
+                  </div>
+                ) : null}
+                {info?.category ? (
+                  <div className="drow">
+                    <span className="dlabel">{t("center.categoryTitle")}</span>
+                    <span className="dval">{info.category}</span>
+                  </div>
+                ) : null}
+                {info?.contact_name ? (
+                  <div className="drow">
+                    <span className="dlabel">{t("center.responsible")}</span>
+                    <span className="dval">{info.contact_name}</span>
+                  </div>
+                ) : null}
+                {/* El teléfono y el usuario de Instagram VIVEN AQUÍ, no en su botón.
+                    Los botones de acción son ahora compactos —un icono y una palabra— y
+                    colgarles el valor detrás («Llamar · +58 212-5559111») partía el número
+                    por la mitad en una columna de 76px, que es peor que no enseñarlo: un
+                    número roto se copia mal. En la tabla se lee entero y se puede
+                    seleccionar; el botón sigue marcando. */}
+                {center.phone ? (
+                  <div className="drow">
+                    <span className="dlabel">{t("center.call")}</span>
+                    <span className="dval">{center.phone}</span>
+                  </div>
+                ) : null}
+                {info?.instagram ? (
+                  <div className="drow">
+                    <span className="dlabel">{t("center.instagram")}</span>
+                    <span className="dval">@{info.instagram}</span>
+                  </div>
+                ) : null}
+              </div>
+              <h3 className="dsection">{t("share.title")}</h3>
+              <ShareRow center={center} />
+
+              <div className="ddisclaimer">
+                <Icon.alert />
+                <span>{t("center.disclaimer")}</span>
+              </div>
+
+              {/* Attribution only for rows that actually came from a partner feed — crediting a
+                  hand-added point to someone else is its own kind of wrong. */}
+              {info?.external_id && info.source ? (
+                <p className="dsource">{t("center.source", { source: info.source })}</p>
+              ) : null}
+        </>
+      ),
+    },
+  ];
+
+  if (campaigns.length > 0 || hayAporte) {
+    tabs.push({
+      id: "campaigns",
+      label: t("tab.campaigns"),
+      count: campaigns.length || null,
+      content: (
+        <>
+          {campaigns.length > 0 ? <CampaignList campaigns={campaigns} /> : null}
+          {/* Debajo de las campañas: quien acaba de leer una meta concreta es justo quien
+              quiere saber por dónde aportar. */}
+          {hayAporte ? <DonateBox donate={donate} locationId={center.id} /> : null}
+        </>
+      ),
+    });
+  }
+
+  if (activities.length > 0) {
+    tabs.push({
+      id: "agenda",
+      label: t("tab.agenda"),
+      count: activities.length,
+      content: <ActivityList activities={activities} />,
+    });
+  }
+
+  if (posts.length > 0) {
+    tabs.push({
+      id: "posts",
+      label: t("tab.posts"),
+      count: posts.length,
+      content: <PostList posts={posts} campaigns={campaigns} />,
+    });
+  }
+
   return (
     <>
       <div className="dhero">
+
         <span className="dav" style={{ color: style.color }}>
           <TypeGlyph name={style.icon} size={38} />
         </span>
@@ -86,106 +275,6 @@ export default function CenterDetail({
       {/* Above the needs on purpose: whether the point still exists outranks what it
           is asking for. */}
       <StatusWarning center={center} />
-
-      {info?.needs?.trim() ? (
-        <div className="dneed">
-          <span className="dneed-l">{t("center.needsTitle")}</span>
-          <p className="dneed-t">{info.needs}</p>
-        </div>
-      ) : null}
-
-      {digital ? (
-        <>
-          <h3 className="dsection">{t("digital.coverageTitle")}</h3>
-          <div className="dtags">
-            {served.length > 0 ? (
-              served.map((name) => (
-                <span key={name} className="dtag">
-                  {name}
-                </span>
-              ))
-            ) : (
-              <span className="dtag">{t("digital.national")}</span>
-            )}
-          </div>
-          {center.coverage_municipalities.length > 0 ? (
-            <p className="sdesc">{center.coverage_municipalities.join(" · ")}</p>
-          ) : null}
-          <p className="small mut dcov-hint">
-            {t("digital.mapHint", { region: site.country.regionNoun.one })}
-          </p>
-        </>
-      ) : null}
-
-      {info && info.help.length > 0 ? (
-        <>
-          <h3 className="dsection">{t("center.helpTitle")}</h3>
-          <div className="dtags">
-            {info.help.map((h) => (
-              <span key={h} className="dtag">
-                {t(`help.${h}` as DictKey)}
-              </span>
-            ))}
-          </div>
-        </>
-      ) : null}
-
-      {info && info.receives.length > 0 ? (
-        <>
-          <h3 className="dsection">{t("center.receivesTitle")}</h3>
-          <div className="dtags">
-            {info.receives.map((r) => (
-              <span key={r} className="dtag">
-                {r}
-              </span>
-            ))}
-          </div>
-        </>
-      ) : null}
-
-      {info?.description ? <p className="sdesc">{info.description}</p> : null}
-
-      <div className="drows">
-        <div className="drow">
-          <span className="dlabel">{t("form.type")}</span>
-          <span className="dval dval-type">
-            <span className="dval-type-ic" style={{ color: style.color }}>
-              <TypeGlyph name={style.icon} size={14} />
-            </span>
-            {t(`type.${center.type}` as DictKey)}
-          </span>
-        </div>
-        {place ? (
-          <div className="drow">
-            <span className="dlabel">{t("form.region")}</span>
-            <span className="dval">{place}</span>
-          </div>
-        ) : null}
-        {center.address && !digital ? (
-          <div className="drow">
-            <span className="dlabel">{t("form.address")}</span>
-            <span className="dval">{center.address}</span>
-          </div>
-        ) : null}
-        {info?.schedule ? (
-          <div className="drow">
-            <span className="dlabel">{t("center.scheduleTitle")}</span>
-            <span className="dval">{info.schedule}</span>
-          </div>
-        ) : null}
-        {info?.category ? (
-          <div className="drow">
-            <span className="dlabel">{t("center.categoryTitle")}</span>
-            <span className="dval">{info.category}</span>
-          </div>
-        ) : null}
-        {info?.contact_name ? (
-          <div className="drow">
-            <span className="dlabel">{t("center.responsible")}</span>
-            <span className="dval">{info.contact_name}</span>
-          </div>
-        ) : null}
-      </div>
 
       <div className="dactions">
         {/* Only for a point with somewhere to go. A digital initiative never gets a
@@ -221,7 +310,7 @@ export default function CenterDetail({
             rel="noopener noreferrer"
           >
             <Icon.spark />
-            {t("center.instagram")} · @{info.instagram}
+            {t("center.instagram")}
           </a>
         ) : null}
 
@@ -245,7 +334,7 @@ export default function CenterDetail({
             }}
           >
             <Icon.phone />
-            {t("center.call")} · {center.phone}
+            {t("center.call")}
           </button>
         ) : null}
 
@@ -257,26 +346,11 @@ export default function CenterDetail({
         ) : null}
       </div>
 
-      {/* Guardar y avisar. Va DESPUÉS de cómo llegar y ANTES de compartir: quien abre
-          una ficha viene a decidir si va, no a administrarla. Lo que cambia esa decisión
-          se lee primero. */}
+      {/* Guardar y avisar. Va DESPUÉS de cómo llegar: quien abre una ficha viene a decidir
+          si va, no a administrarla. Lo que cambia esa decisión se lee primero. */}
       <PointActions locationId={center.id} />
 
-      <InitiativeSections profile={profile} />
-
-      <h3 className="dsection">{t("share.title")}</h3>
-      <ShareRow center={center} />
-
-      <div className="ddisclaimer">
-        <Icon.alert />
-        <span>{t("center.disclaimer")}</span>
-      </div>
-
-      {/* Attribution only for rows that actually came from a partner feed — crediting a
-          hand-added point to someone else is its own kind of wrong. */}
-      {info?.external_id && info.source ? (
-        <p className="dsource">{t("center.source", { source: info.source })}</p>
-      ) : null}
+      <ProfileTabs tabs={tabs} />
     </>
   );
 }

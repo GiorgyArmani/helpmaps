@@ -137,6 +137,22 @@ create policy center_info_manager_update on public.center_info
   using (public.manages_location(location_id))
   with check (public.manages_location(location_id));
 
+-- Y CREARLA, que es lo que faltaba y tenía el onboarding roto ENTERO.
+--
+-- `center_info` es 1:1 con `locations` pero no nace con el punto: el equipo da de alta la
+-- fila en `locations` y la ficha se rellena después, en el onboarding. Por eso el
+-- onboarding guarda con un upsert — y ahí está el detalle que costó encontrar: un upsert
+-- es `insert … on conflict do update`, así que Postgres exige la política de INSERT
+-- SIEMPRE, haya fila o no. Sin ella el primer «Seguir» devolvía 403 y NINGÚN gestor podía
+-- terminar de darse de alta, ni siquiera sobre un punto que ya tenía su ficha hecha.
+--
+-- La frontera no se mueve: es la misma `manages_location` de la política de arriba, de
+-- modo que un gestor sólo puede estrenar la ficha DE SU PUNTO.
+drop policy if exists center_info_manager_insert on public.center_info;
+create policy center_info_manager_insert on public.center_info
+  for insert to authenticated
+  with check (public.manages_location(location_id));
+
 
 -- ===========================================================================
 -- 2) campaigns — «120 colchonetas antes del viernes»

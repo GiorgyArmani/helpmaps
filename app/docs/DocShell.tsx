@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Lang } from "@/i18n/types";
 import { BRAND, LANGUAGE } from "@/config";
 import { DocTopbar } from "./DocTopbar";
+import { Icon } from "@/ui/icons";
 
 /**
  * The frame the hand-written docs share with the generated ones (`[slug]`).
@@ -34,10 +35,13 @@ const DOCS_LABEL: Record<Lang, string> = {
 };
 
 // Same two words the generated `[slug]` pages end on, so every doc leaves the same way.
+// La flecha ya NO va en el texto: la pone el icono al lado. Ver la nota de `.doc-secondary`
+// en `docs.css` — una flecha escrita a mano no se puede alinear con la línea base y cambia
+// de forma según la fuente que el sistema acabe usando.
 const BACK_DOCS: Record<Lang, string> = {
-  es: "← Documentación",
-  en: "← Documentation",
-  pt: "← Documentação",
+  es: "Documentación",
+  en: "Documentation",
+  pt: "Documentação",
 };
 
 const GO_MAP: Record<Lang, string> = {
@@ -85,6 +89,7 @@ export function DocShell({
               phone, the legal pages were a dead end. */}
           <div className="doc-actions">
             <Link href={`/docs${qs(lang)}`} className="doc-secondary">
+              <Icon.back />
               {BACK_DOCS[lang]}
             </Link>
             <Link href="/" className="doc-primary">

@@ -151,6 +151,7 @@ const es = {
   "supply.pickerHint": "Toca lo que reciben. Si falta algo, escríbelo.",
   "supply.addOwn": "Añadir otro",
   "supply.add": "Añadir",
+  "supply.quickHint": "O toca para añadir rápido:",
 
   // ── Reconocimiento: medallas, niveles y tabla de posiciones ─────────────
   "badge.first": "Primera ayuda",
@@ -178,6 +179,24 @@ const es = {
   "rec.toNext": "Te faltan {n} para {level}",
   "rec.maxLevel": "Has llegado arriba del todo.",
   "rec.badges": "Tus Trofeos",
+  "rec.how": "Cómo sube tu nivel",
+  // El texto de cada acción dice DÓNDE se hace, porque ésa es la diferencia que explica
+  // por qué una vale diez veces más que otra.
+  "action.donation": "Aportar a una iniciativa",
+  "action.checkin": "Visitar un punto y escanear su código",
+  "action.volunteer": "Ir a una jornada de voluntariado",
+  "action.suggestion": "Proponer un punto que se publique",
+  "action.report": "Confirmar un punto desde el teléfono",
+
+  // ── «Estoy aquí» ────────────────────────────────────────────────────────
+  "point.checkin": "Estoy aquí",
+  // Lo que se hace con la ubicación, dicho antes de pedirla. Ver `api/checkin/route.ts`.
+  "point.checkinHint":
+    "Comprobamos que estás en el punto para sumarlo a tu nivel. Tu ubicación no se guarda.",
+  "point.checkedIn": "Visita registrada",
+  "point.checkedInHint": "Ya cuenta para tu nivel. Vuelve mañana si sigues ayudando aquí.",
+  "point.tooFar": "Parece que todavía no estás en el punto.",
+  "point.tooFarKm": "Estás a {km} km del punto. Acércate e inténtalo allí.",
   "rec.noBadges": "Todavía ninguna. La primera llega con tu primera colaboración.",
   "rec.locked": "Aún no",
   "rec.empty": "Cuando confirmes un punto, aportes a una iniciativa o salgas a una jornada, aparecerá aquí.",
@@ -202,11 +221,16 @@ const es = {
 
   // ── Compartir ───────────────────────────────────────────────────────────
   "share.title": "Compartir",
+  "tab.info": "Información",
+  "tab.campaigns": "Campañas",
+  "tab.agenda": "Agenda",
+  "tab.posts": "Novedades",
   "share.igTitle": "¿Para dónde es?",
   "share.igStory": "Historia · 9:16",
   "share.igPost": "Publicación · 4:5",
   "share.igSquare": "Cuadrado · 1:1",
   "share.image": "Imagen para redes",
+  "share.more": "Otras apps",
   "share.building": "Generando la imagen…",
   "og.updatedToday": "Actualizado hoy",
   "og.updatedOneDay": "Actualizado hace 1 día",
@@ -231,6 +255,11 @@ const es = {
   // ── Aportar directo a una iniciativa ────────────────────────────────────
   "donate.direct": "Cómo aportar",
   "donate.button": "Ir a donar",
+  "donate.claim": "Ya aporté",
+  // Se dice ANTES de pulsar: quien lo toca va a pedirle una confirmación a alguien.
+  "donate.claimHint":
+    "La iniciativa lo confirma cuando le llegue, y ahí suma a tu nivel. No pedimos ni el monto ni comprobantes.",
+  "donate.claimed": "Aviso enviado. Queda pendiente de que la iniciativa lo confirme.",
   // La misma regla que en el onboarding, dicha ahora a quien va a dar el dinero.
   "donate.directNote":
     "Estos datos son de la iniciativa y el aporte le llega directo. {platform} no lo recibe ni se queda con nada.",
@@ -249,6 +278,39 @@ const es = {
   "mine.newPost": "Publicar una novedad",
   "mine.publish": "Publicar",
 
+  // ── El panel diario del gestor ──────────────────────────────────────────
+  "mine.statusNow": "¿Están abiertos?",
+  // Un toque basta: es el dato que más rápido caduca y el que hace cruzar una ciudad.
+  "mine.statusHint": "Tócalo cuando cambie. Es lo primero que ve quien busca ayuda.",
+  "mine.statusNone": "Sin decir. Marca uno para que la gente sepa si puede venir.",
+  "mine.statusFail": "No se pudo cambiar. Revisa la conexión y vuelve a tocarlo.",
+  "mine.noPosts": "Todavía no has contado nada.",
+  "mine.profile": "Los datos de tu iniciativa",
+  "mine.images": "La imagen de tu perfil",
+  "mine.banner": "Portada",
+  "mine.bannerHint": "La franja de arriba de tu página. Apaisada, y que se entienda pequeña.",
+  "mine.photo": "Foto o logo",
+  "mine.photoHint": "Cuadrada. Es lo que identifica a tu iniciativa en su página.",
+  "mine.imagePick": "Elegir una imagen",
+  "mine.imageClear": "Quitar la imagen",
+  "mine.imageFail": "No se pudo subir. Revisa que sea JPG, PNG o WEBP y pese menos de 3 MB.",
+  "mine.editProfile": "Ver y corregir",
+  "mine.profileLocked":
+    "El nombre, el tipo y la ubicación en el mapa los mantiene el equipo. Si algo está mal, escríbeles.",
+  "mine.updateRaised": "Poner al día lo recaudado",
+  "mine.closeCampaign": "Cerrar la campaña",
+  "mine.closeSure": "Se cerrará y dejará de verse. No podrás volver a abrirla desde aquí.",
+  "mine.closeYes": "Sí, cerrarla",
+  "mine.f.raised": "Cuánto llevan",
+  "mine.f.raisedHint": "Lo que ustedes han recibido. Se muestra como cifra declarada por la iniciativa.",
+
+  // ── Aportes por confirmar, en el panel de la iniciativa ─────────────────
+  "claims.title": "Aportes por confirmar",
+  "claims.hint":
+    "Alguien dice haberles aportado. Si les llegó, confírmalo: es lo que se lo reconoce a esa persona.",
+  "claims.confirm": "Me llegó",
+  "claims.reject": "No me llegó",
+
   "mine.f.title": "Nombre de la campaña",
   "mine.f.titleHint": "Concreto: «120 colchonetas para el refugio», no «ayuda».",
   "mine.f.purpose": "Para qué es",
@@ -266,6 +328,8 @@ const es = {
   "mine.f.postCampaignHint": "Atarlo a una campaña es lo que deja ver en qué se usó lo que dieron.",
   "mine.f.noCampaign": "De ninguna en concreto",
   "mine.f.postBody": "Qué quieres contar",
+  "mine.f.postPhoto": "Una foto",
+  "mine.f.postPhotoHint": "Opcional, y es lo que más se mira. Se reduce sola antes de subirse.",
 
   "onb.stepOf": "Paso {n} de {total}",
   "onb.next": "Seguir",
@@ -318,6 +382,13 @@ const es = {
 
   // ── Pestañas del panel e iniciativas digitales ──────────────────────────
   "panel.tab.nearby": "Cerca",
+  "feed.title": "Novedades",
+  // Las dos caras del feed. Es la misma pregunta que hace la portada de /inicio.
+  "feed.needHelp": "Necesito ayuda",
+  "feed.wantHelp": "Quiero ayudar",
+  "feed.saved": "Guardado",
+  "feed.empty": "Todavía no hay novedades por aquí.",
+  "feed.emptyHint": "Cuando las iniciativas cuenten lo que hacen o abran una campaña, aparecerá aquí.",
   "panel.tab.digital": "Digitales",
 
   // ── Cerca de ti ─────────────────────────────────────────────────────────

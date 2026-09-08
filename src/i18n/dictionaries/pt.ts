@@ -42,6 +42,10 @@ const pt: Partial<Dict> = {
   // mesmo com o dicionário fino: não avisar que a plataforma não verifica o valor é a
   // única omissão daqui que engana quem lê.
   "campaign.title": "Está arrecadando",
+  "tab.info": "Informações",
+  "tab.campaigns": "Campanhas",
+  "tab.agenda": "Agenda",
+  "tab.posts": "Novidades",
   "campaign.of": "de {goal} {unit}",
   "campaign.reached": "Meta atingida",
   "campaign.declared": "Valor declarado pela iniciativa. Não verificamos.",
@@ -115,6 +119,7 @@ const pt: Partial<Dict> = {
 
   "share.title": "Compartilhar",
   "share.copyLink": "Copiar link",
+  "share.more": "Outros apps",
   "share.linkCopied": "Link copiado",
 
   // ── Doações ─────────────────────────────────────────────────────────────

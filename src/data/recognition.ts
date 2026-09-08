@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ContributionKind } from "@/domain/badges";
 
 // Lecturas y escrituras de medallas, puntos y tabla de posiciones.
 //
@@ -95,37 +94,35 @@ export async function fetchLeaderboard(sb: SupabaseClient, limit = 25): Promise<
 }
 
 /**
- * Anotar algo que alguien acaba de hacer.
+ * NO HAY forma de anotar experiencia desde el cliente, y es deliberado.
  *
- * Pasa por la función `record_contribution`, que es la ÚNICA puerta: `contributions` no
- * tiene política de INSERT, precisamente para que nadie pueda regalarse puntos con una
- * petición desde la consola del navegador.
+ * Existió una `recordContribution()` que llamaba a la función de la base. Se quitó al
+ * repesar las acciones: mientras todo valía 1 era discutible, pero con un check-in
+ * valiendo 10 y una donación 15, una llamada abierta desde el navegador es el nivel
+ * puesto a la venta por el precio de abrir la consola.
  *
- * No lanza. Anotar es un efecto secundario de la acción de verdad —confirmar un punto,
- * declarar un aporte— y si falla, esa acción ya ocurrió y no puede deshacerse por esto.
- * Un error aquí no le da a nadie nada que hacer.
+ * Ahora la experiencia la otorgan:
+ *
+ *   • TRIGGERS en la base — `reward_applied_report` corre cuando el equipo aplica un
+ *     aviso, colgado del hecho y no de ninguna pantalla.
+ *   • El SERVIDOR con el service role, después de comprobar que la acción ocurrió: es
+ *     donde irán el check-in por código y la confirmación de un aporte.
+ *
+ * Si alguna vez esto vuelve a hacer falta desde el cliente, la pregunta que hay que
+ * responder antes es: ¿qué impide que quien llama se lo invente?
  */
-export async function recordContribution(
-  sb: SupabaseClient,
-  kind: ContributionKind,
-  locationId: string | null = null,
-  points = 1,
-): Promise<void> {
-  if (tablasAusentes) return;
-  const { error } = await sb.rpc("record_contribution", {
-    p_kind: kind,
-    p_location_id: locationId,
-    p_points: points,
-  });
-  if (faltaLaTabla(error)) tablasAusentes = true;
-}
 
-/** Otorgar una medalla. Idempotente en la base; tampoco lanza, por lo mismo. */
-export async function awardBadge(sb: SupabaseClient, code: string): Promise<void> {
-  if (tablasAusentes) return;
-  const { error } = await sb.rpc("award_badge", { p_badge: code });
-  if (faltaLaTabla(error)) tablasAusentes = true;
-}
+/**
+ * NO hay forma de otorgarse una medalla desde el cliente, y también es deliberado.
+ *
+ * Existió una `awardBadge()`. Se quitó junto con la función de la base: cualquiera podía
+ * pedirse «Vigía» desde la consola sin haber confirmado nada, y una distinción que se
+ * reclama sola no distingue nada.
+ *
+ * Ahora las otorga un trigger sobre `contributions` (`evaluate_badges`), contando lo que
+ * de verdad hay. La aplicación sólo las LEE — `src/domain/badges.ts` describe las mismas
+ * reglas para poder dibujar cuáles faltan, pero quien decide es la base.
+ */
 
 /** Salir o dejar de salir en la tabla de posiciones. Esto SÍ lanza: lo pidió una persona. */
 export async function setLeaderboardOptIn(
