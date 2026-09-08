@@ -496,3 +496,123 @@ export function emptyProfile(locationId: string): CenterProfile {
     onboarded_at: null,
   };
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Quien gestiona un punto, visto desde el panel del equipo.
+//
+// Dar acceso a un punto tenía camino y quitarlo no: se invitaba, la persona aceptaba, y
+// a partir de ahí la única forma de revocar era entrar a Supabase a mano. Un permiso que
+// se reparte con un botón y se retira con una consulta SQL no se retira nunca.
+//
+// El modelo de confianza del repo dice que lo que frena a un voluntario no es una revisión
+// previa sino que su acceso es REVOCABLE AL INSTANTE. Esto es lo que hacía falta para que
+// eso siguiera siendo verdad con el rol nuevo.
+// ───────────────────────────────────────────────────────────────────────────
+
+export interface CenterManager {
+  user_id: string;
+  /** El nombre que la persona eligió. Nunca su correo: ése no sale de `auth.users`. */
+  display_name: string | null;
+  created_at: string;
+}
+
+export interface PendingInvite {
+  id: string;
+  /** A quién iba dirigida, si se puso. Null = vale quien tenga el enlace. */
+  email: string | null;
+  expires_at: string;
+}
+
+/**
+ * Quién gestiona este punto ahora mismo.
+ *
+ * DOS consultas y no un embed de PostgREST: `center_managers.user_id` y `profiles.user_id`
+ * apuntan los dos a `auth.users`, pero NO hay clave foránea entre ellas, así que PostgREST
+ * no puede resolver la relación y un `select=…profiles(…)` falla. Los perfiles se piden
+ * aparte, con un `in`.
+ *
+ * El correo no se pide, y no es un olvido: `010_accounts` lo deja fuera de `profiles` a
+ * propósito para que el equipo vea «Ana M.» y no la dirección de Ana. Esa línea no se
+ * mueve porque ahora haya un rol más.
+ */
+export async function fetchCenterManagers(
+  sb: SupabaseClient,
+  locationId: string,
+): Promise<CenterManager[]> {
+  if (tablasAusentes) return [];
+  const { data, error } = await sb
+    .from("center_managers")
+    .select("user_id,created_at")
+    .eq("location_id", locationId)
+    .order("created_at", { ascending: true });
+  if (faltaLaTabla(error)) tablasAusentes = true;
+  if (error || !data || data.length === 0) return [];
+
+  const rows = data as unknown as Row[];
+  const ids = rows.map((r) => String(r.user_id));
+  const { data: perfiles } = await sb
+    .from("profiles")
+    .select("user_id,display_name")
+    .in("user_id", ids);
+  const nombres = new Map(
+    ((perfiles ?? []) as unknown as Row[]).map((p) => [String(p.user_id), text(p.display_name)]),
+  );
+
+  return rows.map((r) => ({
+    user_id: String(r.user_id),
+    display_name: nombres.get(String(r.user_id)) ?? null,
+    created_at: String(r.created_at ?? ""),
+  }));
+}
+
+/** Las invitaciones que aún no ha aceptado nadie, para poder cancelarlas. */
+export async function fetchPendingInvites(
+  sb: SupabaseClient,
+  locationId: string,
+): Promise<PendingInvite[]> {
+  if (tablasAusentes) return [];
+  const { data, error } = await sb
+    .from("center_invites")
+    .select("id,email,expires_at")
+    .eq("location_id", locationId)
+    .is("accepted_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
+  if (faltaLaTabla(error)) tablasAusentes = true;
+  if (error || !data) return [];
+  return (data as unknown as Row[]).map((r) => ({
+    id: String(r.id),
+    email: text(r.email),
+    expires_at: String(r.expires_at ?? ""),
+  }));
+}
+
+/**
+ * Retirarle a alguien la gestión de un punto.
+ *
+ * Borra la fila y nada más: lo que esa persona publicó mientras gestionaba SIGUE ahí. Las
+ * campañas y las entregas son de la iniciativa, no de quien las escribió, y hacerlas
+ * desaparecer al retirar un acceso borraría la rendición de cuentas de una campaña que ya
+ * recibió dinero.
+ *
+ * El portero es RLS (`center_managers_staff_write`), y por eso esto puede ser un DELETE
+ * directo: sólo pasa si quien llama alcanza la emergencia de ese punto.
+ */
+export async function revokeCenterManager(
+  sb: SupabaseClient,
+  locationId: string,
+  userId: string,
+): Promise<void> {
+  const { error } = await sb
+    .from("center_managers")
+    .delete()
+    .eq("location_id", locationId)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+/** Cancelar una invitación que todavía no se ha usado. */
+export async function cancelInvite(sb: SupabaseClient, id: string): Promise<void> {
+  const { error } = await sb.from("center_invites").delete().eq("id", id);
+  if (error) throw error;
+}

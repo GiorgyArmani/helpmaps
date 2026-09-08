@@ -152,6 +152,46 @@ const es = {
   "supply.addOwn": "Añadir otro",
   "supply.add": "Añadir",
 
+  // ── Reconocimiento: medallas, niveles y tabla de posiciones ─────────────
+  "badge.first": "Primera ayuda",
+  "badge.first.hint": "Por tu primera colaboración.",
+  "badge.confirmer": "Confirmas",
+  "badge.confirmer.hint": "Cinco puntos confirmados. Gracias a esto el mapa se puede creer.",
+  "badge.lookout": "Vigía",
+  "badge.lookout.hint": "Veinticinco puntos confirmados.",
+  "badge.giver": "Das",
+  "badge.giver.hint": "Por tu primer aporte a una iniciativa.",
+  "badge.hands": "Manos",
+  "badge.hands.hint": "Tres jornadas de voluntariado.",
+  "badge.steady": "Constante",
+  "badge.steady.hint": "Siete días distintos ayudando. Volver es lo que más cuesta.",
+
+  "level.1": "Vecino",
+  "level.2": "Colaborador",
+  "level.3": "Puntal",
+  "level.4": "Referente",
+  "level.5": "Pilar",
+
+  "rec.title": "Tu nivel",
+  "rec.xp": "{n} de experiencia",
+  "rec.xpOne": "1 de experiencia",
+  "rec.toNext": "Te faltan {n} para {level}",
+  "rec.maxLevel": "Has llegado arriba del todo.",
+  "rec.badges": "Tus Trofeos",
+  "rec.noBadges": "Todavía ninguna. La primera llega con tu primera colaboración.",
+  "rec.locked": "Aún no",
+  "rec.empty": "Cuando confirmes un punto, aportes a una iniciativa o salgas a una jornada, aparecerá aquí.",
+
+  "rec.optIn": "Salir en la tabla de posiciones",
+  // El texto tiene que dejar claro que NO se publica dónde estuvo nadie: es la pregunta
+  // que se hace cualquiera antes de marcar esta casilla.
+  "rec.optInHint":
+    "Se vería tu nombre y tu experiencia. Nunca dónde estuviste ni a qué puntos fuiste: eso no lo ve nadie, tampoco el equipo.",
+  "rec.board": "Quienes más ayudan",
+  "rec.boardEmpty": "Todavía nadie ha pedido salir en la lista.",
+  "rec.boardHint": "Sólo aparece quien lo pidió.",
+  "rec.you": "tú",
+
   // ── Lista de necesidades ────────────────────────────────────────────────
   "needs.barCount": "{n} puntos necesitan ayuda",
   "needs.barCountOne": "1 punto necesita ayuda",
@@ -727,6 +767,11 @@ const es = {
   "admin.inviteLink": "Enlace de la invitación",
   "admin.inviteLinkHint": "Vale una vez y caduca en 14 días. Cópialo y mándalo por donde coordinéis.",
   "admin.inviteSaveFirst": "Guarda el punto antes de invitar a quien lo gestiona.",
+  "admin.managerSince": "Gestiona este punto desde {ago}",
+  "admin.revoke": "Retirar el acceso",
+  "admin.invitePending": "Invitación pendiente",
+  "admin.inviteCancel": "Cancelar la invitación",
+  "admin.inviteAnyone": "Cualquiera con el enlace",
 
   // ── Pedir el enlace ─────────────────────────────────────────────────────
   // Prefijo propio: `reset.*` ya nombra la pantalla de arriba, que es la OTRA mitad.

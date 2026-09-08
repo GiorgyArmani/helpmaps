@@ -6286,3 +6286,294 @@ fieldset.fieldset {
   opacity: 0.45;
   cursor: default;
 }
+
+/* Quién gestiona un punto, en la ficha del equipo. La lista va ANTES del formulario de
+   invitar: antes de repartir otra llave conviene ver cuántas hay dadas. */
+
+.mgr-list {
+  list-style: none;
+  margin: 0 0 11px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mgr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #fff;
+}
+
+/* Una invitación sin aceptar no es un acceso: borde discontinuo para que no se cuente
+   como una llave ya entregada. */
+.mgr-row-pending {
+  border-style: dashed;
+  background: var(--soft);
+}
+
+.mgr-who {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.mgr-who b {
+  font-size: 0.875rem;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mgr-since {
+  font-size: 0.6875rem;
+  color: var(--mut);
+}
+
+.mgr-x {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--mut);
+  cursor: pointer;
+}
+
+.mgr-x:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, #fff);
+}
+
+.mgr-x svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ─────────────────  Medallas, nivel y puntos  ────────────────────────────
+   Dentro de «Mi cuenta», antes de los puntos guardados: guardar un refugio es para ti,
+   aportar es lo que hiciste por otros. Ver `src/features/account/Recognition.tsx`. */
+
+.rec {
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rec-empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.rec-level {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.rec-level-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* La barra de lo que falta para el nivel siguiente. Es el elemento que convierte un
+   número en una sensación de cercanía: el último tramo es doce veces el primero, así que
+   «te faltan 40» no significa lo mismo arriba que abajo. */
+.rec-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: var(--soft);
+  overflow: hidden;
+}
+
+.rec-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--brand);
+  min-width: 3px;
+}
+
+/* El número del nivel, en grande. Es lo único de esta pantalla que se mira de lejos. */
+.rec-badge-lvl {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.rec-level-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.rec-level-txt b {
+  font-size: 0.9375rem;
+  color: var(--ink);
+}
+
+.rec-pts {
+  font-size: 0.75rem;
+  color: var(--mut);
+}
+
+.rec-next {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--mut);
+}
+
+.rec-sub {
+  margin: 18px 0 8px;
+  font-size: 0.7188rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.rec-badges {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* Las no ganadas se ven, apagadas. Una medalla que no existe hasta tenerla no invita a
+   nada; enseñar lo que falta es la mitad de por qué esto funciona. */
+.rec-badge {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  opacity: 0.5;
+}
+
+.rec-badge-on {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+}
+
+.rec-badge-ic {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--mut);
+}
+
+.rec-badge-on .rec-badge-ic {
+  background: color-mix(in srgb, var(--brand) 14%, #fff);
+  color: var(--brand);
+}
+
+.rec-badge-ic svg {
+  width: 17px;
+  height: 17px;
+}
+
+.rec-badge-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.rec-badge-txt b {
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.rec-badge-txt span {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--mut);
+}
+
+.rec-tag {
+  flex: 0 0 auto;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ok) 12%, #fff);
+  color: var(--ok);
+}
+
+.rec-tag-off {
+  background: var(--soft);
+  color: var(--mut);
+}
+
+/* El interruptor de salir en la lista. Con su explicación al lado y no detrás de un
+   enlace: la pregunta «qué se publica exactamente» se hace ANTES de marcarlo. */
+.rec-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--soft);
+  cursor: pointer;
+}
+
+.rec-opt input {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.rec-opt-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rec-opt-txt b {
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.rec-opt-txt span {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--mut);
+}

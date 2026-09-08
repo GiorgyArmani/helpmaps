@@ -70,6 +70,13 @@ export default function PointActions({ locationId }: { locationId: string }) {
       if (r.ok) {
         setKind(null);
         setNote("");
+        // AQUÍ NO SE SUMA EXPERIENCIA, y es a propósito.
+        //
+        // La primera versión de esto la sumaba al enviar, y así cualquiera pulsaba «sigue
+        // abierto» en cincuenta puntos en una tarde y subía de nivel sin comprobar nada.
+        // Ahora la otorga un trigger cuando el EQUIPO aplica el aviso — misma lógica que
+        // ya rige el aviso en sí: es una señal, y sólo cuenta cuando alguien la confirma.
+        // Ver `db/06_reconocimiento.sql` § 6.
       }
     } catch {
       setResult("error");

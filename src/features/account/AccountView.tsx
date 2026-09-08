@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Center } from "@/domain/types";
 import { useI18n } from "@/i18n/context";
+import Recognition from "@/features/account/Recognition";
 import type { DictKey } from "@/i18n";
 import { Icon } from "@/ui/icons";
 import { Button, Input, Notice, Spinner } from "@/ui/primitives";
@@ -200,6 +201,11 @@ export default function AccountView({
           </div>
         )}
       </header>
+
+      {/* ── Lo que has aportado ─────────────────────────────────────────
+          Antes de los puntos guardados: guardar un refugio es para ti, aportar es lo que
+          hiciste por otros, y es lo que da sentido a volver a esta pantalla. */}
+      {account.userId ? <Recognition userId={account.userId} /> : null}
 
       {/* ── Tus puntos ──────────────────────────────────────────────────── */}
       <section className="acc-sec">
