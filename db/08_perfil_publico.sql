@@ -75,7 +75,7 @@ create policy initiatives_manager_insert on storage.objects
   for insert to authenticated
   with check (
     bucket_id = 'initiatives'
-    and public.manages_location(split_part(name, '/', 1))
+    and private.manages_location(split_part(name, '/', 1))
   );
 
 -- Reemplazar la portada es lo normal, no la excepción: se cambia cada temporada.
@@ -84,11 +84,11 @@ create policy initiatives_manager_update on storage.objects
   for update to authenticated
   using (
     bucket_id = 'initiatives'
-    and public.manages_location(split_part(name, '/', 1))
+    and private.manages_location(split_part(name, '/', 1))
   )
   with check (
     bucket_id = 'initiatives'
-    and public.manages_location(split_part(name, '/', 1))
+    and private.manages_location(split_part(name, '/', 1))
   );
 
 drop policy if exists initiatives_manager_delete on storage.objects;
@@ -96,7 +96,7 @@ create policy initiatives_manager_delete on storage.objects
   for delete to authenticated
   using (
     bucket_id = 'initiatives'
-    and public.manages_location(split_part(name, '/', 1))
+    and private.manages_location(split_part(name, '/', 1))
   );
 
 

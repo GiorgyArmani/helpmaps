@@ -104,11 +104,12 @@ order by 1;
 --
 --    SE ESPERA: 0 filas. Cualquier fila aquí es una función que puede ser secuestrada.
 -- ---------------------------------------------------------------------------
-select p.proname   as funcion_secdef_sin_search_path,
+select p.oid::regprocedure as funcion_secdef_sin_search_path,
        p.proconfig as config
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
-where n.nspname = 'public'
+-- `private` también: que la API no las publique no quita que las llamen las políticas.
+where n.nspname in ('public', 'private')
   and p.prosecdef
   and (p.proconfig is null or not (p.proconfig::text like '%search_path=%'))
 order by 1;
@@ -125,15 +126,22 @@ order by p.prosecdef desc, 1;
 
 -- ---------------------------------------------------------------------------
 -- 7) Vistas SECURITY DEFINER, que saltan el RLS de quien consulta.
---    SE ESPERA: 0 filas, salvo que alguien haya añadido una a propósito y lo sepa.
+--
+--    Una vista es SECURITY DEFINER si NO dice `security_invoker = true`: es lo de por
+--    defecto, no algo que haya que pedir. Esta consulta buscaba al revés —vistas CON la
+--    opción puesta—, así que señalaba justo la que estaba bien, `point_report_counts`, y
+--    dejó pasar `leaderboard`. Lo encontró el linter de Supabase el 2026-09-10.
+--
+--    SE ESPERA: 0 filas.
 -- ---------------------------------------------------------------------------
-select c.relname as vista
+select c.relname as vista_security_definer
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
-  and c.relkind in ('v', 'm')
-  and exists (
-    select 1 from unnest(c.reloptions) o where o like 'security_%'
+  and c.relkind = 'v'
+  and not exists (
+    select 1 from unnest(c.reloptions) o
+    where o ~* '^security_invoker=(true|on|yes|1)$'
   )
 order by 1;
 
@@ -202,7 +210,8 @@ rollback;
 --
 --     SE ESPERA, exactamente:
 --       favourites     1 política  (favourites_own, ALL, sin excepción para admin)
---       profiles       4           (self read/insert/update + staff read)
+--       profiles       3           (profiles_read —propio, equipo o, con 07_aportes, el
+--                                   gestor que recibió su aporte— + self insert/update)
 --       point_reports  3           (insert propio, read propio-o-equipo, update equipo)
 --
 --     Que `favourites` tenga MÁS de una política es el hallazgo a buscar: significaría
@@ -216,3 +225,85 @@ from pg_policies
 where schemaname = 'public'
   and tablename in ('profiles', 'favourites', 'point_reports')
 order by tablename, policyname;
+
+-- ---------------------------------------------------------------------------
+-- 12) FALLO CRÍTICO: funciones SECURITY DEFINER que se pueden llamar SIN CUENTA.
+--
+--     Cada una es una puerta por `/rest/v1/rpc/<nombre>` que corre con los permisos de
+--     su dueño, abierta a cualquiera con la anon key. `revoke ... from public` NO la
+--     cierra: Supabase le da EXECUTE a `anon` por nombre. Ver db/09_endurecimiento.sql.
+--
+--     SE ESPERA: 0 filas. Una fila es una función que hay que clasificar en 09.
+-- ---------------------------------------------------------------------------
+select p.oid::regprocedure as funcion_abierta_a_anon
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.prosecdef
+  and has_function_privilege('anon', p.oid, 'execute')
+order by 1;
+
+-- ---------------------------------------------------------------------------
+-- 13) Y las que puede llamar alguien CON cuenta.
+--
+--     SE ESPERA, exactamente (casos C y D de db/09_endurecimiento.sql):
+--
+--       public.accept_center_invite      ← la única que es un endpoint de la API
+--       private.belongs_to, private.can_delete, private.can_edit, private.is_admin,
+--       private.is_staff, private.is_superadmin
+--       private.can_manage_location, private.manages_location   (sólo con 05_iniciativas)
+--       private.leaderboard_rows                                 (sólo con 06_reconocimiento)
+--
+--     Una de más es una función que nadie decidió abrir. Una de menos, si es de las de
+--     `private`, es el equipo sin poder guardar. Y una de las de `private` apareciendo en
+--     `public` es una base que volvió a correr un archivo viejo: ver 11_privado.sql.
+-- ---------------------------------------------------------------------------
+select p.oid::regprocedure as funcion_abierta_a_authenticated
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname in ('public', 'private')
+  and p.prosecdef
+  and has_function_privilege('authenticated', p.oid, 'execute')
+order by n.nspname desc, 1;
+
+-- ---------------------------------------------------------------------------
+-- 14) Dos políticas permisivas para el mismo rol y el mismo verbo.
+--
+--     Es el aviso 0006 del linter. No es una fuga —Postgres las junta con OR—, pero
+--     quiere decir que para saber quién ve qué hay que sumar políticas de secciones
+--     distintas, y así es como se cuela una de más sin que nadie la vea. Un `for all`
+--     cuenta para los cuatro verbos, y por eso se expande. Ver db/10_politicas.sql.
+--
+--     SE ESPERA: 0 filas.
+-- ---------------------------------------------------------------------------
+select p.tablename                                   as tabla,
+       r.rol,
+       v.verbo,
+       string_agg(p.policyname, ', ' order by p.policyname) as politicas
+from pg_policies p
+cross join unnest(p.roles) as r(rol)
+cross join unnest(
+  case when p.cmd = 'ALL' then array['SELECT', 'INSERT', 'UPDATE', 'DELETE'] else array[p.cmd] end
+) as v(verbo)
+where p.schemaname = 'public'
+  and p.permissive = 'PERMISSIVE'
+group by 1, 2, 3
+having count(*) > 1
+order by 1, 2, 3;
+
+-- ---------------------------------------------------------------------------
+-- 15) Funciones que llaman a las de alcance SIN decir en qué esquema están.
+--
+--     Desde 11_privado.sql viven en `private`, y una función cuyo cuerpo diga `is_staff()`
+--     a secas las busca en su `search_path` —`public`— y no las encuentra. No falla al
+--     crearse ni al migrar: falla la primera vez que se ejecuta, que en un trigger de
+--     guardia es cuando alguien del equipo intenta resolver algo. Las políticas no tienen
+--     este problema: guardan la función por su OID, no por su nombre.
+--
+--     SE ESPERA: 0 filas. Una fila se arregla escribiendo `private.` delante.
+-- ---------------------------------------------------------------------------
+select p.oid::regprocedure as funcion_con_llamada_sin_esquema
+from pg_proc p
+where p.pronamespace in ('public'::regnamespace, 'private'::regnamespace)
+  and p.prosrc ~ '(^|[^.[:alnum:]_])(is_staff|is_admin|is_superadmin|belongs_to|can_edit|can_delete|manages_location|can_manage_location)\s*\('
+order by 1;

@@ -79,8 +79,14 @@ alter table public.center_managers enable row level security;
 -- ¿Esta persona gestiona este punto?
 --
 -- security definer por lo mismo que `is_staff()`: se llama desde políticas RLS, así que
--- no puede depender de que quien consulta pueda leer la tabla.
-create or replace function public.manages_location(loc_id text)
+-- no puede depender de que quien consulta pueda leer la tabla. Y en `private`, como ella,
+-- para que no sea además un endpoint de la API (ver `002_staff` en 01_esquema.sql).
+--
+-- ⚠️ En una base cuyas funciones de alcance siguen en `public` —la de un 01 viejo—, corre
+-- antes db/11_privado.sql: sin `private.can_edit` esto no se puede crear.
+create schema if not exists private;
+
+create or replace function private.manages_location(loc_id text)
 returns boolean
 language sql
 security definer
@@ -94,14 +100,14 @@ $$;
 
 -- El permiso de escritura de todo este archivo, en una función: o gestionas ese punto, o
 -- eres del equipo que alcanza la emergencia a la que pertenece.
-create or replace function public.can_manage_location(loc_id text)
+create or replace function private.can_manage_location(loc_id text)
 returns boolean
 language sql
 security definer
 set search_path = public
 as $$
-  select public.manages_location(loc_id)
-     or public.can_edit((select emergency_id from public.locations where id = loc_id));
+  select private.manages_location(loc_id)
+     or private.can_edit((select emergency_id from public.locations where id = loc_id));
 $$;
 
 -- Leer: lo propio, y el equipo de esa emergencia. No es público a quién se invitó —
@@ -111,15 +117,15 @@ create policy center_managers_read on public.center_managers
   for select to authenticated
   using (
     user_id = (select auth.uid())
-    or public.can_edit((select emergency_id from public.locations where id = location_id))
+    or private.can_edit((select emergency_id from public.locations where id = location_id))
   );
 
 -- Invitar y revocar: sólo el equipo de esa emergencia.
 drop policy if exists center_managers_staff_write on public.center_managers;
 create policy center_managers_staff_write on public.center_managers
   for all to authenticated
-  using (public.can_edit((select emergency_id from public.locations where id = location_id)))
-  with check (public.can_edit((select emergency_id from public.locations where id = location_id)));
+  using (private.can_edit((select emergency_id from public.locations where id = location_id)))
+  with check (private.can_edit((select emergency_id from public.locations where id = location_id)));
 
 -- Un gestor mantiene al día lo suyo: qué necesita hoy, el horario, si está abierto.
 --
@@ -134,8 +140,8 @@ create policy center_managers_staff_write on public.center_managers
 drop policy if exists center_info_manager_update on public.center_info;
 create policy center_info_manager_update on public.center_info
   for update to authenticated
-  using (public.manages_location(location_id))
-  with check (public.manages_location(location_id));
+  using (private.manages_location(location_id))
+  with check (private.manages_location(location_id));
 
 -- Y CREARLA, que es lo que faltaba y tenía el onboarding roto ENTERO.
 --
@@ -151,7 +157,7 @@ create policy center_info_manager_update on public.center_info
 drop policy if exists center_info_manager_insert on public.center_info;
 create policy center_info_manager_insert on public.center_info
   for insert to authenticated
-  with check (public.manages_location(location_id));
+  with check (private.manages_location(location_id));
 
 
 -- ===========================================================================
@@ -399,45 +405,45 @@ create policy initiative_posts_public_read on public.initiative_posts
 
 drop policy if exists campaigns_manager_read on public.campaigns;
 create policy campaigns_manager_read on public.campaigns
-  for select to authenticated using (public.can_manage_location(location_id));
+  for select to authenticated using (private.can_manage_location(location_id));
 
 drop policy if exists campaigns_manager_insert on public.campaigns;
 create policy campaigns_manager_insert on public.campaigns
-  for insert to authenticated with check (public.can_manage_location(location_id));
+  for insert to authenticated with check (private.can_manage_location(location_id));
 
 drop policy if exists campaigns_manager_update on public.campaigns;
 create policy campaigns_manager_update on public.campaigns
   for update to authenticated
-  using (public.can_manage_location(location_id))
-  with check (public.can_manage_location(location_id));
+  using (private.can_manage_location(location_id))
+  with check (private.can_manage_location(location_id));
 
 drop policy if exists activities_manager_read on public.activities;
 create policy activities_manager_read on public.activities
-  for select to authenticated using (public.can_manage_location(location_id));
+  for select to authenticated using (private.can_manage_location(location_id));
 
 drop policy if exists activities_manager_insert on public.activities;
 create policy activities_manager_insert on public.activities
-  for insert to authenticated with check (public.can_manage_location(location_id));
+  for insert to authenticated with check (private.can_manage_location(location_id));
 
 drop policy if exists activities_manager_update on public.activities;
 create policy activities_manager_update on public.activities
   for update to authenticated
-  using (public.can_manage_location(location_id))
-  with check (public.can_manage_location(location_id));
+  using (private.can_manage_location(location_id))
+  with check (private.can_manage_location(location_id));
 
 drop policy if exists initiative_posts_manager_read on public.initiative_posts;
 create policy initiative_posts_manager_read on public.initiative_posts
-  for select to authenticated using (public.can_manage_location(location_id));
+  for select to authenticated using (private.can_manage_location(location_id));
 
 drop policy if exists initiative_posts_manager_insert on public.initiative_posts;
 create policy initiative_posts_manager_insert on public.initiative_posts
-  for insert to authenticated with check (public.can_manage_location(location_id));
+  for insert to authenticated with check (private.can_manage_location(location_id));
 
 drop policy if exists initiative_posts_manager_update on public.initiative_posts;
 create policy initiative_posts_manager_update on public.initiative_posts
   for update to authenticated
-  using (public.can_manage_location(location_id))
-  with check (public.can_manage_location(location_id));
+  using (private.can_manage_location(location_id))
+  with check (private.can_manage_location(location_id));
 
 -- Borrar: sólo un admin, y sólo campañas y actividades. `initiative_posts` NO tiene
 -- política de DELETE para nadie — es la tabla de las pruebas de entrega, y una prueba que
@@ -445,11 +451,11 @@ create policy initiative_posts_manager_update on public.initiative_posts
 -- `status = 'hidden'`, que deja la fila donde estaba.
 drop policy if exists campaigns_admin_delete on public.campaigns;
 create policy campaigns_admin_delete on public.campaigns
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using (private.is_admin());
 
 drop policy if exists activities_admin_delete on public.activities;
 create policy activities_admin_delete on public.activities
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using (private.is_admin());
 
 
 -- ===========================================================================
@@ -548,8 +554,8 @@ alter table public.center_invites enable row level security;
 drop policy if exists center_invites_staff_all on public.center_invites;
 create policy center_invites_staff_all on public.center_invites
   for all to authenticated
-  using (public.can_edit((select emergency_id from public.locations where id = location_id)))
-  with check (public.can_edit((select emergency_id from public.locations where id = location_id)));
+  using (private.can_edit((select emergency_id from public.locations where id = location_id)))
+  with check (private.can_edit((select emergency_id from public.locations where id = location_id)));
 
 /**
  * Canjear una invitación.
@@ -613,8 +619,9 @@ end
 $accept$;
 
 -- `anon` no: aceptar exige sesión, y la primera línea de la función ya lo dice. Dárselo a
--- `anon` sólo cambiaría el mensaje de error por uno peor.
-revoke all on function public.accept_center_invite(text) from public;
+-- `anon` sólo cambiaría el mensaje de error por uno peor. Se le quita por nombre porque
+-- Supabase se lo da por nombre, y eso no lo quita el revoke de PUBLIC.
+revoke all on function public.accept_center_invite(text) from public, anon;
 grant execute on function public.accept_center_invite(text) to authenticated;
 
 -- Bitácora: repartir las llaves de un punto es lo que hay que poder mirar después.
@@ -627,7 +634,7 @@ create trigger trg_center_invites_audit after insert or update on public.center_
 -- Verificación
 --
 --   select count(*) from public.campaigns;            -- 0, y la tabla existe
---   select public.manages_location('cualquier-id');   -- false sin sesión
+--   select private.manages_location('cualquier-id');   -- false sin sesión
 --
 -- Y la comprobación que importa, con una sesión anónima: una campaña en `draft` no debe
 -- salir, y una campaña `active` de un punto con `active = false` tampoco.

@@ -129,27 +129,58 @@ alter table public.profiles
 -- ===========================================================================
 -- 3) La vista pública: un nombre y un número
 --
--- `security_invoker = off` (lo de por defecto en una vista) hace que lea con los permisos
--- de quien la creó, que es lo que permite exponer un agregado de tablas que el visitante
--- no puede leer fila a fila. Ése es justo el punto: se ve el TOTAL, no de dónde sale.
+-- La tabla de posiciones NO puede leer con los permisos del visitante: `contributions`
+-- sólo se la deja leer a su dueño, así que vería la tabla vacía. Hace falta sumar con
+-- permisos de más, y la pregunta es DÓNDE se ponen esos permisos.
+--
+-- La primera versión los ponía en la vista misma (`security_invoker = off`, lo de por
+-- defecto). Funcionaba, pero una vista así se salta la RLS de todo lo que toque, y el
+-- linter de Supabase la marca con razón: el día que alguien le añada una columna o un
+-- join, se lleva los permisos del dueño con ella sin que nada avise.
+--
+-- Ahora los permisos de más viven en UNA función, `private.leaderboard_rows()`, que
+-- devuelve cuatro columnas y ninguna otra. El esquema `private` no lo publica la API —no
+-- se puede llamar por `/rest/v1/rpc`—, y la vista, que sí es pública, lee con los
+-- permisos de quien consulta y sólo alcanza esas cuatro columnas.
 --
 -- No lleva `location_id` ni nada que lleve a él, y no puede llevarlo nunca.
 -- ===========================================================================
 
-create or replace view public.leaderboard as
+create schema if not exists private;
+-- `usage` y nada más: sin él la vista no puede llamar a la función, y lo que haya dentro
+-- sigue cerrado función a función.
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated;
+
+create or replace function private.leaderboard_rows()
+returns table (user_id uuid, display_name text, points int, actions int)
+language sql
+stable
+security definer
+set search_path = ''
+as $lb$
   select
     p.user_id,
     p.display_name,
-    coalesce(sum(c.points), 0)::int as points,
-    count(c.id)::int                as actions
+    coalesce(sum(c.points), 0)::int,
+    count(c.id)::int
   from public.profiles p
   join public.contributions c on c.user_id = p.user_id
   where p.leaderboard_opt_in
   group by p.user_id, p.display_name
-  having coalesce(sum(c.points), 0) > 0
-  order by points desc, p.display_name asc;
+  having coalesce(sum(c.points), 0) > 0;
+$lb$;
 
--- Lectura pública de la vista. Lo que expone ya está acotado por su propia definición.
+revoke all on function private.leaderboard_rows() from public;
+grant execute on function private.leaderboard_rows() to anon, authenticated;
+
+create or replace view public.leaderboard
+with (security_invoker = true) as
+  select user_id, display_name, points, actions
+  from private.leaderboard_rows()
+  order by points desc, display_name asc;
+
+-- Lectura pública de la vista. Lo que expone ya está acotado por la función de arriba.
 grant select on public.leaderboard to anon, authenticated;
 
 
@@ -192,7 +223,7 @@ alter table public.user_badges enable row level security;
 drop policy if exists user_badges_read on public.user_badges;
 create policy user_badges_read on public.user_badges
   for select to authenticated
-  using (user_id = (select auth.uid()) or public.is_staff());
+  using (user_id = (select auth.uid()) or private.is_staff());
 
 -- Sin política de UPDATE para nadie: una medalla se gana y ya está, no cambia después. La
 -- que había existía para marcarlas canjeadas, y las medallas ya no se canjean.
@@ -228,6 +259,9 @@ create or replace function public.contribution_points(p_kind text)
 returns int
 language sql
 immutable
+-- No lee ninguna tabla, así que el `search_path` vacío no le cuesta nada, y sin él una
+-- función que suma puntos resolvería sus nombres según quien la llame.
+set search_path = ''
 as $pts$
   select case p_kind
     -- Desde el teléfono, sin moverse. Cuenta, pero poco.
@@ -294,8 +328,67 @@ $rec$;
 -- La firma vieja, con `p_points`, se retira: mientras exista, existe el agujero.
 drop function if exists public.record_contribution(text, text, int);
 
-revoke all on function public.record_contribution(text, text, uuid) from public;
 -- Sin `grant` a `authenticated`: ver la nota de arriba. Sólo triggers y service role.
+--
+-- ⚠️ `from public` SOLO no basta, y durante un tiempo fue lo único que había aquí.
+-- Supabase le da EXECUTE a `anon` y `authenticated` POR NOMBRE en cada función nueva de
+-- `public`, y ese permiso no cuelga de PUBLIC: sobrevive a su revoke. Comprobado contra
+-- la base viva el 2026-09-10 — cualquiera, sin cuenta, podía anotarle puntos a cualquier
+-- `user_id`, y la tabla de posiciones publica los `user_id`. Ver 09_endurecimiento.sql.
+revoke all on function public.record_contribution(text, text, uuid) from public, anon, authenticated;
+grant execute on function public.record_contribution(text, text, uuid) to service_role;
+
+
+-- ===========================================================================
+-- 6) La experiencia se gana por lo COMPROBADO, no por lo declarado
+--
+-- Este bloque es la respuesta a un agujero real. La primera versión sumaba experiencia al
+-- ENVIAR un aviso sobre un punto, y eso deja abierto lo obvio: alguien pulsa «sigue
+-- abierto» en cincuenta puntos distintos en una tarde y sube de nivel sin haber
+-- comprobado nada. Con niveles que valdrán un beneficio en un comercio aliado, una
+-- experiencia que se puede fabricar así no vale nada.
+--
+-- Así que la experiencia por un aviso se otorga cuando el EQUIPO lo aplica. Es el mismo
+-- principio que `010_accounts` fijó para los avisos mismos —«un reporte es una SEÑAL, no
+-- una escritura»— llevado a su consecuencia: si la señal sólo cuenta cuando alguien la
+-- confirma, el reconocimiento tampoco puede contar antes.
+--
+-- Va en un TRIGGER y no en el panel del equipo a propósito. Si lo hiciera la aplicación
+-- al resolver, se perdería en cuanto alguien resolviera un aviso desde otro sitio —un
+-- script, la consola de Supabase, un panel futuro— y nadie se enteraría de que dejó de
+-- funcionar. Aquí cuelga del hecho, no de la pantalla.
+--
+-- (Este bloque se perdió del repositorio al reescribir el archivo el 2026-09-08 y siguió
+-- vivo en la base de Venezuela. Una base nueva levantada desde aquí no premiaba ningún
+-- aviso, y las medallas «Confirmas» y «Vigía» no se podían ganar. Se restituye igual,
+-- salvo el valor, que ahora sale de `contribution_points` como en todo lo demás.)
+-- ===========================================================================
+
+create or replace function public.reward_applied_report()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $reward$
+begin
+  -- Sólo al PASAR a aplicado, no cada vez que se guarde una fila que ya lo estaba.
+  if new.status = 'applied' and old.status is distinct from 'applied' then
+    insert into public.contributions (user_id, kind, location_id, points, emergency_id)
+    values (
+      new.user_id, 'report', new.location_id,
+      public.contribution_points('report'), new.emergency_id
+    )
+    -- El índice de una-vez-al-día sigue mandando: dos avisos de la misma persona sobre el
+    -- mismo punto, aplicados el mismo día, suman una vez.
+    on conflict do nothing;
+  end if;
+  return new;
+end
+$reward$;
+
+drop trigger if exists trg_point_reports_reward on public.point_reports;
+create trigger trg_point_reports_reward after update on public.point_reports
+  for each row execute function public.reward_applied_report();
 
 -- ===========================================================================
 -- 7) Las medallas las decide la BASE, no la aplicación
@@ -368,9 +461,15 @@ create trigger trg_contributions_badges after insert on public.contributions
 drop function if exists public.award_badge(text);
 
 -- Y `evaluate_badges` se cierra también. No podría otorgar nada indebido —cuenta lo que
--- de verdad hay en `contributions`— pero `create function` regala EXECUTE a PUBLIC, y una
--- función que nadie de fuera necesita llamar no tiene por qué estar expuesta.
-revoke all on function public.evaluate_badges(uuid) from public;
+-- de verdad hay en `contributions`— pero `create function` regala EXECUTE a PUBLIC (y
+-- Supabase, además, a `anon` y `authenticated` por nombre), y una función que nadie de
+-- fuera necesita llamar no tiene por qué estar expuesta.
+revoke all on function public.evaluate_badges(uuid) from public, anon, authenticated;
+
+-- Las de trigger, igual. Un trigger no comprueba EXECUTE al dispararse —sólo al crearse—,
+-- así que cerrarlas no cambia nada de lo que hacen; sólo quita la puerta por `/rpc`.
+revoke all on function public.evaluate_badges_on_contribution() from public, anon, authenticated;
+revoke all on function public.reward_applied_report() from public, anon, authenticated;
 
 -- Nadie las escribe a mano: sin políticas de INSERT ni UPDATE sobre `user_badges`, la
 -- única vía es el trigger de arriba, que corre como definer.

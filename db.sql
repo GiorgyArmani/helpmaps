@@ -4,11 +4,11 @@
 CREATE TABLE public.locations (
   id text NOT NULL,
   name text NOT NULL,
-  type text NOT NULL CHECK (type = ANY (ARRAY['shelter'::text, 'donation_centre'::text, 'comedor'::text, 'iniciativa'::text, 'hospital'::text, 'morgue'::text])),
+  type text NOT NULL CHECK (type = ANY (ARRAY['shelter'::text, 'donation_centre'::text, 'comedor'::text, 'iniciativa'::text, 'hospital'::text, 'morgue'::text, 'digital'::text])),
   region text,
   municipality text,
-  lat double precision NOT NULL,
-  lng double precision NOT NULL,
+  lat double precision,
+  lng double precision,
   address text,
   phone text,
   whatsapp text,
@@ -16,7 +16,12 @@ CREATE TABLE public.locations (
   active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT locations_pkey PRIMARY KEY (id)
+  emergency_id uuid,
+  country_code text,
+  coverage_regions ARRAY NOT NULL DEFAULT '{}'::text[],
+  coverage_municipalities ARRAY NOT NULL DEFAULT '{}'::text[],
+  CONSTRAINT locations_pkey PRIMARY KEY (id),
+  CONSTRAINT locations_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id)
 );
 CREATE TABLE public.center_info (
   location_id text NOT NULL,
@@ -35,6 +40,13 @@ CREATE TABLE public.center_info (
   external_id text UNIQUE,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  website text,
+  instagram text,
+  donate_info text,
+  donate_url text,
+  onboarded_at timestamp with time zone,
+  banner_url text,
+  photo_url text,
   CONSTRAINT center_info_pkey PRIMARY KEY (location_id),
   CONSTRAINT center_info_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id)
 );
@@ -47,7 +59,7 @@ CREATE TABLE public.app_settings (
 );
 CREATE TABLE public.staff_users (
   user_id uuid NOT NULL,
-  role text NOT NULL CHECK (role = ANY (ARRAY['admin'::text, 'volunteer'::text])),
+  role text NOT NULL CHECK (role = ANY (ARRAY['superadmin'::text, 'admin'::text, 'volunteer'::text])),
   email text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT staff_users_pkey PRIMARY KEY (user_id),
@@ -64,8 +76,12 @@ CREATE TABLE public.submissions (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   reviewed_at timestamp with time zone,
   reviewed_by uuid,
+  emergency_id uuid,
+  created_by uuid,
   CONSTRAINT submissions_pkey PRIMARY KEY (id),
-  CONSTRAINT submissions_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id)
+  CONSTRAINT submissions_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id),
+  CONSTRAINT submissions_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id),
+  CONSTRAINT submissions_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
 );
 CREATE TABLE public.volunteer_requests (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -79,8 +95,12 @@ CREATE TABLE public.volunteer_requests (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   reviewed_at timestamp with time zone,
   reviewed_by uuid,
+  emergency_id uuid,
+  user_id uuid,
   CONSTRAINT volunteer_requests_pkey PRIMARY KEY (id),
-  CONSTRAINT volunteer_requests_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id)
+  CONSTRAINT volunteer_requests_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id),
+  CONSTRAINT volunteer_requests_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id),
+  CONSTRAINT volunteer_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.audit_log (
   id bigint NOT NULL DEFAULT nextval('audit_log_id_seq'::regclass),
@@ -92,5 +112,232 @@ CREATE TABLE public.audit_log (
   actor_email text,
   actor_role text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
+  emergency_id uuid,
   CONSTRAINT audit_log_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.donations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  social_url text,
+  donate_url text,
+  donate_info text,
+  sort integer NOT NULL DEFAULT 0,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  emergency_id uuid,
+  CONSTRAINT donations_pkey PRIMARY KEY (id),
+  CONSTRAINT donations_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id)
+);
+CREATE TABLE public.emergencies (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  slug text NOT NULL UNIQUE,
+  host text UNIQUE,
+  country_code text NOT NULL,
+  country_name text NOT NULL,
+  name text NOT NULL,
+  hazard_type text NOT NULL DEFAULT 'earthquake'::text CHECK (hazard_type = ANY (ARRAY['earthquake'::text, 'flood'::text, 'storm'::text, 'fire'::text, 'landslide'::text, 'conflict'::text, 'other'::text])),
+  status text NOT NULL DEFAULT 'draft'::text CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'archived'::text])),
+  region_noun jsonb NOT NULL DEFAULT '{"one": "región", "many": "regiones"}'::jsonb,
+  geo jsonb NOT NULL,
+  regions jsonb NOT NULL DEFAULT '[]'::jsonb,
+  legal jsonb NOT NULL,
+  brand jsonb NOT NULL DEFAULT '{}'::jsonb,
+  features jsonb NOT NULL DEFAULT '{}'::jsonb,
+  language jsonb NOT NULL DEFAULT '{}'::jsonb,
+  hazard jsonb NOT NULL DEFAULT '{}'::jsonb,
+  layers jsonb NOT NULL DEFAULT '[]'::jsonb,
+  maintenance boolean NOT NULL DEFAULT false,
+  notice text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  news jsonb NOT NULL DEFAULT '{}'::jsonb,
+  CONSTRAINT emergencies_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.staff_emergencies (
+  user_id uuid NOT NULL,
+  emergency_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT staff_emergencies_pkey PRIMARY KEY (user_id, emergency_id),
+  CONSTRAINT staff_emergencies_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT staff_emergencies_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id)
+);
+CREATE TABLE public.emergency_phones (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  emergency_id uuid,
+  name text NOT NULL,
+  number text NOT NULL,
+  description text,
+  region text,
+  municipality text,
+  sort integer NOT NULL DEFAULT 0,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT emergency_phones_pkey PRIMARY KEY (id),
+  CONSTRAINT emergency_phones_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id)
+);
+CREATE TABLE public.news_bulletins (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  emergency_id uuid NOT NULL,
+  generated_at timestamp with time zone NOT NULL DEFAULT now(),
+  summary text NOT NULL,
+  sources jsonb NOT NULL DEFAULT '[]'::jsonb,
+  model text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT news_bulletins_pkey PRIMARY KEY (id),
+  CONSTRAINT news_bulletins_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id)
+);
+CREATE TABLE public.profiles (
+  user_id uuid NOT NULL,
+  display_name text NOT NULL CHECK (length(TRIM(BOTH FROM display_name)) >= 2 AND length(TRIM(BOTH FROM display_name)) <= 40),
+  region text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  leaderboard_opt_in boolean NOT NULL DEFAULT false,
+  CONSTRAINT profiles_pkey PRIMARY KEY (user_id),
+  CONSTRAINT profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.favourites (
+  user_id uuid NOT NULL,
+  location_id text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT favourites_pkey PRIMARY KEY (user_id, location_id),
+  CONSTRAINT favourites_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT favourites_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id)
+);
+CREATE TABLE public.point_reports (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  location_id text NOT NULL,
+  emergency_id uuid,
+  user_id uuid NOT NULL,
+  kind text NOT NULL CHECK (kind = ANY (ARRAY['sigue_abierto'::text, 'ya_cerro'::text, 'dato_incorrecto'::text])),
+  note text CHECK (note IS NULL OR length(note) <= 500),
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'applied'::text, 'dismissed'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  reviewed_at timestamp with time zone,
+  reviewed_by uuid,
+  CONSTRAINT point_reports_pkey PRIMARY KEY (id),
+  CONSTRAINT point_reports_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
+  CONSTRAINT point_reports_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id),
+  CONSTRAINT point_reports_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT point_reports_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id)
+);
+CREATE TABLE public.center_managers (
+  user_id uuid NOT NULL,
+  location_id text NOT NULL,
+  invited_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT center_managers_pkey PRIMARY KEY (user_id, location_id),
+  CONSTRAINT center_managers_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT center_managers_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
+  CONSTRAINT center_managers_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES auth.users(id)
+);
+CREATE TABLE public.campaigns (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  location_id text NOT NULL,
+  emergency_id uuid,
+  title text NOT NULL CHECK (length(TRIM(BOTH FROM title)) >= 3 AND length(TRIM(BOTH FROM title)) <= 80),
+  purpose text NOT NULL CHECK (length(TRIM(BOTH FROM purpose)) >= 10 AND length(TRIM(BOTH FROM purpose)) <= 600),
+  goal_amount numeric NOT NULL CHECK (goal_amount > 0::numeric),
+  goal_unit text NOT NULL CHECK (length(TRIM(BOTH FROM goal_unit)) >= 1 AND length(TRIM(BOTH FROM goal_unit)) <= 24),
+  raised_amount numeric NOT NULL DEFAULT 0 CHECK (raised_amount >= 0::numeric),
+  raised_declared_at timestamp with time zone,
+  raised_declared_by uuid,
+  starts_on date NOT NULL DEFAULT CURRENT_DATE,
+  ends_on date,
+  status text NOT NULL DEFAULT 'draft'::text CHECK (status = ANY (ARRAY['draft'::text, 'active'::text, 'reached'::text, 'closed'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT campaigns_pkey PRIMARY KEY (id),
+  CONSTRAINT campaigns_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
+  CONSTRAINT campaigns_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id),
+  CONSTRAINT campaigns_raised_declared_by_fkey FOREIGN KEY (raised_declared_by) REFERENCES auth.users(id)
+);
+CREATE TABLE public.activities (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  location_id text NOT NULL,
+  emergency_id uuid,
+  title text NOT NULL CHECK (length(TRIM(BOTH FROM title)) >= 3 AND length(TRIM(BOTH FROM title)) <= 100),
+  description text CHECK (description IS NULL OR length(description) <= 600),
+  starts_at timestamp with time zone NOT NULL,
+  ends_at timestamp with time zone,
+  place text CHECK (place IS NULL OR length(place) <= 160),
+  needs_volunteers boolean NOT NULL DEFAULT false,
+  status text NOT NULL DEFAULT 'scheduled'::text CHECK (status = ANY (ARRAY['draft'::text, 'scheduled'::text, 'done'::text, 'cancelled'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT activities_pkey PRIMARY KEY (id),
+  CONSTRAINT activities_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
+  CONSTRAINT activities_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id)
+);
+CREATE TABLE public.initiative_posts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  location_id text NOT NULL,
+  emergency_id uuid,
+  campaign_id uuid,
+  kind text NOT NULL DEFAULT 'avance'::text CHECK (kind = ANY (ARRAY['avance'::text, 'entrega'::text, 'necesidad'::text])),
+  body text NOT NULL CHECK (length(TRIM(BOTH FROM body)) >= 3 AND length(TRIM(BOTH FROM body)) <= 1200),
+  photo_url text,
+  status text NOT NULL DEFAULT 'published'::text CHECK (status = ANY (ARRAY['draft'::text, 'published'::text, 'hidden'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT initiative_posts_pkey PRIMARY KEY (id),
+  CONSTRAINT initiative_posts_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
+  CONSTRAINT initiative_posts_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id),
+  CONSTRAINT initiative_posts_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.campaigns(id)
+);
+CREATE TABLE public.center_invites (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  location_id text NOT NULL,
+  token text NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'::text) UNIQUE,
+  email text,
+  invited_by uuid,
+  expires_at timestamp with time zone NOT NULL DEFAULT (now() + '14 days'::interval),
+  accepted_at timestamp with time zone,
+  accepted_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT center_invites_pkey PRIMARY KEY (id),
+  CONSTRAINT center_invites_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
+  CONSTRAINT center_invites_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES auth.users(id),
+  CONSTRAINT center_invites_accepted_by_fkey FOREIGN KEY (accepted_by) REFERENCES auth.users(id)
+);
+CREATE TABLE public.contributions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  kind text NOT NULL CHECK (kind = ANY (ARRAY['checkin'::text, 'report'::text, 'suggestion'::text, 'donation'::text, 'volunteer'::text])),
+  location_id text,
+  emergency_id uuid,
+  points integer NOT NULL DEFAULT 1 CHECK (points >= 0 AND points <= 100),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT contributions_pkey PRIMARY KEY (id),
+  CONSTRAINT contributions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT contributions_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
+  CONSTRAINT contributions_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id)
+);
+CREATE TABLE public.user_badges (
+  user_id uuid NOT NULL,
+  badge text NOT NULL,
+  awarded_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_badges_pkey PRIMARY KEY (user_id, badge),
+  CONSTRAINT user_badges_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.donation_claims (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  location_id text NOT NULL,
+  campaign_id uuid,
+  emergency_id uuid,
+  note text CHECK (note IS NULL OR length(note) <= 280),
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'rejected'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  reviewed_at timestamp with time zone,
+  reviewed_by uuid,
+  CONSTRAINT donation_claims_pkey PRIMARY KEY (id),
+  CONSTRAINT donation_claims_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT donation_claims_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
+  CONSTRAINT donation_claims_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.campaigns(id),
+  CONSTRAINT donation_claims_emergency_id_fkey FOREIGN KEY (emergency_id) REFERENCES public.emergencies(id),
+  CONSTRAINT donation_claims_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id)
 );

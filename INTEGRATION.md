@@ -145,8 +145,8 @@ Scope is enforced where you already put the boundary: **in the RLS policies**. A
 ```sql
 create policy locations_staff_update on public.locations
   for update to authenticated
-  using (public.can_edit(emergency_id))
-  with check (public.can_edit(emergency_id));
+  using (private.can_edit(emergency_id))
+  with check (private.can_edit(emergency_id));
 ```
 
 Under your trust model — verified volunteers publishing live, with no review queue in front

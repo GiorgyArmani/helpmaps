@@ -82,14 +82,14 @@ create policy donation_claims_insert on public.donation_claims
 drop policy if exists donation_claims_read on public.donation_claims;
 create policy donation_claims_read on public.donation_claims
   for select to authenticated
-  using (user_id = (select auth.uid()) or public.can_manage_location(location_id));
+  using (user_id = (select auth.uid()) or private.can_manage_location(location_id));
 
 -- Resolver: quien gestiona el punto. Ni el que aportó ni nadie más.
 drop policy if exists donation_claims_manage on public.donation_claims;
 create policy donation_claims_manage on public.donation_claims
   for update to authenticated
-  using (public.can_manage_location(location_id))
-  with check (public.can_manage_location(location_id));
+  using (private.can_manage_location(location_id))
+  with check (private.can_manage_location(location_id));
 
 
 -- ===========================================================================
@@ -113,7 +113,7 @@ create policy profiles_donor_read on public.profiles
     exists (
       select 1 from public.donation_claims d
       where d.user_id = profiles.user_id
-        and public.can_manage_location(d.location_id)
+        and private.can_manage_location(d.location_id)
     )
   );
 

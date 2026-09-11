@@ -48,6 +48,9 @@
 --   17 políticas   creadas en 001…005 sin alcance, y 008 las suelta y las recrea
 --                  acotadas por emergencia. Por eso hay 62 sentencias `create policy`
 --                  y sólo 45 políticas al final: gana la última, como en producción.
+--   Las lecturas   `016_politicas`, al final del todo, junta en UNA política por tabla,
+--   y los `for all` rol y verbo las que las secciones de arriba fueron sumando. Para
+--                  saber quién ve qué hoy en esas tablas, se mira allí.
 --
 -- Mover una sección hacia arriba deja la definición VIEJA como buena. No lanza ningún
 -- error: simplemente deja la base con menos protección de la que cree tener.
@@ -229,9 +232,17 @@ create table if not exists public.staff_users (
 
 alter table public.staff_users enable row level security;
 
+-- Las funciones que deciden quién es quién viven en `private`, un esquema que la API NO
+-- publica. En `public` serían, además de lo que usan las políticas, un endpoint
+-- `/rest/v1/rpc/is_staff` que nadie pidió — el linter de Supabase lo marca, con razón.
+-- `usage` y nada más: cada función se abre una a una (ver `015_endurecimiento`).
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated;
+
 -- security definer: estas funciones se llaman DESDE las políticas RLS, así que no
 -- pueden depender de que quien consulta pueda leer la tabla.
-create or replace function public.is_staff()
+create or replace function private.is_staff()
 returns boolean
 language sql
 security definer
@@ -240,7 +251,7 @@ as $$
   select exists (select 1 from public.staff_users where user_id = auth.uid());
 $$;
 
-create or replace function public.is_admin()
+create or replace function private.is_admin()
 returns boolean
 language sql
 security definer
@@ -255,44 +266,44 @@ $$;
 -- Los admins ven todo el equipo.
 drop policy if exists staff_users_self_read on public.staff_users;
 create policy staff_users_self_read on public.staff_users
-  for select to authenticated using (user_id = (select auth.uid()) or public.is_admin());
+  for select to authenticated using (user_id = (select auth.uid()) or private.is_admin());
 
 drop policy if exists staff_users_admin_write on public.staff_users;
 create policy staff_users_admin_write on public.staff_users
-  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+  for all to authenticated using (private.is_admin()) with check (private.is_admin());
 
 -- --------------------------------------------------------------------------
 -- Escritura sobre el mapa: staff inserta y edita; solo admin borra.
 -- --------------------------------------------------------------------------
 drop policy if exists locations_staff_insert on public.locations;
 create policy locations_staff_insert on public.locations
-  for insert to authenticated with check (public.is_staff());
+  for insert to authenticated with check (private.is_staff());
 
 drop policy if exists locations_staff_update on public.locations;
 create policy locations_staff_update on public.locations
-  for update to authenticated using (public.is_staff()) with check (public.is_staff());
+  for update to authenticated using (private.is_staff()) with check (private.is_staff());
 
 drop policy if exists locations_admin_delete on public.locations;
 create policy locations_admin_delete on public.locations
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using (private.is_admin());
 
 drop policy if exists center_info_staff_insert on public.center_info;
 create policy center_info_staff_insert on public.center_info
-  for insert to authenticated with check (public.is_staff());
+  for insert to authenticated with check (private.is_staff());
 
 drop policy if exists center_info_staff_update on public.center_info;
 create policy center_info_staff_update on public.center_info
-  for update to authenticated using (public.is_staff()) with check (public.is_staff());
+  for update to authenticated using (private.is_staff()) with check (private.is_staff());
 
 drop policy if exists center_info_admin_delete on public.center_info;
 create policy center_info_admin_delete on public.center_info
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using (private.is_admin());
 
 -- El aviso de mantenimiento lo cambia solo un admin: apagar el mapa para todo el país
 -- no es una acción de voluntario.
 drop policy if exists app_settings_admin_update on public.app_settings;
 create policy app_settings_admin_update on public.app_settings
-  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+  for update to authenticated using (private.is_admin()) with check (private.is_admin());
 
 -- --------------------------------------------------------------------------
 -- Primer admin: no hay forma de crearlo desde la app (haría falta ser admin para eso).
@@ -350,15 +361,15 @@ create policy submissions_public_insert on public.submissions
 
 drop policy if exists submissions_staff_read on public.submissions;
 create policy submissions_staff_read on public.submissions
-  for select to authenticated using (public.is_staff());
+  for select to authenticated using (private.is_staff());
 
 drop policy if exists submissions_staff_update on public.submissions;
 create policy submissions_staff_update on public.submissions
-  for update to authenticated using (public.is_staff()) with check (public.is_staff());
+  for update to authenticated using (private.is_staff()) with check (private.is_staff());
 
 drop policy if exists submissions_admin_delete on public.submissions;
 create policy submissions_admin_delete on public.submissions
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using (private.is_admin());
 
 -- Blindaje: ni un INSERT público con `status` manipulado ni un UPDATE que resucite
 -- una fila ya revisada. La política de arriba cubre el INSERT; esto cubre el resto.
@@ -373,7 +384,7 @@ begin
     new.status := 'pending';
   end if;
   if tg_op = 'UPDATE' then
-    if not public.is_staff() then
+    if not private.is_staff() then
       raise exception 'only staff may review submissions';
     end if;
     new.reviewed_at := now();
@@ -419,15 +430,15 @@ create policy volunteer_requests_public_insert on public.volunteer_requests
 
 drop policy if exists volunteer_requests_admin_read on public.volunteer_requests;
 create policy volunteer_requests_admin_read on public.volunteer_requests
-  for select to authenticated using (public.is_admin());
+  for select to authenticated using (private.is_admin());
 
 drop policy if exists volunteer_requests_admin_update on public.volunteer_requests;
 create policy volunteer_requests_admin_update on public.volunteer_requests
-  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+  for update to authenticated using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists volunteer_requests_admin_delete on public.volunteer_requests;
 create policy volunteer_requests_admin_delete on public.volunteer_requests
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using (private.is_admin());
 
 create or replace function public.guard_volunteer_request_status()
 returns trigger
@@ -440,7 +451,7 @@ begin
     new.status := 'pending';
   end if;
   if tg_op = 'UPDATE' then
-    if not public.is_admin() then
+    if not private.is_admin() then
       raise exception 'only admins may review volunteer requests';
     end if;
     new.reviewed_at := now();
@@ -489,7 +500,7 @@ alter table public.audit_log enable row level security;
 
 drop policy if exists audit_log_staff_read on public.audit_log;
 create policy audit_log_staff_read on public.audit_log
-  for select to authenticated using (public.is_staff());
+  for select to authenticated using (private.is_staff());
 
 create or replace function public.audit_row()
 returns trigger
@@ -619,20 +630,20 @@ create policy donations_public_read on public.donations
 -- El equipo ve todas, incluidas las desactivadas, para poder reactivarlas.
 drop policy if exists donations_staff_read on public.donations;
 create policy donations_staff_read on public.donations
-  for select to authenticated using (public.is_staff());
+  for select to authenticated using (private.is_staff());
 
 drop policy if exists donations_staff_insert on public.donations;
 create policy donations_staff_insert on public.donations
-  for insert to authenticated with check (public.is_staff());
+  for insert to authenticated with check (private.is_staff());
 
 drop policy if exists donations_staff_update on public.donations;
 create policy donations_staff_update on public.donations
-  for update to authenticated using (public.is_staff()) with check (public.is_staff());
+  for update to authenticated using (private.is_staff()) with check (private.is_staff());
 
 -- Borrar sigue siendo de admin, como en el mapa.
 drop policy if exists donations_admin_delete on public.donations;
 create policy donations_admin_delete on public.donations
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using (private.is_admin());
 
 -- Bitácora: publicar a nombre de quién se reciben donaciones es exactamente el tipo de
 -- cambio que hay que poder auditar después. `audit_row()` viene de 004.
@@ -651,7 +662,7 @@ create trigger trg_audit_donations after insert or update or delete on public.do
 --
 -- PROBLEMA QUE ARREGLA
 --
--- `audit_log_staff_read` (004) decía `using (public.is_staff())`: cualquiera con acceso
+-- `audit_log_staff_read` (004) decía `using (private.is_staff())`: cualquiera con acceso
 -- al panel leía TODA la bitácora. Un voluntario veía las filas de `volunteer_requests`
 -- —quién más pidió entrar al equipo, cuándo, y qué admin lo revisó— que son datos de
 -- OTRAS personas y de la operación interna, no del mapa.
@@ -678,6 +689,7 @@ create or replace function public.audit_entity_visible_to_staff(p_entity text)
 returns boolean
 language sql
 immutable
+set search_path = ''
 as $$
   select p_entity in ('locations', 'center_info');
 $$;
@@ -686,8 +698,8 @@ drop policy if exists audit_log_staff_read on public.audit_log;
 create policy audit_log_staff_read on public.audit_log
   for select to authenticated
   using (
-    public.is_admin()
-    or (public.is_staff() and public.audit_entity_visible_to_staff(entity))
+    private.is_admin()
+    or (private.is_staff() and public.audit_entity_visible_to_staff(entity))
   );
 
 -- La bitácora sigue siendo append-only: no hay política de insert/update/delete para
@@ -824,7 +836,7 @@ create policy emergencies_public_read on public.emergencies
 
 drop policy if exists emergencies_staff_read on public.emergencies;
 create policy emergencies_staff_read on public.emergencies
-  for select to authenticated using (public.is_staff());
+  for select to authenticated using (private.is_staff());
 
 -- ---------------------------------------------------------------------------
 -- Verificación: emergencias activas sin host asignado (no las sirve nadie).
@@ -905,7 +917,7 @@ alter table public.staff_emergencies enable row level security;
 -- así que no pueden depender de que quien consulta pueda leer estas tablas.
 -- ===========================================================================
 
-create or replace function public.is_superadmin()
+create or replace function private.is_superadmin()
 returns boolean
 language sql
 security definer
@@ -921,7 +933,7 @@ $$;
 -- políticas que ya existen y dicen `is_admin()` siguen escritas igual y ahora incluyen
 -- al rol de arriba, que es lo que se espera de un rol de arriba. Para una instalación
 -- sin superadmins el comportamiento es idéntico al anterior.
-create or replace function public.is_admin()
+create or replace function private.is_admin()
 returns boolean
 language sql
 security definer
@@ -938,14 +950,14 @@ $$;
 -- El `eid is null` de la primera línea es la compatibilidad hacia atrás en una
 -- expresión: en una base que todavía no adoptó el modelo, todas las filas tienen null y
 -- esta función devuelve lo mismo que antes de existir.
-create or replace function public.belongs_to(eid uuid)
+create or replace function private.belongs_to(eid uuid)
 returns boolean
 language sql
 security definer
 set search_path = public
 as $$
   select eid is null
-      or public.is_superadmin()
+      or private.is_superadmin()
       or exists (
         select 1 from public.staff_emergencies
         where user_id = auth.uid() and emergency_id = eid
@@ -953,24 +965,24 @@ as $$
 $$;
 
 -- Escribir: ser staff Y alcanzar esa emergencia.
-create or replace function public.can_edit(eid uuid)
+create or replace function private.can_edit(eid uuid)
 returns boolean
 language sql
 security definer
 set search_path = public
 as $$
-  select public.is_staff() and public.belongs_to(eid);
+  select private.is_staff() and private.belongs_to(eid);
 $$;
 
 -- Borrar: sigue siendo solo de admin, ahora además acotado. Borrar un centro arrastra su
 -- información y un pin equivocado manda gente al lugar equivocado.
-create or replace function public.can_delete(eid uuid)
+create or replace function private.can_delete(eid uuid)
 returns boolean
 language sql
 security definer
 set search_path = public
 as $$
-  select public.is_admin() and public.belongs_to(eid);
+  select private.is_admin() and private.belongs_to(eid);
 $$;
 
 
@@ -1063,8 +1075,8 @@ create policy emergency_phones_public_read on public.emergency_phones
 drop policy if exists emergency_phones_staff_write on public.emergency_phones;
 create policy emergency_phones_staff_write on public.emergency_phones
   for all to authenticated
-  using (public.can_edit(emergency_id))
-  with check (public.can_edit(emergency_id));
+  using (private.can_edit(emergency_id))
+  with check (private.can_edit(emergency_id));
 
 
 -- ===========================================================================
@@ -1078,83 +1090,83 @@ create policy emergency_phones_staff_write on public.emergency_phones
 -- locations
 drop policy if exists locations_staff_insert on public.locations;
 create policy locations_staff_insert on public.locations
-  for insert to authenticated with check (public.can_edit(emergency_id));
+  for insert to authenticated with check (private.can_edit(emergency_id));
 
 drop policy if exists locations_staff_update on public.locations;
 create policy locations_staff_update on public.locations
   for update to authenticated
-  using (public.can_edit(emergency_id))
-  with check (public.can_edit(emergency_id));
+  using (private.can_edit(emergency_id))
+  with check (private.can_edit(emergency_id));
 
 drop policy if exists locations_admin_delete on public.locations;
 create policy locations_admin_delete on public.locations
-  for delete to authenticated using (public.can_delete(emergency_id));
+  for delete to authenticated using (private.can_delete(emergency_id));
 
 -- center_info — cuelga de locations, así que su alcance es el de su punto.
 drop policy if exists center_info_staff_insert on public.center_info;
 create policy center_info_staff_insert on public.center_info
   for insert to authenticated with check (
-    public.can_edit((select l.emergency_id from public.locations l where l.id = location_id))
+    private.can_edit((select l.emergency_id from public.locations l where l.id = location_id))
   );
 
 drop policy if exists center_info_staff_update on public.center_info;
 create policy center_info_staff_update on public.center_info
   for update to authenticated using (
-    public.can_edit((select l.emergency_id from public.locations l where l.id = location_id))
+    private.can_edit((select l.emergency_id from public.locations l where l.id = location_id))
   ) with check (
-    public.can_edit((select l.emergency_id from public.locations l where l.id = location_id))
+    private.can_edit((select l.emergency_id from public.locations l where l.id = location_id))
   );
 
 drop policy if exists center_info_admin_delete on public.center_info;
 create policy center_info_admin_delete on public.center_info
   for delete to authenticated using (
-    public.can_delete((select l.emergency_id from public.locations l where l.id = location_id))
+    private.can_delete((select l.emergency_id from public.locations l where l.id = location_id))
   );
 
 -- submissions — el insert público sigue abierto y sin leer nunca de vuelta.
 drop policy if exists submissions_staff_read on public.submissions;
 create policy submissions_staff_read on public.submissions
-  for select to authenticated using (public.can_edit(emergency_id));
+  for select to authenticated using (private.can_edit(emergency_id));
 
 drop policy if exists submissions_staff_update on public.submissions;
 create policy submissions_staff_update on public.submissions
   for update to authenticated
-  using (public.can_edit(emergency_id))
-  with check (public.can_edit(emergency_id));
+  using (private.can_edit(emergency_id))
+  with check (private.can_edit(emergency_id));
 
 drop policy if exists submissions_admin_delete on public.submissions;
 create policy submissions_admin_delete on public.submissions
-  for delete to authenticated using (public.can_delete(emergency_id));
+  for delete to authenticated using (private.can_delete(emergency_id));
 
 -- volunteer_requests — solo admin, ahora además acotado.
 drop policy if exists volunteer_requests_admin_read on public.volunteer_requests;
 create policy volunteer_requests_admin_read on public.volunteer_requests
-  for select to authenticated using (public.can_delete(emergency_id));
+  for select to authenticated using (private.can_delete(emergency_id));
 
 drop policy if exists volunteer_requests_admin_update on public.volunteer_requests;
 create policy volunteer_requests_admin_update on public.volunteer_requests
   for update to authenticated
-  using (public.can_delete(emergency_id))
-  with check (public.can_delete(emergency_id));
+  using (private.can_delete(emergency_id))
+  with check (private.can_delete(emergency_id));
 
 drop policy if exists volunteer_requests_admin_delete on public.volunteer_requests;
 create policy volunteer_requests_admin_delete on public.volunteer_requests
-  for delete to authenticated using (public.can_delete(emergency_id));
+  for delete to authenticated using (private.can_delete(emergency_id));
 
 -- donations
 drop policy if exists donations_staff_insert on public.donations;
 create policy donations_staff_insert on public.donations
-  for insert to authenticated with check (public.can_edit(emergency_id));
+  for insert to authenticated with check (private.can_edit(emergency_id));
 
 drop policy if exists donations_staff_update on public.donations;
 create policy donations_staff_update on public.donations
   for update to authenticated
-  using (public.can_edit(emergency_id))
-  with check (public.can_edit(emergency_id));
+  using (private.can_edit(emergency_id))
+  with check (private.can_edit(emergency_id));
 
 drop policy if exists donations_admin_delete on public.donations;
 create policy donations_admin_delete on public.donations
-  for delete to authenticated using (public.can_delete(emergency_id));
+  for delete to authenticated using (private.can_delete(emergency_id));
 
 -- audit_log — sigue siendo append-only y sin política de escritura para nadie.
 --
@@ -1170,10 +1182,10 @@ drop policy if exists audit_log_staff_read on public.audit_log;
 create policy audit_log_staff_read on public.audit_log
   for select to authenticated
   using (
-    public.belongs_to(emergency_id)
+    private.belongs_to(emergency_id)
     and (
-      public.is_admin()
-      or (public.is_staff() and public.audit_entity_visible_to_staff(entity))
+      private.is_admin()
+      or (private.is_staff() and public.audit_entity_visible_to_staff(entity))
     )
   );
 
@@ -1181,18 +1193,18 @@ create policy audit_log_staff_read on public.audit_log
 drop policy if exists staff_emergencies_self_read on public.staff_emergencies;
 create policy staff_emergencies_self_read on public.staff_emergencies
   for select to authenticated
-  using (user_id = (select auth.uid()) or public.is_superadmin());
+  using (user_id = (select auth.uid()) or private.is_superadmin());
 
 drop policy if exists staff_emergencies_super_write on public.staff_emergencies;
 create policy staff_emergencies_super_write on public.staff_emergencies
   for all to authenticated
-  using (public.is_superadmin()) with check (public.is_superadmin());
+  using (private.is_superadmin()) with check (private.is_superadmin());
 
 -- emergencies — la escritura que 007 dejó pendiente a propósito.
 drop policy if exists emergencies_super_write on public.emergencies;
 create policy emergencies_super_write on public.emergencies
   for all to authenticated
-  using (public.is_superadmin()) with check (public.is_superadmin());
+  using (private.is_superadmin()) with check (private.is_superadmin());
 
 -- Un admin puede cambiar el aviso y el modo mantenimiento de SU emergencia, igual que
 -- hoy lo hace sobre `app_settings`. No puede cambiar nada más de la fila: el encuadre,
@@ -1200,8 +1212,8 @@ create policy emergencies_super_write on public.emergencies
 drop policy if exists emergencies_admin_notice on public.emergencies;
 create policy emergencies_admin_notice on public.emergencies
   for update to authenticated
-  using (public.is_admin() and public.belongs_to(id))
-  with check (public.is_admin() and public.belongs_to(id));
+  using (private.is_admin() and private.belongs_to(id))
+  with check (private.is_admin() and private.belongs_to(id));
 
 
 -- ===========================================================================
@@ -1467,7 +1479,7 @@ create policy profiles_self_update on public.profiles
 -- persona concreta en la cola. Nada más: el correo no está en esta tabla.
 drop policy if exists profiles_staff_read on public.profiles;
 create policy profiles_staff_read on public.profiles
-  for select to authenticated using (public.is_staff());
+  for select to authenticated using (private.is_staff());
 
 -- Sin política de DELETE para nadie: una cuenta se borra en `auth.users` y el
 -- `on delete cascade` se lleva esta fila. Borrar el perfil dejando la cuenta produce una
@@ -1607,13 +1619,13 @@ create policy point_reports_insert on public.point_reports
 drop policy if exists point_reports_read on public.point_reports;
 create policy point_reports_read on public.point_reports
   for select to authenticated
-  using (user_id = (select auth.uid()) or public.can_edit(emergency_id));
+  using (user_id = (select auth.uid()) or private.can_edit(emergency_id));
 
 -- Resolver: el equipo de esa emergencia.
 drop policy if exists point_reports_staff_update on public.point_reports;
 create policy point_reports_staff_update on public.point_reports
   for update to authenticated
-  using (public.can_edit(emergency_id)) with check (public.can_edit(emergency_id));
+  using (private.can_edit(emergency_id)) with check (private.can_edit(emergency_id));
 
 -- Mismo guardia que `volunteer_requests`: que nadie resuelva sus propios reportes
 -- cambiando el `status` por su cuenta. La política de arriba ya lo impide para quien no
@@ -1626,7 +1638,7 @@ set search_path = public
 as $guard$
 begin
   if new.status is distinct from old.status then
-    if not public.is_staff() then
+    if not private.is_staff() then
       raise exception 'Sólo el equipo puede resolver un reporte.';
     end if;
     new.reviewed_at := now();
@@ -1794,8 +1806,14 @@ alter table public.center_managers enable row level security;
 -- ¿Esta persona gestiona este punto?
 --
 -- security definer por lo mismo que `is_staff()`: se llama desde políticas RLS, así que
--- no puede depender de que quien consulta pueda leer la tabla.
-create or replace function public.manages_location(loc_id text)
+-- no puede depender de que quien consulta pueda leer la tabla. Y en `private`, como ella,
+-- para que no sea además un endpoint de la API (ver `002_staff` en 01_esquema.sql).
+--
+-- ⚠️ En una base cuyas funciones de alcance siguen en `public` —la de un 01 viejo—, corre
+-- antes db/11_privado.sql: sin `private.can_edit` esto no se puede crear.
+create schema if not exists private;
+
+create or replace function private.manages_location(loc_id text)
 returns boolean
 language sql
 security definer
@@ -1809,14 +1827,14 @@ $$;
 
 -- El permiso de escritura de todo este archivo, en una función: o gestionas ese punto, o
 -- eres del equipo que alcanza la emergencia a la que pertenece.
-create or replace function public.can_manage_location(loc_id text)
+create or replace function private.can_manage_location(loc_id text)
 returns boolean
 language sql
 security definer
 set search_path = public
 as $$
-  select public.manages_location(loc_id)
-     or public.can_edit((select emergency_id from public.locations where id = loc_id));
+  select private.manages_location(loc_id)
+     or private.can_edit((select emergency_id from public.locations where id = loc_id));
 $$;
 
 -- Leer: lo propio, y el equipo de esa emergencia. No es público a quién se invitó —
@@ -1826,15 +1844,15 @@ create policy center_managers_read on public.center_managers
   for select to authenticated
   using (
     user_id = (select auth.uid())
-    or public.can_edit((select emergency_id from public.locations where id = location_id))
+    or private.can_edit((select emergency_id from public.locations where id = location_id))
   );
 
 -- Invitar y revocar: sólo el equipo de esa emergencia.
 drop policy if exists center_managers_staff_write on public.center_managers;
 create policy center_managers_staff_write on public.center_managers
   for all to authenticated
-  using (public.can_edit((select emergency_id from public.locations where id = location_id)))
-  with check (public.can_edit((select emergency_id from public.locations where id = location_id)));
+  using (private.can_edit((select emergency_id from public.locations where id = location_id)))
+  with check (private.can_edit((select emergency_id from public.locations where id = location_id)));
 
 -- Un gestor mantiene al día lo suyo: qué necesita hoy, el horario, si está abierto.
 --
@@ -1849,8 +1867,8 @@ create policy center_managers_staff_write on public.center_managers
 drop policy if exists center_info_manager_update on public.center_info;
 create policy center_info_manager_update on public.center_info
   for update to authenticated
-  using (public.manages_location(location_id))
-  with check (public.manages_location(location_id));
+  using (private.manages_location(location_id))
+  with check (private.manages_location(location_id));
 
 -- Y CREARLA, que es lo que faltaba y tenía el onboarding roto ENTERO.
 --
@@ -1866,7 +1884,7 @@ create policy center_info_manager_update on public.center_info
 drop policy if exists center_info_manager_insert on public.center_info;
 create policy center_info_manager_insert on public.center_info
   for insert to authenticated
-  with check (public.manages_location(location_id));
+  with check (private.manages_location(location_id));
 
 
 -- ===========================================================================
@@ -2114,45 +2132,45 @@ create policy initiative_posts_public_read on public.initiative_posts
 
 drop policy if exists campaigns_manager_read on public.campaigns;
 create policy campaigns_manager_read on public.campaigns
-  for select to authenticated using (public.can_manage_location(location_id));
+  for select to authenticated using (private.can_manage_location(location_id));
 
 drop policy if exists campaigns_manager_insert on public.campaigns;
 create policy campaigns_manager_insert on public.campaigns
-  for insert to authenticated with check (public.can_manage_location(location_id));
+  for insert to authenticated with check (private.can_manage_location(location_id));
 
 drop policy if exists campaigns_manager_update on public.campaigns;
 create policy campaigns_manager_update on public.campaigns
   for update to authenticated
-  using (public.can_manage_location(location_id))
-  with check (public.can_manage_location(location_id));
+  using (private.can_manage_location(location_id))
+  with check (private.can_manage_location(location_id));
 
 drop policy if exists activities_manager_read on public.activities;
 create policy activities_manager_read on public.activities
-  for select to authenticated using (public.can_manage_location(location_id));
+  for select to authenticated using (private.can_manage_location(location_id));
 
 drop policy if exists activities_manager_insert on public.activities;
 create policy activities_manager_insert on public.activities
-  for insert to authenticated with check (public.can_manage_location(location_id));
+  for insert to authenticated with check (private.can_manage_location(location_id));
 
 drop policy if exists activities_manager_update on public.activities;
 create policy activities_manager_update on public.activities
   for update to authenticated
-  using (public.can_manage_location(location_id))
-  with check (public.can_manage_location(location_id));
+  using (private.can_manage_location(location_id))
+  with check (private.can_manage_location(location_id));
 
 drop policy if exists initiative_posts_manager_read on public.initiative_posts;
 create policy initiative_posts_manager_read on public.initiative_posts
-  for select to authenticated using (public.can_manage_location(location_id));
+  for select to authenticated using (private.can_manage_location(location_id));
 
 drop policy if exists initiative_posts_manager_insert on public.initiative_posts;
 create policy initiative_posts_manager_insert on public.initiative_posts
-  for insert to authenticated with check (public.can_manage_location(location_id));
+  for insert to authenticated with check (private.can_manage_location(location_id));
 
 drop policy if exists initiative_posts_manager_update on public.initiative_posts;
 create policy initiative_posts_manager_update on public.initiative_posts
   for update to authenticated
-  using (public.can_manage_location(location_id))
-  with check (public.can_manage_location(location_id));
+  using (private.can_manage_location(location_id))
+  with check (private.can_manage_location(location_id));
 
 -- Borrar: sólo un admin, y sólo campañas y actividades. `initiative_posts` NO tiene
 -- política de DELETE para nadie — es la tabla de las pruebas de entrega, y una prueba que
@@ -2160,11 +2178,11 @@ create policy initiative_posts_manager_update on public.initiative_posts
 -- `status = 'hidden'`, que deja la fila donde estaba.
 drop policy if exists campaigns_admin_delete on public.campaigns;
 create policy campaigns_admin_delete on public.campaigns
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using (private.is_admin());
 
 drop policy if exists activities_admin_delete on public.activities;
 create policy activities_admin_delete on public.activities
-  for delete to authenticated using (public.is_admin());
+  for delete to authenticated using (private.is_admin());
 
 
 -- ===========================================================================
@@ -2263,8 +2281,8 @@ alter table public.center_invites enable row level security;
 drop policy if exists center_invites_staff_all on public.center_invites;
 create policy center_invites_staff_all on public.center_invites
   for all to authenticated
-  using (public.can_edit((select emergency_id from public.locations where id = location_id)))
-  with check (public.can_edit((select emergency_id from public.locations where id = location_id)));
+  using (private.can_edit((select emergency_id from public.locations where id = location_id)))
+  with check (private.can_edit((select emergency_id from public.locations where id = location_id)));
 
 /**
  * Canjear una invitación.
@@ -2328,8 +2346,9 @@ end
 $accept$;
 
 -- `anon` no: aceptar exige sesión, y la primera línea de la función ya lo dice. Dárselo a
--- `anon` sólo cambiaría el mensaje de error por uno peor.
-revoke all on function public.accept_center_invite(text) from public;
+-- `anon` sólo cambiaría el mensaje de error por uno peor. Se le quita por nombre porque
+-- Supabase se lo da por nombre, y eso no lo quita el revoke de PUBLIC.
+revoke all on function public.accept_center_invite(text) from public, anon;
 grant execute on function public.accept_center_invite(text) to authenticated;
 
 -- Bitácora: repartir las llaves de un punto es lo que hay que poder mirar después.
@@ -2342,7 +2361,7 @@ create trigger trg_center_invites_audit after insert or update on public.center_
 -- Verificación
 --
 --   select count(*) from public.campaigns;            -- 0, y la tabla existe
---   select public.manages_location('cualquier-id');   -- false sin sesión
+--   select private.manages_location('cualquier-id');   -- false sin sesión
 --
 -- Y la comprobación que importa, con una sesión anónima: una campaña en `draft` no debe
 -- salir, y una campaña `active` de un punto con `active = false` tampoco.
@@ -2449,27 +2468,58 @@ alter table public.profiles
 -- ===========================================================================
 -- 3) La vista pública: un nombre y un número
 --
--- `security_invoker = off` (lo de por defecto en una vista) hace que lea con los permisos
--- de quien la creó, que es lo que permite exponer un agregado de tablas que el visitante
--- no puede leer fila a fila. Ése es justo el punto: se ve el TOTAL, no de dónde sale.
+-- La tabla de posiciones NO puede leer con los permisos del visitante: `contributions`
+-- sólo se la deja leer a su dueño, así que vería la tabla vacía. Hace falta sumar con
+-- permisos de más, y la pregunta es DÓNDE se ponen esos permisos.
+--
+-- La primera versión los ponía en la vista misma (`security_invoker = off`, lo de por
+-- defecto). Funcionaba, pero una vista así se salta la RLS de todo lo que toque, y el
+-- linter de Supabase la marca con razón: el día que alguien le añada una columna o un
+-- join, se lleva los permisos del dueño con ella sin que nada avise.
+--
+-- Ahora los permisos de más viven en UNA función, `private.leaderboard_rows()`, que
+-- devuelve cuatro columnas y ninguna otra. El esquema `private` no lo publica la API —no
+-- se puede llamar por `/rest/v1/rpc`—, y la vista, que sí es pública, lee con los
+-- permisos de quien consulta y sólo alcanza esas cuatro columnas.
 --
 -- No lleva `location_id` ni nada que lleve a él, y no puede llevarlo nunca.
 -- ===========================================================================
 
-create or replace view public.leaderboard as
+create schema if not exists private;
+-- `usage` y nada más: sin él la vista no puede llamar a la función, y lo que haya dentro
+-- sigue cerrado función a función.
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated;
+
+create or replace function private.leaderboard_rows()
+returns table (user_id uuid, display_name text, points int, actions int)
+language sql
+stable
+security definer
+set search_path = ''
+as $lb$
   select
     p.user_id,
     p.display_name,
-    coalesce(sum(c.points), 0)::int as points,
-    count(c.id)::int                as actions
+    coalesce(sum(c.points), 0)::int,
+    count(c.id)::int
   from public.profiles p
   join public.contributions c on c.user_id = p.user_id
   where p.leaderboard_opt_in
   group by p.user_id, p.display_name
-  having coalesce(sum(c.points), 0) > 0
-  order by points desc, p.display_name asc;
+  having coalesce(sum(c.points), 0) > 0;
+$lb$;
 
--- Lectura pública de la vista. Lo que expone ya está acotado por su propia definición.
+revoke all on function private.leaderboard_rows() from public;
+grant execute on function private.leaderboard_rows() to anon, authenticated;
+
+create or replace view public.leaderboard
+with (security_invoker = true) as
+  select user_id, display_name, points, actions
+  from private.leaderboard_rows()
+  order by points desc, display_name asc;
+
+-- Lectura pública de la vista. Lo que expone ya está acotado por la función de arriba.
 grant select on public.leaderboard to anon, authenticated;
 
 
@@ -2512,7 +2562,7 @@ alter table public.user_badges enable row level security;
 drop policy if exists user_badges_read on public.user_badges;
 create policy user_badges_read on public.user_badges
   for select to authenticated
-  using (user_id = (select auth.uid()) or public.is_staff());
+  using (user_id = (select auth.uid()) or private.is_staff());
 
 -- Sin política de UPDATE para nadie: una medalla se gana y ya está, no cambia después. La
 -- que había existía para marcarlas canjeadas, y las medallas ya no se canjean.
@@ -2548,6 +2598,9 @@ create or replace function public.contribution_points(p_kind text)
 returns int
 language sql
 immutable
+-- No lee ninguna tabla, así que el `search_path` vacío no le cuesta nada, y sin él una
+-- función que suma puntos resolvería sus nombres según quien la llame.
+set search_path = ''
 as $pts$
   select case p_kind
     -- Desde el teléfono, sin moverse. Cuenta, pero poco.
@@ -2614,8 +2667,67 @@ $rec$;
 -- La firma vieja, con `p_points`, se retira: mientras exista, existe el agujero.
 drop function if exists public.record_contribution(text, text, int);
 
-revoke all on function public.record_contribution(text, text, uuid) from public;
 -- Sin `grant` a `authenticated`: ver la nota de arriba. Sólo triggers y service role.
+--
+-- ⚠️ `from public` SOLO no basta, y durante un tiempo fue lo único que había aquí.
+-- Supabase le da EXECUTE a `anon` y `authenticated` POR NOMBRE en cada función nueva de
+-- `public`, y ese permiso no cuelga de PUBLIC: sobrevive a su revoke. Comprobado contra
+-- la base viva el 2026-09-10 — cualquiera, sin cuenta, podía anotarle puntos a cualquier
+-- `user_id`, y la tabla de posiciones publica los `user_id`. Ver 09_endurecimiento.sql.
+revoke all on function public.record_contribution(text, text, uuid) from public, anon, authenticated;
+grant execute on function public.record_contribution(text, text, uuid) to service_role;
+
+
+-- ===========================================================================
+-- 6) La experiencia se gana por lo COMPROBADO, no por lo declarado
+--
+-- Este bloque es la respuesta a un agujero real. La primera versión sumaba experiencia al
+-- ENVIAR un aviso sobre un punto, y eso deja abierto lo obvio: alguien pulsa «sigue
+-- abierto» en cincuenta puntos distintos en una tarde y sube de nivel sin haber
+-- comprobado nada. Con niveles que valdrán un beneficio en un comercio aliado, una
+-- experiencia que se puede fabricar así no vale nada.
+--
+-- Así que la experiencia por un aviso se otorga cuando el EQUIPO lo aplica. Es el mismo
+-- principio que `010_accounts` fijó para los avisos mismos —«un reporte es una SEÑAL, no
+-- una escritura»— llevado a su consecuencia: si la señal sólo cuenta cuando alguien la
+-- confirma, el reconocimiento tampoco puede contar antes.
+--
+-- Va en un TRIGGER y no en el panel del equipo a propósito. Si lo hiciera la aplicación
+-- al resolver, se perdería en cuanto alguien resolviera un aviso desde otro sitio —un
+-- script, la consola de Supabase, un panel futuro— y nadie se enteraría de que dejó de
+-- funcionar. Aquí cuelga del hecho, no de la pantalla.
+--
+-- (Este bloque se perdió del repositorio al reescribir el archivo el 2026-09-08 y siguió
+-- vivo en la base de Venezuela. Una base nueva levantada desde aquí no premiaba ningún
+-- aviso, y las medallas «Confirmas» y «Vigía» no se podían ganar. Se restituye igual,
+-- salvo el valor, que ahora sale de `contribution_points` como en todo lo demás.)
+-- ===========================================================================
+
+create or replace function public.reward_applied_report()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $reward$
+begin
+  -- Sólo al PASAR a aplicado, no cada vez que se guarde una fila que ya lo estaba.
+  if new.status = 'applied' and old.status is distinct from 'applied' then
+    insert into public.contributions (user_id, kind, location_id, points, emergency_id)
+    values (
+      new.user_id, 'report', new.location_id,
+      public.contribution_points('report'), new.emergency_id
+    )
+    -- El índice de una-vez-al-día sigue mandando: dos avisos de la misma persona sobre el
+    -- mismo punto, aplicados el mismo día, suman una vez.
+    on conflict do nothing;
+  end if;
+  return new;
+end
+$reward$;
+
+drop trigger if exists trg_point_reports_reward on public.point_reports;
+create trigger trg_point_reports_reward after update on public.point_reports
+  for each row execute function public.reward_applied_report();
 
 -- ===========================================================================
 -- 7) Las medallas las decide la BASE, no la aplicación
@@ -2688,9 +2800,15 @@ create trigger trg_contributions_badges after insert on public.contributions
 drop function if exists public.award_badge(text);
 
 -- Y `evaluate_badges` se cierra también. No podría otorgar nada indebido —cuenta lo que
--- de verdad hay en `contributions`— pero `create function` regala EXECUTE a PUBLIC, y una
--- función que nadie de fuera necesita llamar no tiene por qué estar expuesta.
-revoke all on function public.evaluate_badges(uuid) from public;
+-- de verdad hay en `contributions`— pero `create function` regala EXECUTE a PUBLIC (y
+-- Supabase, además, a `anon` y `authenticated` por nombre), y una función que nadie de
+-- fuera necesita llamar no tiene por qué estar expuesta.
+revoke all on function public.evaluate_badges(uuid) from public, anon, authenticated;
+
+-- Las de trigger, igual. Un trigger no comprueba EXECUTE al dispararse —sólo al crearse—,
+-- así que cerrarlas no cambia nada de lo que hacen; sólo quita la puerta por `/rpc`.
+revoke all on function public.evaluate_badges_on_contribution() from public, anon, authenticated;
+revoke all on function public.reward_applied_report() from public, anon, authenticated;
 
 -- Nadie las escribe a mano: sin políticas de INSERT ni UPDATE sobre `user_badges`, la
 -- única vía es el trigger de arriba, que corre como definer.
@@ -2770,14 +2888,14 @@ create policy donation_claims_insert on public.donation_claims
 drop policy if exists donation_claims_read on public.donation_claims;
 create policy donation_claims_read on public.donation_claims
   for select to authenticated
-  using (user_id = (select auth.uid()) or public.can_manage_location(location_id));
+  using (user_id = (select auth.uid()) or private.can_manage_location(location_id));
 
 -- Resolver: quien gestiona el punto. Ni el que aportó ni nadie más.
 drop policy if exists donation_claims_manage on public.donation_claims;
 create policy donation_claims_manage on public.donation_claims
   for update to authenticated
-  using (public.can_manage_location(location_id))
-  with check (public.can_manage_location(location_id));
+  using (private.can_manage_location(location_id))
+  with check (private.can_manage_location(location_id));
 
 
 -- ===========================================================================
@@ -2801,7 +2919,7 @@ create policy profiles_donor_read on public.profiles
     exists (
       select 1 from public.donation_claims d
       where d.user_id = profiles.user_id
-        and public.can_manage_location(d.location_id)
+        and private.can_manage_location(d.location_id)
     )
   );
 
@@ -2876,4 +2994,606 @@ create trigger trg_donation_claims_audit after insert or update on public.donati
 --   Con la sesión de quien aporta: declarar deja la fila en `pending` y NO suma nada.
 --   Con la del gestor: pasar a `confirmed` crea la fila de `contributions` con 15.
 --   Con la de un tercero: no ve el aporte ni puede resolverlo.
+-- ---------------------------------------------------------------------------
+
+
+-- ###########################################################################
+-- ### 015_endurecimiento
+-- ###########################################################################
+-- Quién puede llamar a cada función `security definer`, escrito en un sitio. Copia
+-- literal de db/09_endurecimiento.sql, que explica el agujero entero. Si cambias uno,
+-- cambia el otro.
+--
+-- Va AL FINAL a propósito: ordena funciones que crean todas las secciones de arriba.
+-- `create or replace` conserva los permisos, así que volver a correr este archivo no
+-- los reabre: la sección de arriba redefine la función y ésta la vuelve a dejar igual.
+--
+-- Cada `create function` en `public` le da EXECUTE a PUBLIC y, además, a `anon` y
+-- `authenticated` por nombre —eso lo hace Supabase—, y `revoke ... from public` sólo
+-- quita lo primero. Así que cada función cae en uno de cuatro casos:
+--
+--   A. sólo la llama un trigger   → nadie
+--   B. sólo la llama el servidor  → `service_role`
+--   C. la llama una política RLS  → `authenticated`, no `anon` (sin EXECUTE, la
+--                                   política falla: corre como quien consulta). Viven
+--                                   en `private`, así que no son endpoints de la API.
+--   D. la llama la app con sesión → `authenticated`
+--
+-- El de D, `accept_center_invite`, es el único aviso 0029 que el linter de Supabase SIGUE
+-- dando, y el que tiene que dar: es una puerta de la API a propósito.
+-- ===========================================================================
+
+do $matriz$
+declare
+  f     text;
+  v_pol text;
+begin
+
+  -- -------------------------------------------------------------------------
+  -- A) Sólo las llama un trigger → nadie.
+  -- -------------------------------------------------------------------------
+  foreach f in array array[
+    'public.audit_row()',
+    'public.guard_submission_status()',
+    'public.guard_volunteer_request_status()',
+    'public.guard_point_report_status()',
+    'public.set_point_report_emergency()',
+    'public.set_emergency_from_location()',
+    'public.stamp_raised_declaration()',
+    'public.stamp_donation_review()',
+    'public.reward_confirmed_donation()',
+    'public.reward_applied_report()',
+    'public.evaluate_badges_on_contribution()'
+  ] loop
+    if to_regprocedure(f) is not null then
+      execute format('revoke all on function %s from public, anon, authenticated', f);
+    end if;
+  end loop;
+
+  -- -------------------------------------------------------------------------
+  -- B) Sólo el servidor → `service_role`.
+  --
+  -- `record_contribution` la llama /api/checkin con el service role, DESPUÉS de comprobar
+  -- que la persona está en el punto. `evaluate_badges` ni eso: la llama un trigger que
+  -- corre como su dueño.
+  -- -------------------------------------------------------------------------
+  foreach f in array array[
+    'public.record_contribution(text, text, uuid)',
+    'public.evaluate_badges(uuid)'
+  ] loop
+    if to_regprocedure(f) is not null then
+      execute format('revoke all on function %s from public, anon, authenticated', f);
+    end if;
+  end loop;
+
+  if to_regprocedure('public.record_contribution(text, text, uuid)') is not null then
+    grant execute on function public.record_contribution(text, text, uuid) to service_role;
+  end if;
+
+  -- -------------------------------------------------------------------------
+  -- C) Las llaman las políticas RLS → `authenticated`, y no `anon`.
+  -- -------------------------------------------------------------------------
+  foreach f in array array[
+    'private.is_staff()',
+    'private.is_admin()',
+    'private.is_superadmin()',
+    'private.belongs_to(uuid)',
+    'private.can_edit(uuid)',
+    'private.can_delete(uuid)',
+    'private.manages_location(text)',
+    'private.can_manage_location(text)'
+  ] loop
+    continue when to_regprocedure(f) is null;
+
+    -- ¿Alguna política que alcance a `anon` la evalúa? Entonces cerrarla rompería esa
+    -- tabla para quien llega sin cuenta. Se busca el nombre seguido de `(`, en cualquier
+    -- esquema —`storage.objects` también tiene políticas—.
+    select string_agg(format('%s.%s · %s', schemaname, tablename, policyname), ', ')
+      into v_pol
+      from pg_policies
+     where roles && array['anon', 'public']::name[]
+       and concat_ws(' ', qual, with_check)
+           ~ ('\m' || split_part(split_part(f, '.', 2), '(', 1) || '\(');
+
+    if v_pol is not null then
+      raise exception
+        'No se cierra % para anon: la evalúan políticas que alcanzan a anon (%). Revísalas antes.',
+        f, v_pol;
+    end if;
+
+    execute format('revoke all on function %s from public, anon', f);
+    execute format('grant execute on function %s to authenticated', f);
+  end loop;
+
+  -- -------------------------------------------------------------------------
+  -- D) Las llama la app con sesión → `authenticated`.
+  --
+  -- `accept_center_invite` es la puerta para que un gestor reciba su punto. Su primera
+  -- línea ya rechaza a quien no tiene sesión; quitarle `anon` sólo quita el ruido.
+  -- -------------------------------------------------------------------------
+  if to_regprocedure('public.accept_center_invite(text)') is not null then
+    revoke all on function public.accept_center_invite(text) from public, anon;
+    grant execute on function public.accept_center_invite(text) to authenticated;
+  end if;
+
+  -- -------------------------------------------------------------------------
+  -- `search_path` fijo en las dos que no lo tenían (linter 0011).
+  --
+  -- Ninguna lee una tabla, así que vacío no les cuesta nada. Ya está en su definición;
+  -- esto es para las bases donde se crearon antes de que lo estuviera.
+  -- -------------------------------------------------------------------------
+  foreach f in array array[
+    'public.contribution_points(text)',
+    'public.audit_entity_visible_to_staff(text)'
+  ] loop
+    if to_regprocedure(f) is not null then
+      execute format('alter function %s set search_path = %L', f, '');
+    end if;
+  end loop;
+
+  -- -------------------------------------------------------------------------
+  -- Lo que se escapó de la lista.
+  --
+  -- Una función `security definer` que `anon` todavía puede llamar es una que se creó
+  -- después de este archivo y nadie clasificó. No se cierra a ciegas —podría ser una que
+  -- la app necesita—: se avisa, y hay que meterla en A, B, C o D.
+  -- -------------------------------------------------------------------------
+  select string_agg(p.oid::regprocedure::text, ', ' order by p.proname)
+    into v_pol
+    from pg_proc p
+   where p.pronamespace = 'public'::regnamespace
+     and p.prosecdef
+     and has_function_privilege('anon', p.oid, 'execute');
+
+  if v_pol is not null then
+    raise warning 'Siguen abiertas a anon, y no están en esta lista: %', v_pol;
+  end if;
+
+end
+$matriz$;
+
+
+-- ---------------------------------------------------------------------------
+-- Verificación
+--
+--   db/03_verificacion.sql, consultas 12 y 13.
+--
+--   Y en el linter de Supabase (Advisors → Security) tienen que desaparecer todos los
+--   0028, el 0010 de `leaderboard` y los dos 0011. Con 11_privado.sql aplicado, queda
+--   UN 0029, y es el que tiene que quedar: `accept_center_invite`, que la app llama a
+--   propósito (caso D).
+--
+--   Por la API, con la anon key, `POST /rest/v1/rpc/evaluate_badges` tiene que responder
+--   401 o 403 —antes respondía 204—, y `GET /rest/v1/leaderboard` seguir respondiendo 200.
+-- ---------------------------------------------------------------------------
+
+
+-- ###########################################################################
+-- ### 016_politicas
+-- ###########################################################################
+-- Una política por tabla, rol y verbo. Copia literal de db/10_politicas.sql, que
+-- explica cada caso. Si cambias uno, cambia el otro.
+--
+-- Va AL FINAL a propósito, igual que 008 con las políticas de 001…005: SUSTITUYE
+-- políticas creadas más arriba —las lecturas `*_public_read` pasan a ser sólo de `anon`,
+-- y `*_staff_read`, `*_own_read`, `*_manager_read` y los `for all` de escritura
+-- desaparecen dentro de una sola por verbo—. Quien lea una sección de arriba y quiera
+-- saber quién ve qué HOY, tiene que mirar aquí.
+--
+-- Nadie gana ni pierde acceso: cada política de abajo es el OR de las que sustituye.
+-- ===========================================================================
+
+do $politicas$
+begin
+
+  -- =========================================================================
+  -- 1) Lecturas públicas + lo que ve el equipo
+  -- =========================================================================
+
+  -- donations: las activas para todos; el equipo, también las desactivadas.
+  drop policy if exists donations_staff_read  on public.donations;
+  drop policy if exists donations_public_read on public.donations;
+  drop policy if exists donations_read        on public.donations;
+  create policy donations_public_read on public.donations
+    for select to anon using (active);
+  create policy donations_read on public.donations
+    for select to authenticated
+    using (active or (select private.is_staff()));
+
+  -- emergencies: las publicadas para todos; el equipo ve también los borradores. Un
+  -- superadmin tenía además la lectura de su `for all`, pero es staff —está en
+  -- `staff_users`—, así que `is_staff()` ya lo incluye.
+  drop policy if exists emergencies_staff_read  on public.emergencies;
+  drop policy if exists emergencies_public_read on public.emergencies;
+  drop policy if exists emergencies_read        on public.emergencies;
+  create policy emergencies_public_read on public.emergencies
+    for select to anon using (status <> 'draft');
+  create policy emergencies_read on public.emergencies
+    for select to authenticated
+    using (status <> 'draft' or (select private.is_staff()));
+
+  -- emergency_phones: los activos para todos; el equipo de esa emergencia, todos.
+  drop policy if exists emergency_phones_public_read on public.emergency_phones;
+  drop policy if exists emergency_phones_read        on public.emergency_phones;
+  create policy emergency_phones_public_read on public.emergency_phones
+    for select to anon using (active);
+  create policy emergency_phones_read on public.emergency_phones
+    for select to authenticated
+    using (active or private.can_edit(emergency_id));
+
+
+  -- =========================================================================
+  -- 2) Lo propio + lo que ve el equipo
+  -- =========================================================================
+
+  -- submissions: quien la mandó ve la suya; el equipo de esa emergencia, todas.
+  drop policy if exists submissions_own_read   on public.submissions;
+  drop policy if exists submissions_staff_read on public.submissions;
+  drop policy if exists submissions_read       on public.submissions;
+  create policy submissions_read on public.submissions
+    for select to authenticated
+    using (created_by = (select auth.uid()) or private.can_edit(emergency_id));
+
+  -- volunteer_requests: quien se ofreció ve la suya; un admin de esa emergencia, todas.
+  drop policy if exists volunteer_requests_own_read   on public.volunteer_requests;
+  drop policy if exists volunteer_requests_admin_read on public.volunteer_requests;
+  drop policy if exists volunteer_requests_read       on public.volunteer_requests;
+  create policy volunteer_requests_read on public.volunteer_requests
+    for select to authenticated
+    using (user_id = (select auth.uid()) or private.can_delete(emergency_id));
+
+  -- profiles: el propio y el equipo. Y, si existe 07_aportes.sql, el gestor ve el
+  -- nombre de quien LE declaró un aporte a él — ver allí por qué, y por qué nada más.
+  drop policy if exists profiles_self_read  on public.profiles;
+  drop policy if exists profiles_staff_read on public.profiles;
+  drop policy if exists profiles_donor_read on public.profiles;
+  drop policy if exists profiles_read       on public.profiles;
+  if to_regclass('public.donation_claims') is null then
+    create policy profiles_read on public.profiles
+      for select to authenticated
+      using (user_id = (select auth.uid()) or (select private.is_staff()));
+  else
+    create policy profiles_read on public.profiles
+      for select to authenticated
+      using (
+        user_id = (select auth.uid())
+        or (select private.is_staff())
+        or exists (
+          select 1 from public.donation_claims d
+          where d.user_id = profiles.user_id
+            and private.can_manage_location(d.location_id)
+        )
+      );
+  end if;
+
+
+  -- =========================================================================
+  -- 3) Los `for all` se parten en sus verbos
+  --
+  -- Un `for all` también es un SELECT, y se solapaba con la política de lectura, que ya
+  -- decía lo mismo o más. Partido en INSERT, UPDATE y DELETE, escribe exactamente lo que
+  -- escribía y deja de contar como lectura.
+  -- =========================================================================
+
+  -- staff_users: sólo un admin da de alta, cambia o quita a alguien del equipo.
+  -- (Leer sigue en `staff_users_self_read`: la propia fila, o un admin todas.)
+  drop policy if exists staff_users_admin_write  on public.staff_users;
+  drop policy if exists staff_users_admin_insert on public.staff_users;
+  drop policy if exists staff_users_admin_update on public.staff_users;
+  drop policy if exists staff_users_admin_delete on public.staff_users;
+  create policy staff_users_admin_insert on public.staff_users
+    for insert to authenticated with check ((select private.is_admin()));
+  create policy staff_users_admin_update on public.staff_users
+    for update to authenticated
+    using ((select private.is_admin())) with check ((select private.is_admin()));
+  create policy staff_users_admin_delete on public.staff_users
+    for delete to authenticated using ((select private.is_admin()));
+
+  -- staff_emergencies: sólo un superadmin reparte a quién alcanza cada emergencia.
+  -- (Leer sigue en `staff_emergencies_self_read`.)
+  drop policy if exists staff_emergencies_super_write  on public.staff_emergencies;
+  drop policy if exists staff_emergencies_super_insert on public.staff_emergencies;
+  drop policy if exists staff_emergencies_super_update on public.staff_emergencies;
+  drop policy if exists staff_emergencies_super_delete on public.staff_emergencies;
+  create policy staff_emergencies_super_insert on public.staff_emergencies
+    for insert to authenticated with check ((select private.is_superadmin()));
+  create policy staff_emergencies_super_update on public.staff_emergencies
+    for update to authenticated
+    using ((select private.is_superadmin())) with check ((select private.is_superadmin()));
+  create policy staff_emergencies_super_delete on public.staff_emergencies
+    for delete to authenticated using ((select private.is_superadmin()));
+
+  -- emergency_phones: el equipo de esa emergencia mantiene sus teléfonos.
+  drop policy if exists emergency_phones_staff_write  on public.emergency_phones;
+  drop policy if exists emergency_phones_staff_insert on public.emergency_phones;
+  drop policy if exists emergency_phones_staff_update on public.emergency_phones;
+  drop policy if exists emergency_phones_staff_delete on public.emergency_phones;
+  create policy emergency_phones_staff_insert on public.emergency_phones
+    for insert to authenticated with check (private.can_edit(emergency_id));
+  create policy emergency_phones_staff_update on public.emergency_phones
+    for update to authenticated
+    using (private.can_edit(emergency_id)) with check (private.can_edit(emergency_id));
+  create policy emergency_phones_staff_delete on public.emergency_phones
+    for delete to authenticated using (private.can_edit(emergency_id));
+
+  -- emergencies: crear y borrar una emergencia es de un superadmin. Cambiarla, de un
+  -- superadmin o de un admin de ESA emergencia —el aviso y el modo mantenimiento—.
+  --
+  -- ⚠️ Lo de «sólo el aviso y el modo mantenimiento» lo dice el comentario de
+  -- `emergencies_admin_notice` en 008, y NO lo impone nada: RLS decide qué FILAS, no qué
+  -- columnas, y no hay trigger ni permiso por columna que lo frene. Hoy un admin puede
+  -- cambiar cualquier campo de su emergencia. Esto no lo abre ni lo cierra; lo deja
+  -- escrito donde se va a leer.
+  drop policy if exists emergencies_super_write  on public.emergencies;
+  drop policy if exists emergencies_admin_notice on public.emergencies;
+  drop policy if exists emergencies_super_insert on public.emergencies;
+  drop policy if exists emergencies_super_delete on public.emergencies;
+  drop policy if exists emergencies_update       on public.emergencies;
+  create policy emergencies_super_insert on public.emergencies
+    for insert to authenticated with check ((select private.is_superadmin()));
+  create policy emergencies_super_delete on public.emergencies
+    for delete to authenticated using ((select private.is_superadmin()));
+  create policy emergencies_update on public.emergencies
+    for update to authenticated
+    using (
+      (select private.is_superadmin())
+      or ((select private.is_admin()) and private.belongs_to(id))
+    )
+    with check (
+      (select private.is_superadmin())
+      or ((select private.is_admin()) and private.belongs_to(id))
+    );
+
+
+  -- =========================================================================
+  -- 4) Lo de 05_iniciativas.sql: el gestor de un punto
+  -- =========================================================================
+
+  if to_regclass('public.center_managers') is not null then
+
+    -- center_info: la escribe el equipo de esa emergencia, o quien gestiona ese punto.
+    -- Las dos, INSERT incluido: el onboarding guarda con upsert, y un upsert exige la
+    -- política de INSERT aunque la fila ya exista (ver 05_iniciativas.sql).
+    drop policy if exists center_info_staff_insert   on public.center_info;
+    drop policy if exists center_info_manager_insert on public.center_info;
+    drop policy if exists center_info_insert         on public.center_info;
+    create policy center_info_insert on public.center_info
+      for insert to authenticated
+      with check (
+        private.manages_location(location_id)
+        or private.can_edit((select l.emergency_id from public.locations l where l.id = location_id))
+      );
+
+    drop policy if exists center_info_staff_update   on public.center_info;
+    drop policy if exists center_info_manager_update on public.center_info;
+    drop policy if exists center_info_update         on public.center_info;
+    create policy center_info_update on public.center_info
+      for update to authenticated
+      using (
+        private.manages_location(location_id)
+        or private.can_edit((select l.emergency_id from public.locations l where l.id = location_id))
+      )
+      with check (
+        private.manages_location(location_id)
+        or private.can_edit((select l.emergency_id from public.locations l where l.id = location_id))
+      );
+
+    -- center_managers: invitar y revocar es del equipo de esa emergencia.
+    -- (Leer sigue en `center_managers_read`: lo propio, o el equipo.)
+    drop policy if exists center_managers_staff_write  on public.center_managers;
+    drop policy if exists center_managers_staff_insert on public.center_managers;
+    drop policy if exists center_managers_staff_update on public.center_managers;
+    drop policy if exists center_managers_staff_delete on public.center_managers;
+    create policy center_managers_staff_insert on public.center_managers
+      for insert to authenticated
+      with check (private.can_edit((select emergency_id from public.locations where id = location_id)));
+    create policy center_managers_staff_update on public.center_managers
+      for update to authenticated
+      using (private.can_edit((select emergency_id from public.locations where id = location_id)))
+      with check (private.can_edit((select emergency_id from public.locations where id = location_id)));
+    create policy center_managers_staff_delete on public.center_managers
+      for delete to authenticated
+      using (private.can_edit((select emergency_id from public.locations where id = location_id)));
+
+  end if;
+
+  -- campaigns, activities, initiative_posts: lo publicado de un punto activo para todos;
+  -- quien gestiona ese punto, además, sus borradores.
+  if to_regclass('public.campaigns') is not null then
+
+    drop policy if exists campaigns_manager_read on public.campaigns;
+    drop policy if exists campaigns_public_read  on public.campaigns;
+    drop policy if exists campaigns_read         on public.campaigns;
+    create policy campaigns_public_read on public.campaigns
+      for select to anon
+      using (
+        status in ('active','reached','closed')
+        and exists (select 1 from public.locations l where l.id = location_id and l.active)
+      );
+    create policy campaigns_read on public.campaigns
+      for select to authenticated
+      using (
+        (
+          status in ('active','reached','closed')
+          and exists (select 1 from public.locations l where l.id = location_id and l.active)
+        )
+        or private.can_manage_location(location_id)
+      );
+
+    drop policy if exists activities_manager_read on public.activities;
+    drop policy if exists activities_public_read  on public.activities;
+    drop policy if exists activities_read         on public.activities;
+    create policy activities_public_read on public.activities
+      for select to anon
+      using (
+        status in ('scheduled','done','cancelled')
+        and exists (select 1 from public.locations l where l.id = location_id and l.active)
+      );
+    create policy activities_read on public.activities
+      for select to authenticated
+      using (
+        (
+          status in ('scheduled','done','cancelled')
+          and exists (select 1 from public.locations l where l.id = location_id and l.active)
+        )
+        or private.can_manage_location(location_id)
+      );
+
+    drop policy if exists initiative_posts_manager_read on public.initiative_posts;
+    drop policy if exists initiative_posts_public_read  on public.initiative_posts;
+    drop policy if exists initiative_posts_read         on public.initiative_posts;
+    create policy initiative_posts_public_read on public.initiative_posts
+      for select to anon
+      using (
+        status = 'published'
+        and exists (select 1 from public.locations l where l.id = location_id and l.active)
+      );
+    create policy initiative_posts_read on public.initiative_posts
+      for select to authenticated
+      using (
+        (
+          status = 'published'
+          and exists (select 1 from public.locations l where l.id = location_id and l.active)
+        )
+        or private.can_manage_location(location_id)
+      );
+
+  end if;
+
+end
+$politicas$;
+
+
+-- ---------------------------------------------------------------------------
+-- Verificación
+--
+--   db/03_verificacion.sql, consulta 14: tiene que dar 0 filas. Es la misma pregunta
+--   que el aviso 0006 del linter.
+--
+--   Y la de verdad, en el navegador: el mapa sin sesión sigue enseñando campañas y
+--   actividades; con la cuenta de gestor de las cuentas de prueba, su panel sigue
+--   enseñando los borradores y guarda; con la del equipo, la cola de sugerencias.
+-- ---------------------------------------------------------------------------
+
+
+-- ###########################################################################
+-- ### 017_privado
+-- ###########################################################################
+-- Las funciones de alcance, fuera de la API. Copia literal de db/11_privado.sql, que
+-- explica por qué. Si cambias uno, cambia el otro.
+--
+-- En una base nueva este bloque no mueve nada: `002_staff`, `008_tenancy` y
+-- `012_iniciativas` ya las crean en `private`. Está para la base que corrió un 01 viejo
+-- y ahora corre éste: ahí quedan copias en `public` de las que ya nadie depende, y este
+-- bloque las encuentra y las borra.
+-- ===========================================================================
+
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated;
+
+do $privado$
+declare
+  -- Las ocho, con su firma.
+  firmas constant text[] := array[
+    'is_staff()', 'is_admin()', 'is_superadmin()',
+    'belongs_to(uuid)', 'can_edit(uuid)', 'can_delete(uuid)',
+    'manages_location(text)', 'can_manage_location(text)'
+  ];
+  -- Una llamada escrita `public.<una de las ocho>(`. `\m` para no pescar un nombre que
+  -- sólo termine igual.
+  llamada constant text :=
+    '\mpublic\.(is_staff|is_admin|is_superadmin|belongs_to|can_edit|can_delete|manages_location|can_manage_location)\(';
+  f       text;
+  r       record;
+  v_resto text;
+begin
+
+  -- -------------------------------------------------------------------------
+  -- 1) Mover las que siguen en `public`.
+  -- -------------------------------------------------------------------------
+  foreach f in array firmas loop
+    if to_regprocedure('public.' || f) is not null
+       and to_regprocedure('private.' || f) is null then
+      execute format('alter function public.%s set schema private', f);
+    end if;
+  end loop;
+
+  -- -------------------------------------------------------------------------
+  -- 2) Reescribir los cuerpos que las llaman por su nombre en `public`.
+  --
+  -- `create or replace` con la definición que da la base, cambiando sólo el esquema de
+  -- esas llamadas. Conserva permisos, `security definer` y `search_path`.
+  -- -------------------------------------------------------------------------
+  for r in
+    select p.oid
+      from pg_proc p
+     where p.pronamespace in ('public'::regnamespace, 'private'::regnamespace)
+       and p.prokind = 'f'
+       and p.prosrc ~ llamada
+  loop
+    execute regexp_replace(pg_get_functiondef(r.oid), llamada, 'private.\1(', 'g');
+  end loop;
+
+  -- -------------------------------------------------------------------------
+  -- 3) Si quedó una copia en `public` —una base que volvió a correr un archivo viejo
+  --    después de mover éstas—, se borra.
+  --
+  -- Sin `cascade`, a propósito: si alguna política todavía apunta a la copia de
+  -- `public`, Postgres se niega, dice cuál, y no se aplica nada. En ese caso vuelve a
+  -- correr el archivo de esa política (ya escrito contra `private`) y después éste.
+  -- -------------------------------------------------------------------------
+  foreach f in array firmas loop
+    if to_regprocedure('public.' || f) is not null
+       and to_regprocedure('private.' || f) is not null then
+      execute format('drop function public.%s', f);
+    end if;
+  end loop;
+
+  -- -------------------------------------------------------------------------
+  -- 4) Permisos: `authenticated` sí —las políticas las necesitan—, nadie más.
+  -- -------------------------------------------------------------------------
+  foreach f in array firmas loop
+    if to_regprocedure('private.' || f) is not null then
+      execute format('revoke all on function private.%s from public, anon', f);
+      execute format('grant execute on function private.%s to authenticated', f);
+    end if;
+  end loop;
+
+  -- -------------------------------------------------------------------------
+  -- 5) Comprobarlo antes de dar nada por hecho. Cualquier fallo aquí deshace todo.
+  -- -------------------------------------------------------------------------
+  select string_agg(f2, ', ') into v_resto
+    from unnest(firmas) as f2
+   where to_regprocedure('public.' || f2) is not null;
+  if v_resto is not null then
+    raise exception 'Siguen en public: %', v_resto;
+  end if;
+
+  select string_agg(p.oid::regprocedure::text, ', ') into v_resto
+    from pg_proc p
+   where p.pronamespace in ('public'::regnamespace, 'private'::regnamespace)
+     and p.prosrc ~ llamada;
+  if v_resto is not null then
+    raise exception 'Siguen llamando a las de public: %', v_resto;
+  end if;
+
+end
+$privado$;
+
+-- Que la API se entere ya de que esos `/rpc` dejaron de existir.
+notify pgrst, 'reload schema';
+
+
+-- ---------------------------------------------------------------------------
+-- Verificación
+--
+--   db/03_verificacion.sql, consultas 6, 12, 13 y 14.
+--
+--   En el linter de Supabase (Advisors → Security) queda UN 0029: `accept_center_invite`,
+--   que la app llama a propósito para que un gestor reciba su punto.
+--
+--   Por la API, con la anon key, `POST /rest/v1/rpc/is_staff` tiene que dar 404 —antes
+--   daba 401—. Y en el navegador, con las cuentas de prueba: el equipo sigue guardando
+--   un punto y viendo la cola; el gestor, su panel y sus borradores.
 -- ---------------------------------------------------------------------------
