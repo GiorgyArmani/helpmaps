@@ -79,10 +79,25 @@ const venezuela: CountryConfig = {
   // preset is what the migration from the original repo fills in — and an explicit `null`
   // reads as a decision, while an absent key reads as an oversight.
   //
-  // No logo file yet: the wordmark renders the country initial over the brand colour.
-  // Drop the asset in `public/` and point at it here when the migration brings it over.
+  // ── LA MARCA SALE DEL MANUAL (`marca/`) ──────────────────────────────────
+  //
+  // Logo: el isotipo «Dark Tricolor» (`marca/svg/helpmaps_tricolor_dark.svg`) — la
+  // estrella de la red con los nodos norte, este y sur en amarillo, azul y rojo sobre
+  // negro profundo. Es la marca común con los colores de la bandera, no un dibujo aparte.
+  // El PNG está a sangre, sin esquinas redondeadas: cada contenedor pone su propio radio
+  // y el icono de la PWA tiene que llenar el cuadro para que la máscara no deje bordes.
+  //
+  // ⚠️ El corazón amarillo del manual NO es de este despliegue: es la marca vieja de
+  // «HelpMap Venezuela», y este sitio es HelpMaps Venezuela.
+  //
+  // Tipografía: Outfit para el logotipo y las cabeceras, DM Sans para el cuerpo y la
+  // interfaz. Las dos las carga `app/layout.tsx`; aquí sólo se eligen.
   brand: {
-    logo: "/Venezuela.png",
+    logo: "/helpmaps-venezuela.png",
+    font: {
+      sans: "var(--font-dm-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif",
+      display: "var(--font-outfit), var(--font-dm-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif",
+    },
     contact: {
       email: "info@helpmapvzla.net",
       whatsapp: "",

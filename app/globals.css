@@ -468,7 +468,10 @@ a {
   flex-direction: column;
 }
 
+/* El nombre es el logotipo: va con la letra de marca (`display`), no con la de interfaz.
+   En los países sin letra propia las dos son la misma y no cambia nada. */
 .bname {
+  font-family: var(--font-display);
   font-weight: 700;
   font-size: 0.8125rem;
   letter-spacing: -0.3px;

@@ -224,7 +224,11 @@ insert into public.emergencies (
     "privacyEmail": "info@helpmapvzla.net"
   }'::jsonb,   -- legal
   '{
-    "logo": "/Venezuela.png",
+    "logo": "/helpmaps-venezuela.png",
+    "font": {
+      "sans": "var(--font-dm-sans), ''Helvetica Neue'', Helvetica, Arial, sans-serif",
+      "display": "var(--font-outfit), var(--font-dm-sans), ''Helvetica Neue'', Helvetica, Arial, sans-serif"
+    },
     "contact": {
       "email": "info@helpmapvzla.net",
       "whatsapp": "",

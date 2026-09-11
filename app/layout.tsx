@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { DM_Sans, Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { BRAND, IS_HUB } from "@/config";
 import { currentEmergency, getSite } from "@/server/emergency";
@@ -25,12 +25,40 @@ import RecoveryRedirect from "@/features/account/RecoveryRedirect";
  *
  * `--font-jakarta` la lee `config/brand.ts` dentro de `font.sans`, así que un país que
  * quiera otra letra sigue cambiándola en su preset y no aquí.
+ *
+ * ── LAS LETRAS DE UN PAÍS SE DECLARAN AQUÍ Y SE ELIGEN EN SU PRESET ─────────
+ *
+ * `next/font` sólo acepta opciones literales: no puede cargar «la fuente que diga el
+ * preset». Así que aquí se declaran todas las familias que algún preset usa —hoy Outfit y
+ * DM Sans, las del manual de HelpMap Venezuela— cada una en su variable, y el preset elige
+ * cuál leer.
+ *
+ * Por eso NINGUNA se precarga. Una `@font-face` declarada y no usada no descarga nada,
+ * pero una precargada sí: con `preload` cada despliegue bajaba las letras de todos los
+ * demás, justo en el teléfono con mala cobertura. Sin él, el navegador pide sólo la que
+ * el texto usa, y el respaldo con métricas ajustadas que genera `next/font` evita el
+ * salto mientras llega. Sin `weight`: son variables, un archivo cubre 400–800.
  */
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
   variable: "--font-jakarta",
+  preload: false,
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-dm-sans",
+  preload: false,
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-outfit",
+  preload: false,
 });
 
 /**
@@ -99,7 +127,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     : null;
 
   return (
-    <html lang={site.language.default} data-country={site.country.slug} className={jakarta.variable}>
+    <html lang={site.language.default} data-country={site.country.slug} className={`${jakarta.variable} ${dmSans.variable} ${outfit.variable}`}>
       <head>
         {/* Brand tokens from the resolved config, so a clone re-skins without touching CSS. */}
         <style dangerouslySetInnerHTML={{ __html: themeCss(site.brand) }} />
