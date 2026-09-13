@@ -128,6 +128,11 @@ export function validateConfig(site: SiteConfig): void {
   // ── Marca ────────────────────────────────────────────────────────────────
   if (site.brand.logo !== null && !site.brand.logo.startsWith("/"))
     errors.push(`brand.logo "${site.brand.logo}" debe ser una ruta bajo public/ que empiece por "/" (o null)`);
+  // Misma red que el logo: `app/icon.tsx` lo lee del disco por `basename`, así que una
+  // ruta que no empiece por "/" no falla — se cae al respaldo y el despliegue se entera
+  // por un icono que no es el suyo.
+  if (site.brand.favicon !== null && !site.brand.favicon.startsWith("/"))
+    errors.push(`brand.favicon "${site.brand.favicon}" debe ser una ruta bajo public/ que empiece por "/" (o null)`);
   if (!site.brand.contact.email.trim())
     errors.push("brand.contact.email vacío: es el buzón al que llegan sugerencias y voluntariado");
   if (site.brand.contact.whatsapp && !/^\d+$/.test(site.brand.contact.whatsapp))

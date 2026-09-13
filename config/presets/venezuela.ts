@@ -81,9 +81,26 @@ const venezuela: CountryConfig = {
   //
   // ── LA MARCA SALE DEL MANUAL (`marca/`) ──────────────────────────────────
   //
-  // Logo: el isotipo «Dark Tricolor» (`marca/svg/helpmaps_tricolor_dark.svg`) — la
-  // estrella de la red con los nodos norte, este y sur en amarillo, azul y rojo sobre
-  // negro profundo. Es la marca común con los colores de la bandera, no un dibujo aparte.
+  // Logo: el isotipo «Tricolor Light»
+  // (`marca/svg/helpmaps_tricolor_light_transparente.svg`) — la estrella de la red con los
+  // nodos norte, este y sur en amarillo, azul y rojo, y la estructura en grafito. Es la
+  // marca común con los colores de la bandera, no un dibujo aparte.
+  //
+  // EL PNG ES TRANSPARENTE, y la teja es de la SUPERFICIE, no del archivo.
+  //
+  // `BRAND.logo` se compone sobre siete sitios y no todos son del mismo color, así que
+  // hornear un fondo en el propio archivo no sirve: sobre la tarjeta blanca de la cabecera
+  // del mapa se veía un recuadro pegado alrededor del isotipo. Cada superficie decide:
+  //
+  //   • Sin teja, la marca se apoya en lo que ya hay — `.logo` (cabecera del mapa),
+  //     `.doc-brand-mark:has(img)` (barra de docs) y el correo. Los tres son claros.
+  //   • Con teja blanca, porque el fondo es oscuro y la tinta del arte es grafito —
+  //     `.entry-logo` (`/inicio` y las cinco pantallas de auth), la tarjeta de compartir
+  //     (`app/c/[id]/story`) y el icono de `app/icon.tsx`.
+  //
+  // Si algún día se cambia el arte por uno de tinta clara, esto se invierte: lo que hay
+  // que revisar es la lista de arriba, no el PNG.
+  //
   // El PNG está a sangre, sin esquinas redondeadas: cada contenedor pone su propio radio
   // y el icono de la PWA tiene que llenar el cuadro para que la máscara no deje bordes.
   //
@@ -94,6 +111,18 @@ const venezuela: CountryConfig = {
   // interfaz. Las dos las carga `app/layout.tsx`; aquí sólo se eligen.
   brand: {
     logo: "/helpmaps-venezuela.png",
+    // EL ICONO NO ES EL LOGO, y aquí está la razón de que exista este campo.
+    //
+    // Dentro de la aplicación cada superficie es nuestra, así que el arte transparente se
+    // apoya en lo que le toque. La pestaña del navegador y el escritorio del teléfono no
+    // lo son: ahí no hay dónde poner una teja, y un arte transparente con tinta grafito
+    // se pierde. El icono usa el isotipo «Tricolor Grafito»
+    // (`marca/svg/helpmaps_tricolor_grafito.svg`), que trae su propio fondo `#334155`.
+    //
+    // Se aplana sobre ese mismo `#334155` al generarlo: el SVG del manual lleva
+    // `rx="253.78"` y el cuadro tiene que ir a sangre, porque la máscara de la PWA recorta
+    // ella y una esquina transparente deja borde.
+    favicon: "/favicon-venezuela.png",
     font: {
       sans: "var(--font-dm-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif",
       display: "var(--font-outfit), var(--font-dm-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif",

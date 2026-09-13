@@ -66,6 +66,19 @@
   font-weight: 800;
 }
 
+/* LA TEJA BLANCA, y es lo contrario que en la cabecera del mapa: allí la marca se apoya
+   desnuda sobre la tarjeta, y aquí necesita fondo claro porque el arte es transparente con
+   tinta grafito y esta pantalla es el degradado oscuro. La teja es de la SUPERFICIE, no
+   del archivo — el mismo PNG sirve a las dos.
+
+   Va en `:has(img)` y no en el bloque de arriba porque el respaldo SIN logo es texto
+   BLANCO (`BRAND.emoji || COUNTRY.code`, ver `app/inicio/page.tsx`): ése necesita el azul
+   de `--e-hi` y sobre blanco desaparecería. El azul de arriba, por cierto, sólo se veía
+   con un logo transparente: mientras el archivo fue opaco lo tapaba entero. */
+.entry-logo:has(img) {
+  background: #fff;
+}
+
 .entry-logo img {
   width: 100%;
   height: 100%;

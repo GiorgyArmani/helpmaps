@@ -50,6 +50,11 @@ const base: BrandConfig = {
   // `public/` y escribe la ruta en el preset de ese país:
   //   brand: { logo: "/colombia.png" }
   logo: null,
+  // El icono de la pestaña y de la PWA. `null` = se usa `logo`, que es lo correcto para
+  // casi todos: sólo hace falta separarlos cuando el logo no aguanta fuera de la
+  // aplicación — un arte transparente o muy claro se pierde en la tira de pestañas y en
+  // el escritorio del teléfono, que no son superficies nuestras.
+  favicon: null,
   // Se usa como icono de la PWA y de la pestaña cuando no hay logo.
   emoji: "",
 
@@ -96,7 +101,17 @@ const base: BrandConfig = {
  * se presentaba como "HelpMaps Colombia", con el logo de Colombia, en helpmaps.net — el
  * mismo fallo que hacía que su sitemap dijera co.helpmaps.net.
  *
- * El logo es la cruz de HelpMaps: la marca común, sin bandera de nadie.
+ * El logo es el isotipo «Monocromático Dark» (`marca/svg/helpmaps_mono_dark.svg`): la
+ * marca común, sin bandera de nadie — que es justo lo que el hub necesita, porque aquí no
+ * se representa a ningún país. Antes era la cruz blanca sobre azul noche.
+ *
+ * A diferencia del arte de Venezuela, éste es OPACO y trae su propio `#0F172A`, así que
+ * no necesita que ninguna superficie le ponga teja: vale igual sobre la portada clara del
+ * hub que en la pestaña. Por eso el hub no declara `favicon` y hereda éste — y da la
+ * casualidad de que es el mismo isotipo que `app/icon.tsx` dibuja como respaldo.
+ *
+ * El PNG se genera a sangre: el SVG del manual lleva `rx="253.78"`, pero `.hub-mark-logo`
+ * pone su propio radio de 14px y la máscara de la PWA recorta ella.
  */
 const HUB: BrandOverrides = {
   name: PLATFORM,

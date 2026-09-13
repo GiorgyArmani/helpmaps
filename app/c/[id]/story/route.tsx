@@ -63,8 +63,22 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const eyebrow = (
     <div style={{ display: "flex", alignItems: "center", gap: T(18) }}>
       {logo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logo} width={T(54)} height={T(54)} alt="" style={{ borderRadius: T(15) }} />
+        // La teja blanca no es decoración: el arte de marca es transparente y con tinta
+        // grafito, y esta tarjeta es casi negra (`INK`). Sin ella el logo no aparece.
+        <div
+          style={{
+            width: T(54),
+            height: T(54),
+            borderRadius: T(15),
+            background: "#FFFFFF",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} width={T(54)} height={T(54)} alt="" style={{ borderRadius: T(15) }} />
+        </div>
       ) : (
         <div
           style={{

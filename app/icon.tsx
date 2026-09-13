@@ -6,11 +6,15 @@ import { BRAND } from "@/config";
 // The tab icon and the PWA icon (app/manifest.ts points both at this route), drawn from
 // the brand config so a clone gets its own without anyone exporting a PNG.
 //
-// `BRAND.logo` wins and `BRAND.emoji` is the fallback — the order `config/brand.ts` has
-// always documented ("se usa cuando no hay logo") but this route did not implement: it
-// rendered the emoji unconditionally, so a deployment that set a logo and left the emoji
-// empty (which is exactly what Colombia does) shipped a blank coloured square as its
-// favicon while the header showed the real mark.
+// Order: `BRAND.favicon`, then `BRAND.logo`, then the isotype below. `favicon` exists
+// because this square lands somewhere the deployment does not control — a tab strip, a
+// home screen — while `logo` is seen on our own surfaces, where a transparent mark can be
+// given the right backing per screen. A country whose logo travels fine leaves `favicon`
+// null and both stay the same file.
+//
+// (`BRAND.emoji` used to render unconditionally here, so a deployment that set a logo and
+// left the emoji empty — exactly what Colombia does — shipped a blank coloured square as
+// its favicon while the header showed the real mark.)
 
 export const size = { width: 512, height: 512 };
 export const contentType = "image/png";
@@ -30,7 +34,7 @@ const MIME: Record<string, string> = {
  * build time, when there is no server of ours listening to fetch it from.
  */
 async function logoDataUri(): Promise<string | null> {
-  const logo = BRAND.logo;
+  const logo = BRAND.favicon ?? BRAND.logo;
   if (!logo) return null;
   const ext = path.extname(logo).toLowerCase();
   const mime = MIME[ext];
@@ -63,7 +67,11 @@ export default async function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0F172A",
+          // Claro con logo, oscuro sin él. El arte de marca es transparente y con tinta
+          // grafito: sobre el azul noche de abajo no se vería. El respaldo es al revés —
+          // el isotipo Monocromático Dark ES estructura blanca sobre ese azul.
+          // Sea cual sea, el cuadro va lleno: la máscara de la PWA no puede dejar bordes.
+          background: src ? "#FFFFFF" : "#0F172A",
           overflow: "hidden",
         }}
       >

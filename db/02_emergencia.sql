@@ -225,6 +225,7 @@ insert into public.emergencies (
   }'::jsonb,   -- legal
   '{
     "logo": "/helpmaps-venezuela.png",
+    "favicon": "/favicon-venezuela.png",
     "font": {
       "sans": "var(--font-dm-sans), ''Helvetica Neue'', Helvetica, Arial, sans-serif",
       "display": "var(--font-outfit), var(--font-dm-sans), ''Helvetica Neue'', Helvetica, Arial, sans-serif"

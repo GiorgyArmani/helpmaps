@@ -44,6 +44,11 @@
 .doc-brand { justify-self: center; display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); }
 /* The mark is the box, so the logo and the no-logo fallback are the same size and shape. */
 .doc-brand-mark { width: 26px; height: 26px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; overflow: hidden; background: var(--accent); color: #fff; font-size: 0.6875rem; font-weight: 800; box-shadow: 0 0 0 1px rgba(16, 20, 28, 0.08); }
+/* Con logo la teja sobra: esta barra ya es clara y el arte de marca es transparente, así
+   que el fondo `--accent` sólo metía un recuadro negro alrededor. Se quita SÓLO en ese
+   caso porque el respaldo sin logo aquí es texto blanco (`BRAND.emoji || COUNTRY.code`),
+   y ese sí necesita el fondo oscuro para leerse. */
+.doc-brand-mark:has(img) { background: none; box-shadow: none; }
 .doc-brand-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .doc-brand-name { font-size: 0.875rem; font-weight: 800; letter-spacing: -0.2px; }
 .doc-brand-sub { color: var(--mut); font-weight: 600; }

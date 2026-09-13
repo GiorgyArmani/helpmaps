@@ -156,6 +156,16 @@ export interface BrandConfig {
   tagline: string;
   /** Path under /public, or null to render the wordmark only. */
   logo: string | null;
+  /**
+   * Path under /public for the tab and PWA icon. `null` reuses `logo`.
+   *
+   * Separate from `logo` because the two are seen against grounds the deployment does NOT
+   * equally control. Inside the product every surface is ours, so a transparent mark can
+   * be given the right backing per screen; a tab strip and a phone home screen are the
+   * browser's and the launcher's, and there a transparent or pale mark disappears.
+   * Venezuela is exactly that case: a light logo in the app, the graphite tile outside it.
+   */
+  favicon: string | null;
   /** Emoji fallback used for the favicon and small badges. */
   emoji: string;
   colors: BrandColors;
@@ -193,6 +203,8 @@ export interface BrandOverrides {
   tagline?: string;
   /** Path under /public, or `null` for the wordmark. State it: the base cannot guess. */
   logo?: string | null;
+  /** Tab and PWA icon under /public, or `null` to reuse `logo`. */
+  favicon?: string | null;
   emoji?: string;
   colors?: Partial<BrandColors>;
   radius?: Partial<BrandConfig["radius"]>;

@@ -439,12 +439,17 @@ a {
   cursor: pointer;
 }
 
+/* SIN TEJA DETRÁS. El arte de marca es transparente y esta tarjeta ya es blanca: la marca
+   se apoya en ella y no en un cuadro propio. Antes había un `background: var(--accent)`
+   que dibujaba un recuadro casi negro alrededor del isotipo — con un logo opaco no se
+   notaba, pero con uno transparente el fondo es justo lo que se ve.
+   El caso «sin logo» no depende de esto: `Brand.tsx` dibuja `<Isotype>`, que pinta su
+   propio fondo. */
 .logo {
   width: 30px;
   height: 30px;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--accent);
   color: #fff;
   flex: 0 0 auto;
   display: flex;
