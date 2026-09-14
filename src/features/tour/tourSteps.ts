@@ -84,7 +84,10 @@ export const PUBLIC_STEPS: TourStep[] = [
   {
     id: "search",
     anchor: "search",
-    eyebrow: { es: "Paso 1", en: "Step 1", pt: "Passo 1" },
+    // Las etiquetas nombran el tema, nunca un número: la tarjeta ya lleva «5 de 13», y un
+    // «Paso 4» escrito a mano no coincide con él (la bienvenida cuenta, y un paso que se
+    // salta por no tener ancla descuadra cualquier numeración fija).
+    eyebrow: { es: "Buscador", en: "Search", pt: "Busca" },
     title: { es: "Busca un lugar", en: "Search for a place", pt: "Busque um lugar" },
     body: {
       es: "Escribe el nombre del sitio o el municipio. La búsqueda ocurre en tu teléfono: no registramos qué buscas ni quién lo busca.",
@@ -96,7 +99,7 @@ export const PUBLIC_STEPS: TourStep[] = [
   {
     id: "filters",
     anchor: "filters",
-    eyebrow: { es: "Paso 2", en: "Step 2", pt: "Passo 2" },
+    eyebrow: { es: "Zona", en: "Area", pt: "Área" },
     title: { es: "Acércate a tu zona", en: "Zoom to your area", pt: "Aproxime-se da sua área" },
     body: {
       es: "Este desplegable acerca el mapa a una zona y deja en el panel de puntos solo los de allí. Si vas directo a un punto concreto, escribe su nombre en el buscador.",
@@ -107,7 +110,7 @@ export const PUBLIC_STEPS: TourStep[] = [
   {
     id: "types",
     anchor: "types",
-    eyebrow: { es: "Paso 3", en: "Step 3", pt: "Passo 3" },
+    eyebrow: { es: "Filtros", en: "Filters", pt: "Filtros" },
     title: { es: "Muestra solo lo que buscas", en: "Show only what you need", pt: "Mostre só o que procura" },
     body: {
       es: "Cada tipo de punto tiene su color en el mapa: dónde dormir, dónde comer, dónde dejar o recibir donaciones, iniciativas de gente organizándose. Toca uno para ver solo ese; sin ninguno activo se ven todos.",
@@ -119,7 +122,7 @@ export const PUBLIC_STEPS: TourStep[] = [
   {
     id: "sheet",
     anchor: "sheet",
-    eyebrow: { es: "Paso 4", en: "Step 4", pt: "Passo 4" },
+    eyebrow: { es: "Si necesitas ayuda", en: "If you need help", pt: "Se você precisa de ajuda" },
     // «El panel de puntos», no «la lista de abajo»: en escritorio no está abajo, y además de
     // la lista lleva las pestañas. Y no «el panel» a secas, que ya es el del equipo. Las
     // pestañas se nombran con sus rótulos (`feed.title`, `panel.tab.nearby`, `map.points`,

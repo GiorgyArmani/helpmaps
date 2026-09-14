@@ -2731,24 +2731,6 @@ textarea.finput {
 
 /* Open state for the gear. The cog is muted grey at rest, which on the accent fill would
    be grey-on-near-black, so the open state sets the colour outright. */
-.staff-guide-on,
-.staff-guide-on:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.signout {
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--danger);
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 9px;
-  padding: 7px 11px;
-  cursor: pointer;
-}
 
 .loginwrap {
   padding: 22px 16px;
@@ -3588,12 +3570,6 @@ a.hub-card:hover {
   color: var(--mut);
 }
 
-.admsettings {
-  position: relative;
-  margin-left: auto;
-  flex: 0 0 auto;
-}
-
 .amini-on {
   background: var(--accent);
   border-color: var(--accent);
@@ -3607,57 +3583,6 @@ a.hub-card:hover {
   color: inherit;
 }
 
-.admmenu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 650;
-  min-width: 210px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 13px;
-  box-shadow: 0 12px 30px rgba(16, 20, 28, 0.2);
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.admmenu-item {
-  border: none;
-  background: none;
-  border-radius: 9px;
-  padding: 9px 10px;
-  text-align: left;
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.admmenu-item:hover {
-  background: var(--soft);
-}
-
-.admmenu-danger {
-  color: var(--danger);
-}
-
-/* The password form lives inside the menu, so it gets the room rather than the row. */
-.admmenu .pwform {
-  padding: 6px 4px 2px;
-  gap: 10px;
-}
-
-.admmenu .linkbtn {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 9px 10px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
 
 /* Already indented and already padded by the overlay body, which the rail is now the
    first child of — a second copy of both just pushed it away from the header it belongs
@@ -8239,4 +8164,68 @@ fieldset.fieldset {
 .userlang-opt:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+
+/* ── La sesión tiene una sola casa: el avatar ─────────────────────────────
+   La fila del panel del equipo mientras llega el rol, con la medida de una fila de verdad:
+   un hueco que no mide lo mismo que lo que sustituye provoca el salto que venía a evitar. */
+.useritem-skel,
+.useritem-skel:hover {
+  background: none;
+  cursor: default;
+}
+
+.useritem-skel-ic {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.useritem-skel-txt {
+  width: 58%;
+  height: 12px;
+}
+
+/* Dónde estás: con el panel abierto su fila se marca, con el mismo relleno que la opción
+   elegida de un selector, en vez de desaparecer del menú. */
+.useritem-on,
+.useritem-on:hover {
+  background: var(--soft2);
+}
+
+.useritem-on .useritem-ic {
+  color: var(--ink);
+}
+
+/* El «?» del panel es lo único que queda en su cabecera: 44px, como todo lo que se toca. */
+.ovhead .staff-guide {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+}
+
+/* Las acciones de Mi cuenta —abrir el panel, postularse, cambiar la contraseña— a 44px. */
+.acc-cta {
+  min-height: 44px;
+}
+
+.acc .pwform {
+  gap: 10px;
+}
+
+/* «Cancelar» es un `.linkbtn`, que en su sitio original era un enlace de texto de 16px de
+   alto. Aquí va junto a «Guardar», y se toca con el mismo pulgar. */
+.acc .pwform .linkbtn {
+  width: auto;
+  min-height: 44px;
+  margin-top: 0;
+  padding: 0 12px;
+}
+
+.acc-skel {
+  display: block;
+  width: 62%;
+  height: 44px;
+  border-radius: var(--r-md);
 }

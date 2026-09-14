@@ -21,6 +21,7 @@ import CenterCard from "@/features/centers/CenterCard";
 import DigitalCard from "@/features/centers/DigitalCard";
 import { isDigital } from "@/domain/center";
 import LoginForm from "@/features/admin/LoginForm";
+import PasswordChange from "@/features/admin/PasswordChange";
 import { savedLabel, sentLabel } from "@/features/account/ledger";
 
 /**
@@ -54,12 +55,17 @@ export default function AccountView({
   centers,
   onOpenCenter,
   onVolunteer,
+  isStaff,
+  onOpenPanel,
   justConfirmed,
 }: {
   account: AccountState;
   centers: Center[];
   onOpenCenter: (id: string) => void;
   onVolunteer: () => void;
+  /** Del equipo, sí o no; `null` mientras el rol no ha llegado. */
+  isStaff: boolean | null;
+  onOpenPanel: () => void;
   justConfirmed?: boolean;
 }) {
   const { t, lang } = useI18n();
@@ -254,10 +260,24 @@ export default function AccountView({
         )}
       </section>
 
-      {/* ── Sumarme al equipo ───────────────────────────────────────────── */}
+      {/* ── El equipo ───────────────────────────────────────────────────────
+          Quien ya es del equipo no se postula: le sale la puerta a su panel. Lo decide
+          `staff_users` y no la postulación, porque una cuenta que da de alta un
+          administrador no tiene solicitud — y a un superadmin se le pedía postularse.
+          Mientras el rol no llega, el hueco del botón y no un «Postularme» que cambia. */}
       <section className="acc-sec">
-        <h3 className="acc-h">{t("account.volunteer")}</h3>
-        {vol === null ? (
+        <h3 className="acc-h">{isStaff ? t("admin.title") : t("account.volunteer")}</h3>
+        {isStaff === null ? (
+          <span className="skel acc-skel" aria-hidden="true" />
+        ) : isStaff ? (
+          <>
+            <p className="acc-empty">{t("account.teamNote")}</p>
+            <button type="button" className="acc-cta" onClick={onOpenPanel}>
+              {t("account.openPanel")}
+              <Icon.chevron />
+            </button>
+          </>
+        ) : vol === null ? (
           <>
             <p className="acc-empty">{t("account.volNone")}</p>
             <button type="button" className="acc-cta" onClick={onVolunteer}>
@@ -272,6 +292,15 @@ export default function AccountView({
         ) : (
           <Notice tone="info">{t("account.volRejected")}</Notice>
         )}
+      </section>
+
+      {/* ── Contraseña ──────────────────────────────────────────────────────
+          Vivía en un engranaje de la cabecera del panel del equipo, así que sólo la
+          encontraba el equipo, y la ruta (`/api/account/password`) es la misma para
+          cualquier cuenta. */}
+      <section className="acc-sec">
+        <h3 className="acc-h">{t("account.security")}</h3>
+        <PasswordChange toggleClassName="acc-cta" />
       </section>
 
       <p className="acc-fine">{t("account.privacy")}</p>

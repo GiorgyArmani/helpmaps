@@ -83,14 +83,6 @@ const AdminPanel = dynamic(() => import("@/features/admin/AdminPanel"), {
   loading: () => null,
 });
 
-// Lives in the header now, next to the other two session controls — but it is still staff
-// code, so it is split out for the same reason the panel is: a visitor on one bar of
-// signal should not download a password form they can never open.
-const PasswordChange = dynamic(() => import("@/features/admin/PasswordChange"), {
-  ssr: false,
-  loading: () => null,
-});
-
 type View =
   | "list"
   | "detail"
@@ -340,11 +332,20 @@ export default function AppShell({
   const [justConfirmed, setJustConfirmed] = useState(initialAction === "account");
   // Resolved only once the panel — or the avatar menu — is actually open. Ver
   // useStaffSession: la consulta del rol no entra en el camino crítico del mapa.
-  const staff = useStaffSession(view === "admin" || userMenu);
+  const [fabOpen, setFabOpen] = useState(false);
+  // Colaborar también lo pide: a quien ya es del equipo no se le ofrece sumarse a él.
+  const staff = useStaffSession(view === "admin" || view === "account" || userMenu || fabOpen);
   // El perfil y los guardados, con la misma pereza. Una sola instancia para el menú y para
   // la vista: son la misma cuenta, y dos copias del recuento de guardados es cómo el menú
   // acaba diciendo 3 mientras el panel dice 4.
   const account = useAccount(userMenu || view === "account");
+  // Entrar desde Mi cuenta cambia de persona con la vista ya abierta, y el rol se pedía
+  // sólo al ACTIVARSE: quien entraba ahí con una cuenta del equipo seguía viendo
+  // «Postularme» hasta abrir el avatar.
+  const refreshStaff = staff.refresh;
+  useEffect(() => {
+    if (account.userId) refreshStaff();
+  }, [account.userId, refreshStaff]);
   // "Register my initiative" is the same form with a different pre-selected kind: one
   // moderation queue, one shape, so the entry page needs no endpoint of its own.
   const [suggestKind] = useState<SubmissionKind>(
@@ -354,7 +355,6 @@ export default function AppShell({
   // tapped "I want to help" asked for that list.
   const [open, setOpen] = useState(initialAction === "needs");
   const [folded, setFolded] = useState(false);
-  const [fabOpen, setFabOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   // Loaded the first time the panel is opened, not with the map: most visits never open
   // it, and this is a screen budgeted for one bar of signal.
@@ -369,15 +369,11 @@ export default function AppShell({
   // never opens the panel and so never fetches the queues — the lazy session check this
   // sits behind is the whole point (see useStaffSession).
   const [pending, setPending] = useState(0);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   // Los dos desplegables de este componente. `useDismiss` los cierra al tocar fuera, con
   // Escape y con atrás, y cierra cualquier otro menú abierto cuando se abre uno.
   const fabRef = useRef<HTMLDivElement>(null);
   const closeFab = useCallback(() => setFabOpen(false), []);
   useDismiss(fabOpen, closeFab, fabRef);
-  const settingsRef = useRef<HTMLDivElement>(null);
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
-  useDismiss(settingsOpen, closeSettings, settingsRef);
   useEffect(() => {
     // Someone who arrived with an intent ("I want to help", "register my initiative")
     // gets what they asked for, not a tour over it. The flag is left unset, so the tour
@@ -705,9 +701,6 @@ export default function AppShell({
   function back() {
     navBack();
     setJustConfirmed(false);
-    // The menu is header state, not panel state, so it outlives the view that owns it —
-    // without this it would be hanging open the next time the panel is opened.
-    setSettingsOpen(false);
     // Leaving the panel takes the half-placed pin with it; otherwise it lingers over the
     // public map looking like a real point.
     setDraftPin(null);
@@ -720,7 +713,6 @@ export default function AppShell({
    */
   function goRoot(entry: NavEntry<View>) {
     setJustConfirmed(false);
-    setSettingsOpen(false);
     setDraftPin(null);
     navOpenRoot(entry);
   }
@@ -742,7 +734,6 @@ export default function AppShell({
     setUserMenu(false);
     navReset();
     setJustConfirmed(false);
-    setSettingsOpen(false);
     setDraftPin(null);
   }
 
@@ -958,7 +949,8 @@ export default function AppShell({
                           </span>
                         </button>
                       ) : null}
-                      {site.features.volunteerSignup ? (
+                      {/* A quien ya es del equipo no se le ofrece sumarse a él. */}
+                      {site.features.volunteerSignup && !staff.session ? (
                         <button
                           type="button"
                           className="fab-opt"
@@ -1006,6 +998,7 @@ export default function AppShell({
               pending={pending}
               onOpenAccount={() => goRoot({ view: "account", id: null })}
               onOpenPanel={() => goRoot({ view: "admin", id: null })}
+              panelOpen={activeView === "admin"}
               onHelp={() => setTourOpen(true)}
               managesInitiative={managed.length > 0}
               onOpenInitiative={() => {
@@ -1289,49 +1282,20 @@ export default function AppShell({
                             ? t(staff.session ? "admin.title" : "login.title")
                             : t("volunteer.title")}
             </span>
-            {/* Session actions belong to the header, next to the title that names the
-                session — not folded into a menu inside the body. Replaying the
-                walkthrough is the first thing someone reaches for when a field is
-                unclear, and a sign-out has to be visible on a machine that gets handed
-                around. */}
+            {/* Sólo lo que es DEL PANEL: su recorrido. La sesión —salir, la contraseña, el
+                idioma— vive en el avatar, que está en pantalla junto a este panel. Tenerla
+                también aquí eran dos «salir» con dos nombres, uno a cada lado de la
+                pantalla, y dos menús que se cerraban el uno al otro al abrirse. */}
             {activeView === "admin" && staff.session ? (
-              <>
-                <div className="admsettings" ref={settingsRef}>
-                  <button
-                    type="button"
-                    className={`staff-guide${settingsOpen ? " staff-guide-on" : ""}`}
-                    aria-expanded={settingsOpen}
-                    aria-label={t("admin.settings")}
-                    title={t("admin.settings")}
-                    onClick={() => setSettingsOpen((v) => !v)}
-                  >
-                    <Icon.gear />
-                  </button>
-                  {settingsOpen ? (
-                    <>
-                      <div className="admmenu" role="group" aria-label={t("admin.settings")}>
-                        {/* Only the password lives here. The other two session actions
-                            are buttons in this same row — a menu for a single form is
-                            worth it because the form needs the room; a menu for a
-                            sign-out is just a sign-out you cannot find. */}
-                        <PasswordChange />
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  className="staff-guide"
-                  aria-label={t("admin.howItWorks")}
-                  title={t("admin.howItWorks")}
-                  onClick={() => setStaffTourOpen(true)}
-                >
-                  <Icon.question />
-                </button>
-                <button type="button" className="signout" onClick={() => void signOut()}>
-                  {t("login.signOut")}
-                </button>
-              </>
+              <button
+                type="button"
+                className="staff-guide"
+                aria-label={t("admin.howItWorks")}
+                title={t("admin.howItWorks")}
+                onClick={() => setStaffTourOpen(true)}
+              >
+                <Icon.question />
+              </button>
             ) : null}
           </div>
           <div className="ovbody">
@@ -1362,6 +1326,8 @@ export default function AppShell({
                 account={account}
                 centers={centers}
                 onOpenCenter={openCenter}
+                isStaff={staff.checked ? Boolean(staff.session) : null}
+                onOpenPanel={() => goRoot({ view: "admin", id: null })}
                 onVolunteer={() => navPush({ view: "volunteer", id: null })}
                 justConfirmed={justConfirmed}
               />

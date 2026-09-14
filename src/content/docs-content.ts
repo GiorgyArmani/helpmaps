@@ -329,8 +329,8 @@ export const DOCS: DocPage[] = [
         blocks: [
           {
             text: {
-              es: "Entra en {host}/login con tu correo y tu contraseña. Una vez dentro, el engranaje de la cabecera abre el panel. Si algo no te aparece, es que tu rol no lo incluye: hay acciones reservadas a administradores.",
-              en: "Go to {host}/login with your email and password. Once inside, the gear in the header opens the panel. If something is not there, your role does not include it: some actions are reserved for administrators.",
+              es: "Entra en {host}/login con tu correo y tu contraseña. Una vez dentro, el panel se abre desde tu avatar, arriba a la derecha, y en Mi cuenta puedes cambiar la contraseña. Si algo no te aparece, es que tu rol no lo incluye: hay acciones reservadas a administradores.",
+              en: "Go to {host}/login with your email and password. Once inside, the panel opens from your avatar at the top right, and you can change your password in My account. If something is not there, your role does not include it: some actions are reserved for administrators.",
             },
           },
         ],

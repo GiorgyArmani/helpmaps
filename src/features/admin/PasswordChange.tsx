@@ -14,7 +14,12 @@ import { useI18n } from "@/i18n/context";
  *
  * Collapsed by default: it is a thing you do once, not a thing you read every day.
  */
-export default function PasswordChange() {
+export default function PasswordChange({
+  toggleClassName = "linkbtn",
+}: {
+  /** El botón que abre el formulario toma la forma de la pantalla donde vive. */
+  toggleClassName?: string;
+}) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
@@ -63,7 +68,7 @@ export default function PasswordChange() {
 
   if (!open) {
     return (
-      <button type="button" className="linkbtn" onClick={() => setOpen(true)}>
+      <button type="button" className={toggleClassName} onClick={() => setOpen(true)}>
         {t("password.change")}
       </button>
     );

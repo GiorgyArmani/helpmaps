@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
@@ -12,6 +12,8 @@ import type { StaffState } from "@/features/admin/useStaffSession";
 import type { AccountState } from "@/features/account/useAccount";
 import { avatarInitial, useSessionPeek } from "@/features/account/useSessionPeek";
 import { savedLabel } from "@/features/account/ledger";
+
+const STAFF_HINT = "hmWasStaff";
 
 /**
  * El avatar de la barra, y lo que se despliega debajo.
@@ -56,6 +58,7 @@ export default function AccountMenu({
   onSignOut,
   managesInitiative = false,
   onOpenInitiative,
+  panelOpen = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -73,6 +76,8 @@ export default function AccountMenu({
    */
   managesInitiative?: boolean;
   onOpenInitiative?: () => void;
+  /** El panel del equipo está abierto: su fila se marca en vez de desaparecer. */
+  panelOpen?: boolean;
 }) {
   const { t, lang, setLang, available } = useI18n();
   const site = useSite();
@@ -86,6 +91,28 @@ export default function AccountMenu({
   const name = account.profile?.displayName ?? null;
   const initial = avatarInitial(name, peek.initial);
   const isStaff = Boolean(staff.session);
+
+  // El rol cuesta un viaje y se pide al abrir el menú, así que «Panel del equipo» entraba
+  // un segundo DESPUÉS y empujaba hacia abajo la fila que la persona iba a tocar. Se
+  // recuerda si esta cuenta era del equipo la última vez —un sí o un no, nada más— y sólo
+  // entonces se reserva el hueco. A quien nunca lo fue no le aparece una fila fantasma.
+  const [wasStaff] = useState(() => {
+    try {
+      return window.localStorage.getItem(STAFF_HINT) === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    if (!staff.checked) return;
+    try {
+      if (staff.session) window.localStorage.setItem(STAFF_HINT, "1");
+      else window.localStorage.removeItem(STAFF_HINT);
+    } catch {
+      /* modo privado: sin pista, el menú sólo pierde el hueco reservado */
+    }
+  }, [staff.checked, staff.session]);
+  const staffPending = signedIn && !staff.checked && wasStaff;
   const savedCount = account.favourites.size;
   const hasCookies = Boolean(site.integrations.analytics.ga);
 
@@ -180,13 +207,13 @@ export default function AccountMenu({
                 <span className="userhead-txt">
                   <b className="userhead-name">{name ?? t("account.noName")}</b>
                   <span className="userhead-sub">
-                    {isStaff ? t("account.roleStaff") : savedLabel(t, savedCount)}
+                    {isStaff || staffPending ? t("account.roleStaff") : savedLabel(t, savedCount)}
                   </span>
                 </span>
                 <Icon.chevron className="userhead-ch" />
               </button>
 
-              {(managesInitiative && onOpenInitiative) || isStaff ? (
+              {(managesInitiative && onOpenInitiative) || isStaff || staffPending ? (
                 <div className="usermenu-list">
                   {managesInitiative && onOpenInitiative ? (
                     <button
@@ -202,8 +229,19 @@ export default function AccountMenu({
                     </button>
                   ) : null}
 
-                  {isStaff ? (
-                    <button type="button" className="useritem" role="menuitem" onClick={pick(onOpenPanel)}>
+                  {staffPending ? (
+                    <div className="useritem useritem-skel" aria-hidden="true">
+                      <span className="skel useritem-skel-ic" />
+                      <span className="skel useritem-skel-txt" />
+                    </div>
+                  ) : isStaff ? (
+                    <button
+                      type="button"
+                      className={`useritem${panelOpen ? " useritem-on" : ""}`}
+                      role="menuitem"
+                      aria-current={panelOpen ? "page" : undefined}
+                      onClick={pick(onOpenPanel)}
+                    >
                       <span className="useritem-ic">
                         <Icon.sliders />
                       </span>

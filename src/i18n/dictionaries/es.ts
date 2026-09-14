@@ -608,6 +608,10 @@ const es = {
   "account.volRejected":
     "Por ahora tu postulación no siguió adelante. Puedes volver a postularte más adelante.",
 
+  "account.teamNote": "Eres parte del equipo: publicas en vivo sobre el mapa desde el panel.",
+  "account.openPanel": "Abrir el panel del equipo",
+  "account.security": "Contraseña",
+
   "account.signOut": "Cerrar sesión",
   "account.hello": "Hola, {name}",
   "account.panelIntro":

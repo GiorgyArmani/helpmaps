@@ -393,9 +393,8 @@ export default function AdminPanel({
       {/* No <h1> here: the overlay's own header already says "Panel del equipo" directly
           above this, so a second copy was pure repetition eating the top of a 430px
           column. What is left is the thing the title could not tell you — WHO you are
-          signed in as. The gear that used to float on the right of this row now sits in
-          the header with the other two session controls: three buttons for the same
-          session, on three different rows, was the arrangement worth fixing.
+          signed in as. The session controls (sign-out, password, language) live in the
+          avatar menu, once, and the header keeps only the panel's own guide.
 
           No "back to map" link either: the map is on screen beside this panel and the
           overlay's ← closes it. The old link navigated to `/`, which tore the client tree
