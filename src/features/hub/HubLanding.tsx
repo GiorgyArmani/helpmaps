@@ -2,6 +2,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { BRAND, LANGUAGE, NETWORK } from "@/config";
 import { translator } from "@/i18n";
+import { CookiePrefsLink } from "@/features/consent/CookieConsent";
 import { LANG_NAME } from "@/ui/flags";
 import type { Lang } from "@/i18n/types";
 
@@ -211,6 +212,7 @@ export default function HubLanding({ lang }: { lang: Lang }) {
       <footer className="hub-foot">
         <Link href="/docs/terminos">{t("hub.terms")}</Link>
         <Link href="/docs/privacidad">{t("footer.privacy")}</Link>
+        <CookiePrefsLink label={t("footer.cookies")} />
         <Link href="/docs/api">{t("footer.api")}</Link>
         <Link href="/docs/desplegar">{t("hub.joinCountry")}</Link>
         {/* El correo vivía dentro de la tarjeta de contribuir. Al convertirla en un

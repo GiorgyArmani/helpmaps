@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DocShell, DocSection } from "../DocShell";
 import { BRAND, COUNTRY } from "@/config";
+import { CookiePrefsLink } from "@/features/consent/CookieConsent";
 
 export const metadata: Metadata = {
   title: "Privacidad",
@@ -66,6 +67,40 @@ export default function PrivacyPage() {
           Los puntos permanecen mientras la emergencia siga activa. Al cerrarse la respuesta,
           retiramos la publicación y conservamos solo cifras agregadas, que no identifican a nadie.
           Las sugerencias y solicitudes ya revisadas se eliminan cuando dejan de ser necesarias.
+        </p>
+      </DocSection>
+
+      <DocSection id="cookies" heading={`Cookies y lo que se guarda en tu navegador`}>
+        <p>
+          Separamos lo que hace funcionar la aplicación, que no necesita tu permiso, de la
+          analítica, que sí lo necesita y no se activa hasta que aceptas.
+        </p>
+        <ul>
+          <li>
+            <strong>Necesarias:</strong> la sesión si entras con tu cuenta (cookies{" "}
+            <code>sb-…</code>, mientras dure la sesión); <code>helpmaps_entry_{COUNTRY.slug}</code>,
+            que recuerda que ya pasaste por la página de entrada (6 meses); y, en el almacenamiento
+            del navegador, tu idioma, si ya viste el recorrido guiado, una copia de los puntos para
+            abrir el mapa con mala conexión, los formularios pendientes de enviar hasta que vuelva
+            la red y tu elección sobre cookies. Nada de esto se usa para seguirte.
+          </li>
+          <li>
+            <strong>Analítica, solo si aceptas:</strong> Google Analytics 4, de Google Ireland
+            Limited y Google LLC. Guarda las cookies <code>_ga</code> y <code>_ga_…</code> hasta
+            2 años. Cuenta páginas vistas, sin la parte de la dirección que va detrás del «?», y el
+            país del despliegue. No le enviamos nombres, búsquedas ni tu ubicación. Si no aceptas,
+            el script de Google ni siquiera se descarga.
+          </li>
+        </ul>
+        <p>
+          Tu elección se guarda en este navegador durante 12 meses; después te lo volvemos a
+          preguntar. Puedes cambiarla cuando quieras desde «Cookies» al pie de la app, o aquí:{" "}
+          <CookiePrefsLink className="note-link" label="Cambiar mi elección de cookies" />
+        </p>
+        <p>
+          Para dibujar el mapa y las capas sísmicas, tu navegador pide imágenes y datos a CARTO,
+          OpenFreeMap, Amazon Web Services (relieve del mapa 3D) y el Servicio Geológico de
+          EE. UU. (USGS). Como cualquier servidor, reciben tu dirección IP para poder responder.
         </p>
       </DocSection>
 

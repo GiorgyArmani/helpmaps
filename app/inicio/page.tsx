@@ -8,6 +8,7 @@ import type { LocationType } from "@/domain/types";
 import { Icon } from "@/ui/icons";
 import { fetchCoverage } from "./coverage";
 import NewsSection from "@/features/news/NewsSection";
+import { CookiePrefsLink } from "@/features/consent/CookieConsent";
 import "./entry.css";
 
 /**
@@ -184,6 +185,7 @@ export default async function EntryPage({
             <Link href={`/docs/terminos?lang=${lang}`} className="entry-foot-link">
               {t("footer.terms")}
             </Link>
+            <CookiePrefsLink className="entry-foot-link" label={t("footer.cookies")} separator />
             <span aria-hidden="true">·</span>
             <Link href={`/docs?lang=${lang}`} className="entry-foot-link">
               {t("footer.about")}

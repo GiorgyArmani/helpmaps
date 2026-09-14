@@ -103,9 +103,9 @@ export function DocShell({
 }
 
 /** One titled block inside a DocShell. */
-export function DocSection({ heading, children }: { heading: string; children: ReactNode }) {
+export function DocSection({ heading, id, children }: { heading: string; id?: string; children: ReactNode }) {
   return (
-    <section className="doc-section">
+    <section className="doc-section" id={id}>
       <h2 className="doc-h2">{heading}</h2>
       {children}
     </section>

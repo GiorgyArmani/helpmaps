@@ -226,6 +226,14 @@ const pt: Partial<Dict> = {
   "mmi.9.damage": "Graves",
   "mmi.10.shaking": "Extremo",
   "mmi.10.damage": "Muito graves",
+
+  "consent.label": "Aviso de cookies",
+  "consent.title": "Cookies de análise",
+  "consent.text": "Usamos cookies do Google Analytics para contar visitas, só se você aceitar.",
+  "consent.more": "Saiba mais",
+  "consent.accept": "Aceitar",
+  "consent.reject": "Recusar",
+  "footer.cookies": "Cookies",
 };
 
 export default pt;

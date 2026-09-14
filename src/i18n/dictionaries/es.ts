@@ -468,6 +468,14 @@ const es = {
     "Lo que envíes lo revisa el equipo. Tu contacto no se publica y se usa solo para confirmar el dato.",
   "privacy.link": "Cómo tratamos tus datos",
 
+  // ── Aviso de cookies ────────────────────────────────────────────────────
+  "consent.label": "Aviso de cookies",
+  "consent.title": "Cookies de analítica",
+  "consent.text": "Usamos cookies de Google Analytics para contar visitas, solo si aceptas.",
+  "consent.more": "Más información",
+  "consent.accept": "Aceptar",
+  "consent.reject": "Rechazar",
+
   // ── Datos en caché / mantenimiento ──────────────────────────────────────
   "offline.offline": "Sin conexión",
   "offline.swBody": "No hay conexión y esta página todavía no está guardada. Abre el mapa al menos una vez con internet y quedará disponible sin señal.",
@@ -758,6 +766,7 @@ const es = {
   // ── Pie de página / red ─────────────────────────────────────────────────
   "footer.privacy": "Privacidad",
   "footer.terms": "Términos",
+  "footer.cookies": "Cookies",
   "footer.api": "API pública",
   "footer.network": "HelpMaps en otros países",
   "footer.about": "Qué es HelpMaps",

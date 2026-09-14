@@ -63,6 +63,7 @@ import DonateView from "@/features/donate/DonateView";
 import ContactForm from "@/features/donate/ContactForm";
 import VolunteerForm from "@/features/volunteer/VolunteerForm";
 import GuidedTour from "@/features/tour/GuidedTour";
+import { CookiePrefsLink } from "@/features/consent/CookieConsent";
 import { PUBLIC_STEPS, STAFF_STEPS } from "@/features/tour/tourSteps";
 import { watchConnection } from "@/features/suggest/offlineQueue";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
@@ -1128,6 +1129,7 @@ export default function AppShell({
             <Link className="small mut" href="/docs/terminos">
               {t("footer.terms")}
             </Link>
+            <CookiePrefsLink className="small mut" />
             {site.features.publicApi ? (
               <Link className="small mut" href="/docs/api">
                 {t("footer.api")}

@@ -409,6 +409,13 @@ const en: Partial<Dict> = {
     "What you send is reviewed by the team. Your contact is never published and is only used to confirm the information.",
   "privacy.link": "How we handle your data",
 
+  "consent.label": "Cookie notice",
+  "consent.title": "Analytics cookies",
+  "consent.text": "We use Google Analytics cookies to count visits, only if you accept.",
+  "consent.more": "Learn more",
+  "consent.accept": "Accept",
+  "consent.reject": "Reject",
+
   "offline.offline": "Offline",
   "offline.swBody": "You are offline and this page is not saved yet. Open the map once with a connection and it will be available without signal.",
   "offline.queued": "Offline: we will send it on its own once the signal is back.",
@@ -634,6 +641,7 @@ const en: Partial<Dict> = {
 
   "footer.privacy": "Privacy",
   "footer.terms": "Terms",
+  "footer.cookies": "Cookies",
   "footer.api": "Public API",
   "footer.network": "HelpMaps in other countries",
   "footer.about": "What HelpMaps is",

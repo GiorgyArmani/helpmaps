@@ -7965,3 +7965,104 @@ fieldset.fieldset {
    Un enlace dentro de un párrafo (`.small a`) tampoco se agranda: se solaparía con las
    líneas de arriba y de abajo, y un párrafo por el que se navega sin querer al rozarlo es
    peor que un enlace pequeño. Su tamaño es el del texto porque es texto. */
+
+/* ─────────────────────────────  Aviso de cookies  ─────────────────────────────
+ *
+ * Una tarjeta CENTRADA sobre un velo, igual en el teléfono y en escritorio: es una pregunta
+ * de un toque y se contesta antes de seguir (ver el comentario de `CookieConsent`). El velo
+ * sale de `--ink`, no de un negro escrito a mano, y al 45% — lo bastante para separar la
+ * tarjeta del mapa sin que parezca que la aplicación se ha apagado.
+ *
+ * Por debajo del recorrido guiado (`.gt-root`, 1200): en la primera visita al mapa manda el
+ * recorrido y el aviso espera detrás. */
+.ck-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: max(var(--gut), env(safe-area-inset-top)) var(--gut) max(var(--gut), env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  animation: ck-fade var(--t-ui) var(--ease);
+}
+
+.ck {
+  width: 100%;
+  max-width: 360px;
+  padding: 20px var(--gut) var(--gut);
+  background: #fff;
+  border-radius: var(--r-lg);
+  box-shadow: var(--e-3);
+  animation: ck-in var(--t-ui) var(--ease);
+}
+
+.ck-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.ck-text {
+  margin: 0 0 16px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.ck-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ck-btn {
+  flex: 1 1 0;
+  min-height: 44px;
+  transition: background-color var(--t-tap) var(--ease), border-color var(--t-tap) var(--ease);
+}
+
+.ck-btn:hover {
+  background: var(--soft);
+}
+
+.ck-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@keyframes ck-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ck-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* «Cookies» en los pies es un botón que tiene que parecer el enlace de al lado. Con
+   `:where` no pesa nada, así que `.small`, `.mut`, `.entry-foot-link` o `.note-link` ganan
+   solos y no hay que repetir su estilo aquí. */
+:where(.ck-reopen) {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.hub-foot .ck-reopen {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.hub-foot .ck-reopen:hover {
+  color: var(--ink);
+}

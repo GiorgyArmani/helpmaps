@@ -421,9 +421,9 @@ export interface IntegrationsConfig {
      *
      * The same id is meant to be shared by every country deployment (`integrations` is not
      * overridable per country), landing them in one GA4 property; the layout sends
-     * `country_code` on the `config` call so reports can still split by deployment. gtag
-     * boots with Consent Mode `analytics_storage: 'denied'`, i.e. cookieless, until a
-     * deployment's own consent banner (none today) grants it.
+     * `country_code` on the `config` call so reports can still split by deployment.
+     * Nothing — not even gtag.js — loads until the visitor accepts in `CookieConsent`; with
+     * this empty, no cookie notice is shown at all.
      *
      * Same rule as `vercel`: pageviews only, never custom events carrying names, documents
      * or search terms.

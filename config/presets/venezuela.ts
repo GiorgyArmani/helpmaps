@@ -116,10 +116,11 @@ const venezuela: CountryConfig = {
     // Dentro de la aplicación cada superficie es nuestra, así que el arte transparente se
     // apoya en lo que le toque. La pestaña del navegador y el escritorio del teléfono no
     // lo son: ahí no hay dónde poner una teja, y un arte transparente con tinta grafito
-    // se pierde. El icono usa el isotipo «Tricolor Grafito»
-    // (`marca/svg/helpmaps_tricolor_grafito.svg`), que trae su propio fondo `#334155`.
+    // se pierde. El icono usa el isotipo «Tricolor Light»
+    // (`marca/svg/helpmaps_tricolor_light.svg`, elegido el 2026-09-13 en lugar del
+    // «Tricolor Grafito»), que trae su propio fondo blanco.
     //
-    // Se aplana sobre ese mismo `#334155` al generarlo: el SVG del manual lleva
+    // Se aplana sobre ese mismo blanco al generarlo: el SVG del manual lleva
     // `rx="253.78"` y el cuadro tiene que ir a sangre, porque la máscara de la PWA recorta
     // ella y una esquina transparente deja borde.
     favicon: "/favicon-venezuela.png",

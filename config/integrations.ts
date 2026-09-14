@@ -20,7 +20,9 @@ const integrations: IntegrationsConfig = {
     // nombres, documentos ni términos de búsqueda. No lo hagas.
     vercel: false,
 
-    // Google Analytics 4 (gtag.js). Vacío → no se carga nada. El layout raíz lo lee, así
+    // Google Analytics 4 (gtag.js). Vacío → no se carga nada y no sale aviso de cookies. Con
+    // un id sale el aviso, y gtag.js sólo se descarga si la persona acepta (RGPD / art. 22.2
+    // LSSI: el modo de consentimiento en `denied` no bastaba). El layout raíz lo lee, así
     // que cubre la página de inicio y el mapa por igual. Rige la misma regla que arriba:
     // solo páginas vistas, nunca eventos propios con nombres, documentos ni términos de
     // búsqueda.

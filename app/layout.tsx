@@ -8,6 +8,7 @@ import { I18nProvider } from "@/i18n/context";
 import { SiteProvider } from "@/features/app/SiteProvider";
 import ServiceWorkerRegister from "@/features/app/ServiceWorkerRegister";
 import Analytics from "@/features/app/Analytics";
+import CookieConsent from "@/features/consent/CookieConsent";
 import RecoveryRedirect from "@/features/account/RecoveryRedirect";
 
 /**
@@ -138,7 +139,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             token intacto. Ver el componente — el arreglo de verdad es de configuración. */}
         <RecoveryRedirect />
         <SiteProvider site={site} emergency={identity}>
-          <I18nProvider initial={site.language.default}>{children}</I18nProvider>
+          <I18nProvider initial={site.language.default}>
+            {children}
+            <CookieConsent />
+          </I18nProvider>
         </SiteProvider>
         {site.integrations.pwa.enabled ? <ServiceWorkerRegister /> : null}
         <Analytics id={site.integrations.analytics.ga} country={site.country.code} />
