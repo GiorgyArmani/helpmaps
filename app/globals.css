@@ -726,18 +726,6 @@ a {
   transform: rotate(45deg);
 }
 
-/* Tap-away backdrop. The button and menu carry z-index:1 so they stay above it —
-   a positioned element would otherwise paint over its non-positioned siblings and
-   swallow the taps. */
-.fab-backdrop {
-  position: fixed;
-  inset: 0;
-  background: transparent;
-  border: none;
-  cursor: default;
-  z-index: 0;
-}
-
 .fab-menu {
   position: relative;
   z-index: 1;
@@ -978,11 +966,6 @@ a {
 
 
 
-/* Cierra al tocar fuera. Sin fondo visible a propósito: oscurecer el mapa detrás de un
-   panel que se abre para MIRAR el mapa es trabajar en contra. Los dos nombres son el
-   mismo fondo —uno lo usan las lengüetas del canto, el otro un desplegable de la barra—
-   y estaban declarados dos veces, idénticos, a tres mil líneas de distancia. */
-.layers-backdrop,
 /* Hangs off the right edge of the button, so it opens INTO the map rather than off the
    side of the window. `max-width` keeps it inside the viewport on the narrowest phone. */
 .layers-panel {
@@ -3766,7 +3749,6 @@ fieldset.fieldset {
 .lg-flag-btn{width:22px;height:15px}
 .langwrap{position:relative}
 .langbtn-open{border-color:var(--accent)}
-.lang-backdrop{position:fixed;inset:0;background:transparent;border:none;cursor:default;z-index:649}
 .lang-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:650;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 12px 30px rgba(16,20,28,.20);padding:5px;display:flex;flex-direction:column;gap:2px;min-width:150px}
 .lang-opt{display:flex;align-items:center;gap:9px;background:none;border:none;border-radius:9px;padding:8px 9px;cursor:pointer;text-align:left;font-family:inherit}
 .lang-opt:active{background:var(--soft)}
@@ -4328,15 +4310,6 @@ fieldset.fieldset {
    pestaña, tapándola. Cuelga desde donde está la lengüeta, que además es de donde el
    gesto dice que va a salir. */
 
-.side-backdrop {
-  position: fixed;
-  inset: 0;
-  border: none;
-  background: transparent;
-  cursor: default;
-  z-index: 0;
-}
-
 .side-panel {
   position: relative;
   z-index: 1;
@@ -4584,13 +4557,6 @@ fieldset.fieldset {
   right: 0;
   width: min(88vw, 300px);
   z-index: 2;
-}
-
-/* El fondo que cierra el menú al tocar fuera cubre la pantalla entera, no solo la barra. */
-.macbar .fab-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
 }
 
 /* La caja que envuelve los dos botones de zoom, al ancho de ellos. */
@@ -5417,15 +5383,7 @@ fieldset.fieldset {
 
 /* ── Selector de región ───────────────────────────────────────────────────
    Reusa las clases del selector de puntos para que el par se lea como un control.
-   Lo único propio: el estado seleccionado y el fondo que cierra al tocar fuera. */
-
-.cpick-back {
-  position: fixed;
-  inset: 0;
-  border: none;
-  background: transparent;
-  cursor: default;
-}
+   Lo único propio: el estado seleccionado. El cierre al tocar fuera lo pone `useDismiss`. */
 
 .cpick-opt-on { background: var(--soft2); font-weight: 600; }
 
@@ -8065,4 +8023,220 @@ fieldset.fieldset {
 
 .hub-foot .ck-reopen:hover {
   color: var(--ink);
+}
+
+/* ─────────────────────────  Navegación entre menús  ─────────────────────────
+ *
+ * Un desplegable de la barra tiene que quedar por ENCIMA de la hoja de puntos (630 en
+ * teléfono) y de las lengüetas del canto (620). `.topbar` es su propio contexto de
+ * apilamiento, así que su menú no puede subir por sí solo: con 68dvh de alto, la mitad
+ * de abajo de «Colaborar» quedaba escondida bajo la hoja. Mientras hay uno abierto sube
+ * la barra entera, siempre por debajo de las capas a pantalla completa (800). */
+.topbar:has(.fab-menu, .usermenu, .lang-menu, .cpick-panel) {
+  z-index: 700;
+}
+
+/* La cabecera de una lista a la que se llega desde otra — hoy, la de necesidades: el
+   mismo lenguaje que la franja de «Volver» de la ficha, con el título que faltaba. */
+.listhead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px calc(var(--fold-size) + var(--fold-inset) + 8px) 2px 2px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.listhead-back {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color var(--t-tap) var(--ease);
+}
+
+.listhead-back:hover {
+  background: var(--soft);
+}
+
+.listhead-back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.listhead-back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.listhead-title {
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+@media (min-width: 900px) {
+  .listhead {
+    padding-right: var(--gut);
+  }
+}
+
+/* ── La barra: marca, Colaborar y el avatar ───────────────────────────────
+   Con dos acciones en vez de seis sobra sitio para separarlas como pide el sistema (8px), y
+   el avatar puede ensanchar su área tocable a 44px sin pisar a Colaborar: la ampliación de
+   `::after` de más arriba es sólo vertical porque la fila iba apretada. */
+@media (max-width: 899px) {
+  .macbar .hright { gap: 8px; }
+}
+
+.avatar-btn::after {
+  left: -5px;
+  right: -5px;
+}
+
+/* ── Capas y Noticias: botón con palabra, no lengüeta vertical ─────────────
+   Ver el comentario de `SideTab`. Separados del canto como el resto de controles que
+   flotan sobre el mapa, y con la misma elevación que ellos. */
+.sidetabs {
+  right: calc(12px + env(safe-area-inset-right));
+  gap: 8px;
+}
+
+.scene3d-layers { right: 12px; }
+
+.maptab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 44px;
+  padding: 0 15px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--e-2);
+  cursor: pointer;
+  transition:
+    background-color var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease);
+}
+
+.maptab:hover {
+  background: var(--soft);
+}
+
+.maptab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.maptab-ic {
+  display: grid;
+  place-items: center;
+  color: var(--mut);
+}
+
+.maptab-ic svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Una capa encendida se ve con el botón cerrado: si no, la única forma de enterarse de que
+   el mapa está mostrando datos modelados es abrirlo. */
+.maptab-on,
+.maptab-on:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.maptab-on .maptab-ic {
+  color: inherit;
+}
+
+/* ── El menú del avatar ───────────────────────────────────────────────────
+   Cada fila, 44px: era una lista de 38px de alto con 1px entre filas, y en una lista así
+   el pulgar toca la de al lado. */
+.useritem {
+  min-height: 44px;
+}
+
+.useritem-mut {
+  color: var(--mut);
+  font-weight: 500;
+}
+
+/* Con idioma, ayuda y lo legal dentro, en un teléfono apaisado ya no cabe siempre. */
+.usermenu {
+  max-height: calc(100dvh - 96px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.userlang {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 11px 8px;
+}
+
+.userlang-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mut);
+}
+
+.userlang-seg {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-md);
+  background: var(--soft);
+}
+
+.userlang-opt {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: calc(var(--r-md) - 3px);
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mut-track);
+  cursor: pointer;
+  transition:
+    background-color var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
+}
+
+.userlang-on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-1);
+}
+
+.userlang-opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }

@@ -292,6 +292,29 @@ export const Icon = {
       <path d="M5.6 18.4a9 9 0 0 1 0-12.8M18.4 5.6a9 9 0 0 1 0 12.8" />
     </Svg>
   ),
+  // Escudo con un visto: privacidad. No el candado, que en esta aplicación quiere decir
+  // «entrar», y un menú que usa el mismo dibujo para dos cosas no dice ninguna.
+  shield: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M12 3 5 6v5.5c0 4.3 3 8 7 9.5 4-1.5 7-5.2 7-9.5V6l-7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </Svg>
+  ),
+  // Una galleta mordida con pepitas: la elección sobre cookies.
+  cookie: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M20.9 12.5A9 9 0 1 1 11.5 3.1a3 3 0 0 0 3.6 3.6 3 3 0 0 0 3.2 3.2 3 3 0 0 0 2.6 2.6Z" />
+      <path d="M8.5 9.5h.01M15.5 15.5h.01M9.5 15h.01" />
+    </Svg>
+  ),
+  // Hoja de periódico: el boletín de lo que se está reportando.
+  news: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M5 5h11a1 1 0 0 1 1 1v12a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1Z" />
+      <path d="M17 9h2a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2" />
+      <path d="M8 9h5M8 12.5h5M8 16h3" />
+    </Svg>
+  ),
 } as const;
 
 export type IconName = keyof typeof Icon;

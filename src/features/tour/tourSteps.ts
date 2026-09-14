@@ -26,6 +26,7 @@ export type TourCtl = {
   closeViews: () => void; // an open overlay would cover every target
   showSheet: (open: boolean) => void;
   setFabOpen: (open: boolean) => void;
+  setUserMenuOpen: (open: boolean) => void; // the avatar menu: language, help and legal live there
   clearCenter: () => void; // deselect, so the needs bar is reachable
   openSample: () => void; // open a real record as a live example (no-op if none loaded)
   openDonate: () => void;
@@ -50,6 +51,10 @@ export type TourStep = {
   eyebrow: L10n;
   title: L10n;
   body: L10n;
+  // Lo que cambia en pantalla ancha (≥900px, el mismo corte del CSS). El panel de puntos es
+  // una hoja que sube desde abajo en el teléfono y una columna a la izquierda en escritorio:
+  // un solo texto le decía «la lista de abajo» y «arrástrala» a quien la tenía al lado.
+  wide?: { title?: L10n; body?: L10n };
   hint?: L10n; // "try it" line — shown only when the target is live and tappable
   bullets?: L10n[];
   cta?: "donate" | "volunteer";
@@ -94,9 +99,9 @@ export const PUBLIC_STEPS: TourStep[] = [
     eyebrow: { es: "Paso 2", en: "Step 2", pt: "Passo 2" },
     title: { es: "Acércate a tu zona", en: "Zoom to your area", pt: "Aproxime-se da sua área" },
     body: {
-      es: "El primer desplegable acerca el mapa a una zona. El segundo abre la lista completa de puntos, agrupada por tipo y con buscador, por si vas directo a uno concreto.",
-      en: "The first dropdown brings the map to an area. The second opens the full list of points, grouped by type and searchable, for when you are going straight to one.",
-      pt: "O primeiro menu aproxima o mapa de uma área. O segundo abre a lista completa de pontos, agrupada por tipo e com busca, para quando você vai direto a um.",
+      es: "Este desplegable acerca el mapa a una zona y deja en el panel de puntos solo los de allí. Si vas directo a un punto concreto, escribe su nombre en el buscador.",
+      en: "This dropdown brings the map to an area and keeps only its points in the points panel. If you are going straight to one point, type its name in the search box.",
+      pt: "Este menu aproxima o mapa de uma área e deixa no painel de pontos só os de lá. Se você vai direto a um ponto, digite o nome dele na busca.",
     },
   },
   {
@@ -115,11 +120,22 @@ export const PUBLIC_STEPS: TourStep[] = [
     id: "sheet",
     anchor: "sheet",
     eyebrow: { es: "Paso 4", en: "Step 4", pt: "Passo 4" },
-    title: { es: "La lista de abajo", en: "The list below", pt: "A lista abaixo" },
+    // «El panel de puntos», no «la lista de abajo»: en escritorio no está abajo, y además de
+    // la lista lleva las pestañas. Y no «el panel» a secas, que ya es el del equipo. Las
+    // pestañas se nombran con sus rótulos (`feed.title`, `panel.tab.nearby`, `map.points`,
+    // `panel.tab.digital`): si cambia uno, cambia aquí.
+    title: { es: "El panel de puntos", en: "The points panel", pt: "O painel de pontos" },
     body: {
-      es: "Muestra los puntos que coinciden con lo que filtraste. Arrástrala hacia arriba para ver más, o pliégala con el botón de la esquina si quieres el mapa entero.",
-      en: "It shows the points matching your filters. Drag it up to see more, or fold it with the corner button if you want the whole map.",
-      pt: "Mostra os pontos que correspondem aos seus filtros. Arraste para cima para ver mais, ou recolha no botão do canto se quiser o mapa inteiro.",
+      es: "Ordena lo que muestra el mapa en cuatro pestañas: Novedades, Cerca, Puntos y Digitales, que son las iniciativas sin sede física. En Puntos salen los que coinciden con tu filtro. Toca la barra de arriba para subirlo y ver más, o pliégalo con la flecha de su esquina si quieres el mapa entero.",
+      en: "It sorts what the map shows into four tabs: Updates, Near, Points and Digital, which are initiatives with no physical site. Points lists the ones matching your filters. Tap the bar at the top to raise it and see more, or fold it with the arrow in its corner if you want the whole map.",
+      pt: "Organiza o que o mapa mostra em quatro abas: Novidades, Perto, Pontos e Digitais, que são as iniciativas sem sede física. Em Pontos aparecem os que correspondem aos seus filtros. Toque na barra de cima para subir e ver mais, ou recolha com a seta do canto se quiser o mapa inteiro.",
+    },
+    wide: {
+      body: {
+        es: "Ordena lo que muestra el mapa en cuatro pestañas: Novedades, Cerca, Puntos y Digitales, que son las iniciativas sin sede física. En Puntos salen los que coinciden con tu filtro. Pliégalo con la lengüeta de su borde derecho si quieres el mapa entero.",
+        en: "It sorts what the map shows into four tabs: Updates, Near, Points and Digital, which are initiatives with no physical site. Points lists the ones matching your filters. Fold it with the handle on its right edge if you want the whole map.",
+        pt: "Organiza o que o mapa mostra em quatro abas: Novidades, Perto, Pontos e Digitais, que são as iniciativas sem sede física. Em Pontos aparecem os que correspondem aos seus filtros. Recolha com a lingueta da borda direita se quiser o mapa inteiro.",
+      },
     },
     before: (c) => {
       c.clearCenter();
@@ -174,17 +190,54 @@ export const PUBLIC_STEPS: TourStep[] = [
     eyebrow: { es: "Colaborar", en: "Contribute", pt: "Colaborar" },
     title: { es: "Falta algo en el mapa", en: "Something is missing", pt: "Falta algo no mapa" },
     body: {
-      es: "Desde aquí puedes contarnos de un punto que no aparece o registrar tu propia iniciativa, y también sumarte al equipo si tienes información de primera mano y puedes mantenerla al día.",
-      en: "From here you can tell us about a point that is not listed or register your own initiative, and also join the team if you have first-hand information and can keep it current.",
-      pt: "Daqui você pode nos contar sobre um ponto que não aparece ou registrar sua própria iniciativa, e também se juntar à equipe se tiver informação em primeira mão e puder mantê-la atualizada.",
+      es: "Aquí están las formas de aportar: contarnos de un punto que no aparece o registrar tu propia iniciativa, ver dónde donar, y sumarte al equipo si tienes información de primera mano y puedes mantenerla al día.",
+      en: "Here are the ways to contribute: tell us about a point that is not listed or register your own initiative, see where to donate, and join the team if you have first-hand information and can keep it current.",
+      pt: "Aqui estão as formas de contribuir: nos contar sobre um ponto que não aparece ou registrar sua própria iniciativa, ver onde doar, e se juntar à equipe se tiver informação em primeira mão e puder mantê-la atualizada.",
     },
     hint: {
-      es: "Ábrelo para ver las dos opciones.",
-      en: "Open it to see both options.",
-      pt: "Abra para ver as duas opções.",
+      es: "Ábrelo para ver las opciones.",
+      en: "Open it to see the options.",
+      pt: "Abra para ver as opções.",
     },
     before: (c) => c.closeViews(),
     after: (c) => c.setFabOpen(false),
+  },
+  {
+    // El menú del avatar se ABRE para este paso: resaltar un disco con una inicial no
+    // enseña nada, lo que hay que ver es lo que guarda. El anillo abarca el avatar y el
+    // menú juntos, para que quede claro de dónde sale.
+    id: "account",
+    anchor: ["staffgear", "usermenu"],
+    pad: 6,
+    eyebrow: { es: "Tu menú", en: "Your menu", pt: "Seu menu" },
+    title: { es: "Tu cuenta y tus ajustes", en: "Your account and settings", pt: "Sua conta e seus ajustes" },
+    body: {
+      es: "Arriba a la derecha. Con una cuenta guardas puntos para volver a ellos; sin cuenta puedes usar el mapa entero igual.",
+      en: "Top right. With an account you save points to come back to them; without one you can still use the whole map.",
+      pt: "No canto superior direito. Com uma conta você salva pontos para voltar a eles; sem conta pode usar o mapa inteiro do mesmo jeito.",
+    },
+    bullets: [
+      {
+        es: "Idioma: cambia la app de un toque.",
+        en: "Language: switch the app in one tap.",
+        pt: "Idioma: mude o app com um toque.",
+      },
+      {
+        es: "Cómo funciona: vuelve a abrir este recorrido.",
+        en: "How it works: reopens this tour.",
+        pt: "Como funciona: reabre este tour.",
+      },
+      {
+        es: "Privacidad y cookies: qué guardamos y tu elección sobre la analítica.",
+        en: "Privacy and cookies: what we keep and your choice about analytics.",
+        pt: "Privacidade e cookies: o que guardamos e sua escolha sobre a análise.",
+      },
+    ],
+    before: (c) => {
+      c.closeViews();
+      c.setUserMenuOpen(true);
+    },
+    after: (c) => c.setUserMenuOpen(false),
   },
   {
     id: "review",
@@ -218,16 +271,23 @@ export const PUBLIC_STEPS: TourStep[] = [
     },
   },
   {
+    // Señala «Cómo funciona» DENTRO del menú del avatar, que se abre para eso: el «?» de
+    // la barra ya no existe. `soft` porque es el último paso: si el menú no llegara a
+    // abrirse, la despedida sale igual como tarjeta en vez de desaparecer.
     id: "help",
     anchor: "help",
+    soft: true,
+    pad: 4,
     eyebrow: { es: "Listo", en: "Done", pt: "Pronto" },
     title: { es: "Puedes volver a ver esto", en: "You can see this again", pt: "Você pode ver isto de novo" },
     body: {
-      es: "Este botón reabre el recorrido cuando quieras. Y en la documentación está la guía completa, con todo lo que no cabe aquí.",
-      en: "This button reopens the tour whenever you want. And the documentation has the full guide, with everything that does not fit here.",
-      pt: "Este botão reabre o tour quando quiser. E a documentação tem o guia completo, com tudo o que não cabe aqui.",
+      es: "«Cómo funciona», en tu menú, reabre el recorrido cuando quieras. Y en la documentación está la guía completa, con todo lo que no cabe aquí.",
+      en: "“How it works”, in your menu, reopens the tour whenever you want. And the documentation has the full guide, with everything that does not fit here.",
+      pt: "“Como funciona”, no seu menu, reabre o tour quando quiser. E a documentação tem o guia completo, com tudo o que não cabe aqui.",
     },
     docs: "/docs/guia",
+    before: (c) => c.setUserMenuOpen(true),
+    after: (c) => c.setUserMenuOpen(false),
   },
 ];
 

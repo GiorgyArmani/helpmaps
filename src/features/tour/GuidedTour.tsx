@@ -107,6 +107,17 @@ export default function GuidedTour({
 
   const step = steps[i];
 
+  // El corte es el de `.sheet` en globals.css: por encima de 900px el panel deja de ser una
+  // hoja inferior. Se escucha el cambio para que girar una tableta cambie también el texto.
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 900px)");
+    const sync = () => setWide(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   const finish = useCallback(() => {
     steps[i]?.after?.(ctlRef.current);
     closeRef.current();
@@ -211,6 +222,8 @@ export default function GuidedTour({
 
   if (!step) return null;
 
+  const title = (wide && step.wide?.title) || step.title;
+  const body = (wide && step.wide?.body) || step.body;
   const settled = spot?.id === step.id;
   const rect = settled ? spot.rect : null;
   const ready = settled;
@@ -221,7 +234,7 @@ export default function GuidedTour({
   const dockTop = !!rect && rect.top + rect.height / 2 > window.innerHeight * 0.55;
 
   return (
-    <div className="gt-root" role="dialog" aria-modal="true" aria-label={L(step.title, lang)}>
+    <div className="gt-root" role="dialog" aria-modal="true" aria-label={L(title, lang)}>
       {/* Four blockers around the cutout: they swallow stray taps on the rest of the
           UI while leaving the highlighted control itself live and tappable. */}
       {rect ? (
@@ -262,8 +275,8 @@ export default function GuidedTour({
         {/* Only this block scrolls. The actions row below stays pinned: on a short phone
             a long step used to push "Atrás"/"Siguiente" past the bottom of the screen. */}
         <div className="gt-scroll">
-        <h2 className="gt-title">{L(step.title, lang)}</h2>
-        <p className="gt-body">{L(step.body, lang)}</p>
+        <h2 className="gt-title">{L(title, lang)}</h2>
+        <p className="gt-body">{L(body, lang)}</p>
 
         {step.bullets && (
           <ul className="gt-bullets">

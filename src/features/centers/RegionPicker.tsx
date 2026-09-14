@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Icon } from "@/ui/icons";
+import { useDismiss } from "@/ui/useDismiss";
 import { useSite } from "@/features/app/SiteProvider";
 import { useI18n } from "@/i18n/context";
 
@@ -27,6 +28,9 @@ export default function RegionPicker({
   const { t } = useI18n();
   const site = useSite();
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(open, close, ref);
 
   const regions = site.country.regions;
   const selected = regions.find((r) => r.code === value) ?? null;
@@ -38,7 +42,7 @@ export default function RegionPicker({
   }
 
   return (
-    <div className="cpick" data-tour="filters">
+    <div className="cpick" data-tour="filters" ref={ref}>
       <button
         type="button"
         className="cpick-btn"
@@ -53,12 +57,6 @@ export default function RegionPicker({
 
       {open ? (
         <>
-          <button
-            type="button"
-            className="cpick-back"
-            aria-label={t("common.close")}
-            onClick={() => setOpen(false)}
-          />
           <div className="cpick-panel">
             <div className="cpick-list">
               <button

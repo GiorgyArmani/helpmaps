@@ -62,8 +62,8 @@ export const DOCS: DocPage[] = [
                 en: "Search by name or municipality in the bar at the top.",
               },
               {
-                es: "Toca un punto en el mapa, o en la lista de abajo, para ver su ficha completa.",
-                en: "Tap a point on the map, or in the list below, to see its full card.",
+                es: "Toca un punto en el mapa, o en el panel de puntos, para ver su ficha completa.",
+                en: "Tap a point on the map, or in the points panel, to see its full card.",
               },
               {
                 es: "En la ficha tienes cómo llegar, el teléfono y el WhatsApp cuando el punto los tiene.",
@@ -162,8 +162,8 @@ export const DOCS: DocPage[] = [
         blocks: [
           {
             text: {
-              es: "El botón con la bandera cambia el idioma y recuerda tu elección. Si compartes un enlace, quien lo abra lo verá en el idioma de su navegador o en el que le añadas al enlace.",
-              en: "The flag button changes the language and remembers your choice. If you share a link, whoever opens it sees it in their own language or in the one you add to the link.",
+              es: "El idioma se cambia desde tu menú, el círculo con tu inicial arriba a la derecha, y la app recuerda tu elección. Si compartes un enlace, quien lo abra lo verá en el idioma de su navegador o en el que le añadas al enlace.",
+              en: "You change the language from your menu, the circle with your initial at the top right, and the app remembers your choice. If you share a link, whoever opens it sees it in their own language or in the one you add to the link.",
             },
           },
         ],

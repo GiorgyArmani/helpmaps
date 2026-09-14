@@ -348,6 +348,7 @@ export default function Scene3D({
           headClassName="layers-head"
           label={t("layers.cta")}
           title={t("layers.title")}
+          icon={<Icon.layers />}
           active={anyOn}
           open={panelOpen}
           onOpenChange={setPanelOpen}

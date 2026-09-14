@@ -93,6 +93,7 @@ export default function LayersPanel({
          nombre accesible sí es el largo — quien lo oye no ve la columna. */
       label={t("layers.cta")}
       title={t("layers.title")}
+      icon={<Icon.layers />}
       active={active}
       open={open}
       onOpenChange={setOpen}

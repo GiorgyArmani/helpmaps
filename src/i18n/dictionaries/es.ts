@@ -52,8 +52,8 @@ const es = {
   "map.allCenters": "Todos los puntos",
   "map.centerSearch": "Buscar un punto",
   "map.help": "Cómo funciona",
-  "map.fold": "Plegar la lista",
-  "map.unfold": "Ver la lista",
+  "map.fold": "Plegar el panel de puntos",
+  "map.unfold": "Ver el panel de puntos",
   "map.points": "Puntos",
   "map.region": "{region}",
   "map.myLocation": "Mi ubicación",
@@ -109,7 +109,7 @@ const es = {
   "center.updated": "Actualizado {ago}",
   "center.updatedLabel": "Última actualización",
   "center.confirmedLabel": "Confirmado por última vez",
-  "center.socialLink": "Ver su red social",
+  "center.socialLink": "Redes sociales",
   "center.website": "Sitio web",
   "center.instagram": "Instagram",
   "center.confirmed": "Confirmado {ago}",
@@ -623,6 +623,7 @@ const es = {
   // "login.title" es "Entrar al panel": el rótulo del equipo. Una persona que va a
   // guardar refugios entra a lo suyo, no a un panel.
   "account.signIn": "Entrar",
+  "account.language": "Idioma",
   "account.anonTitle": "Tu cuenta",
   "account.anonSub": "Entra para guardar puntos del mapa.",
   "account.createAccount": "Crear una cuenta",

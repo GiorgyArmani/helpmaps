@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import Link from "next/link";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
+import { useSite } from "@/features/app/SiteProvider";
+import { FLAG_ICON, LANG_NAME } from "@/ui/flags";
+import { openConsent } from "@/features/consent/consent";
+import { useDismiss } from "@/ui/useDismiss";
 import type { StaffState } from "@/features/admin/useStaffSession";
 import type { AccountState } from "@/features/account/useAccount";
 import { avatarInitial, useSessionPeek } from "@/features/account/useSessionPeek";
@@ -23,6 +27,16 @@ import { savedLabel } from "@/features/account/ledger";
  * derecha y, debajo, tus cosas. El panel del equipo pasa a ser UNA entrada más del menú,
  * que es lo que es: algo que casi nadie tiene y que no merecía el sitio de honor.
  *
+ * ── LA BARRA AYUDA A ENCONTRAR; ESTE MENÚ ES LO TUYO ─────────────────────────
+ *
+ * La barra se quedó con dos acciones: Colaborar —las formas de ayudar— y este avatar. Lo
+ * demás que vivía en ella (la bandera del idioma y el «?» del recorrido) se consulta una vez
+ * por visita y ocupaba el sitio del buscador, así que vive aquí, igual con o sin sesión.
+ *
+ * Y cada destino aparece UNA vez. «Tus puntos guardados» llevaba al mismo sitio que la ficha
+ * de arriba, que ya dice cuántos hay; y «Sumarme al equipo» es una de las tres opciones de
+ * Colaborar, que es donde alguien que quiere ayudar la busca.
+ *
  * ── LO QUE SE RESUELVE, Y CUÁNDO ────────────────────────────────────────────
  *
  * Dibujar el avatar no cuesta señal: `useSessionPeek` lee el token del propio navegador.
@@ -38,9 +52,8 @@ export default function AccountMenu({
   pending,
   onOpenAccount,
   onOpenPanel,
-  onOpenVolunteer,
+  onHelp,
   onSignOut,
-  volunteerEnabled,
   managesInitiative = false,
   onOpenInitiative,
 }: {
@@ -51,9 +64,9 @@ export default function AccountMenu({
   pending: number;
   onOpenAccount: () => void;
   onOpenPanel: () => void;
-  onOpenVolunteer: () => void;
+  /** Abre el recorrido guiado. */
+  onHelp: () => void;
   onSignOut: () => void;
-  volunteerEnabled: boolean;
   /**
    * Gestiona algún punto: entonces le sale «Tu iniciativa», que es lo primero que abre
    * quien tiene una. Casi nadie lo es, así que la entrada no existe para casi nadie.
@@ -61,7 +74,8 @@ export default function AccountMenu({
   managesInitiative?: boolean;
   onOpenInitiative?: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang, setLang, available } = useI18n();
+  const site = useSite();
   const peek = useSessionPeek();
 
   // Con sesión según CUALQUIERA de las dos fuentes. El vistazo local responde en el acto y
@@ -73,6 +87,7 @@ export default function AccountMenu({
   const initial = avatarInitial(name, peek.initial);
   const isStaff = Boolean(staff.session);
   const savedCount = account.favourites.size;
+  const hasCookies = Boolean(site.integrations.analytics.ga);
 
   const pick = useCallback(
     (run: () => void) => () => {
@@ -82,35 +97,96 @@ export default function AccountMenu({
     [onOpenChange],
   );
 
-  return (
-    <div className="userwrap">
-      {open ? (
-        <>
-          <button
-            type="button"
-            className="fab-backdrop"
-            aria-label={t("common.close")}
-            onClick={() => onOpenChange(false)}
-          />
-          <div className="usermenu" role="menu" aria-label={t("account.title")}>
-            {signedIn ? (
-              <>
-                {/* La ficha de arriba ES el enlace a la cuenta, como en cualquier mapa: no
-                    saluda, dice quién eres y cuántos puntos llevas guardados. Un recuento
-                    se puede comprobar; "bienvenido" no informa de nada. */}
-                <button type="button" className="userhead" role="menuitem" onClick={pick(onOpenAccount)}>
-                  <span className="avatar avatar-lg avatar-signed" aria-hidden="true">
-                    {initial ?? <Icon.user />}
-                  </span>
-                  <span className="userhead-txt">
-                    <b className="userhead-name">{name ?? t("account.noName")}</b>
-                    <span className="userhead-sub">
-                      {isStaff ? t("account.roleStaff") : savedLabel(t, savedCount)}
-                    </span>
-                  </span>
-                  <Icon.chevron className="userhead-ch" />
-                </button>
+  // El avatar va dentro del envoltorio: tocarlo con el menú abierto lo cierra. Antes lo
+  // tapaba el fondo transparente que cerraba el menú, y el gesto no hacía nada.
+  const ref = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+  useDismiss(open, close, ref);
 
+  // Lo que vale igual con o sin sesión: el idioma, la ayuda y lo legal.
+  const general = (
+    <div className="usermenu-list">
+      {available.length > 1 ? (
+        // Un control segmentado y no otro desplegable dentro del desplegable: son dos o tres
+        // opciones, caben a la vista y se cambian de un toque. Es el mismo control que las
+        // pestañas del panel — pista hundida y pastilla blanca para lo elegido.
+        <div className="userlang" role="group" aria-label={t("account.language")}>
+          <span className="userlang-label" aria-hidden="true">
+            {t("account.language")}
+          </span>
+          <div className="userlang-seg">
+            {available.map((l) => (
+              <button
+                key={l}
+                type="button"
+                role="menuitemradio"
+                aria-checked={l === lang}
+                aria-label={LANG_NAME[l]}
+                title={LANG_NAME[l]}
+                className={`userlang-opt${l === lang ? " userlang-on" : ""}`}
+                onClick={() => setLang(l)}
+              >
+                <span className="lg-flag">{FLAG_ICON[l]}</span>
+                <span aria-hidden="true">{l.toUpperCase()}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <button type="button" className="useritem" role="menuitem" data-tour="help" onClick={pick(onHelp)}>
+        <span className="useritem-ic">
+          <Icon.question />
+        </span>
+        <span className="useritem-txt">{t("map.help")}</span>
+      </button>
+
+      <Link
+        className="useritem"
+        role="menuitem"
+        href="/docs/privacidad"
+        onClick={() => onOpenChange(false)}
+      >
+        <span className="useritem-ic">
+          <Icon.shield />
+        </span>
+        <span className="useritem-txt">{t("footer.privacy")}</span>
+      </Link>
+
+      {hasCookies ? (
+        <button type="button" className="useritem" role="menuitem" onClick={pick(openConsent)}>
+          <span className="useritem-ic">
+            <Icon.cookie />
+          </span>
+          <span className="useritem-txt">{t("footer.cookies")}</span>
+        </button>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <div className="userwrap" ref={ref}>
+      {open ? (
+        <div className="usermenu" role="menu" aria-label={t("account.title")} data-tour="usermenu">
+          {signedIn ? (
+            <>
+              {/* La ficha de arriba ES el enlace a la cuenta, como en cualquier mapa: no
+                  saluda, dice quién eres y cuántos puntos llevas guardados. Un recuento se
+                  puede comprobar; "bienvenido" no informa de nada. */}
+              <button type="button" className="userhead" role="menuitem" onClick={pick(onOpenAccount)}>
+                <span className="avatar avatar-lg avatar-signed" aria-hidden="true">
+                  {initial ?? <Icon.user />}
+                </span>
+                <span className="userhead-txt">
+                  <b className="userhead-name">{name ?? t("account.noName")}</b>
+                  <span className="userhead-sub">
+                    {isStaff ? t("account.roleStaff") : savedLabel(t, savedCount)}
+                  </span>
+                </span>
+                <Icon.chevron className="userhead-ch" />
+              </button>
+
+              {(managesInitiative && onOpenInitiative) || isStaff ? (
                 <div className="usermenu-list">
                   {managesInitiative && onOpenInitiative ? (
                     <button
@@ -126,14 +202,6 @@ export default function AccountMenu({
                     </button>
                   ) : null}
 
-                  <button type="button" className="useritem" role="menuitem" onClick={pick(onOpenAccount)}>
-                    <span className="useritem-ic">
-                      <Icon.heart />
-                    </span>
-                    <span className="useritem-txt">{t("account.saved.title")}</span>
-                    {savedCount > 0 ? <span className="useritem-n">{savedCount}</span> : null}
-                  </button>
-
                   {isStaff ? (
                     <button type="button" className="useritem" role="menuitem" onClick={pick(onOpenPanel)}>
                       <span className="useritem-ic">
@@ -142,65 +210,64 @@ export default function AccountMenu({
                       <span className="useritem-txt">{t("admin.title")}</span>
                       {pending > 0 ? <span className="useritem-n useritem-alert">{pending}</span> : null}
                     </button>
-                  ) : volunteerEnabled ? (
-                    <button type="button" className="useritem" role="menuitem" onClick={pick(onOpenVolunteer)}>
-                      <span className="useritem-ic">
-                        <Icon.hand />
-                      </span>
-                      <span className="useritem-txt">{t("account.volunteer")}</span>
-                    </button>
                   ) : null}
-
-                  <button
-                    type="button"
-                    className="useritem useritem-quiet"
-                    role="menuitem"
-                    onClick={pick(onSignOut)}
-                  >
-                    <span className="useritem-ic">
-                      <Icon.logout />
-                    </span>
-                    <span className="useritem-txt">{t("account.signOut")}</span>
-                  </button>
                 </div>
-              </>
-            ) : (
-              /* Sin sesión el menú no lista funciones que no se pueden usar: dice para qué
-                 sirve una cuenta EN ESTE mapa y ofrece las dos puertas. */
-              <>
-                <div className="userhead userhead-anon">
-                  <span className="avatar avatar-lg" aria-hidden="true">
+              ) : null}
+
+              {general}
+
+              <div className="usermenu-list">
+                <button
+                  type="button"
+                  className="useritem useritem-mut"
+                  role="menuitem"
+                  onClick={pick(onSignOut)}
+                >
+                  <span className="useritem-ic">
+                    <Icon.logout />
+                  </span>
+                  <span className="useritem-txt">{t("account.signOut")}</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            /* Sin sesión el menú no lista funciones que no se pueden usar: dice para qué
+               sirve una cuenta EN ESTE mapa y ofrece las dos puertas. */
+            <>
+              <div className="userhead userhead-anon">
+                <span className="avatar avatar-lg" aria-hidden="true">
+                  <Icon.user />
+                </span>
+                <span className="userhead-txt">
+                  <b className="userhead-name">{t("account.anonTitle")}</b>
+                  <span className="userhead-sub">{t("account.anonSub")}</span>
+                </span>
+              </div>
+
+              <div className="usermenu-list">
+                <button type="button" className="useritem" role="menuitem" onClick={pick(onOpenAccount)}>
+                  <span className="useritem-ic">
                     <Icon.user />
                   </span>
-                  <span className="userhead-txt">
-                    <b className="userhead-name">{t("account.anonTitle")}</b>
-                    <span className="userhead-sub">{t("account.anonSub")}</span>
+                  <span className="useritem-txt">{t("account.signIn")}</span>
+                </button>
+                <Link
+                  className="useritem"
+                  role="menuitem"
+                  href="/registro"
+                  onClick={() => onOpenChange(false)}
+                >
+                  <span className="useritem-ic">
+                    <Icon.plus />
                   </span>
-                </div>
+                  <span className="useritem-txt">{t("account.createAccount")}</span>
+                </Link>
+              </div>
 
-                <div className="usermenu-list">
-                  <button type="button" className="useritem" role="menuitem" onClick={pick(onOpenAccount)}>
-                    <span className="useritem-ic">
-                      <Icon.user />
-                    </span>
-                    <span className="useritem-txt">{t("account.signIn")}</span>
-                  </button>
-                  <Link
-                    className="useritem"
-                    role="menuitem"
-                    href="/registro"
-                    onClick={() => onOpenChange(false)}
-                  >
-                    <span className="useritem-ic">
-                      <Icon.plus />
-                    </span>
-                    <span className="useritem-txt">{t("account.createAccount")}</span>
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
-        </>
+              {general}
+            </>
+          )}
+        </div>
       ) : null}
 
       <button

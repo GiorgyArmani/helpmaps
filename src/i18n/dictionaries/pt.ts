@@ -32,6 +32,13 @@ const pt: Partial<Dict> = {
   "map.myLocation": "Minha localização",
   "map.pointsCount": "{n} pontos",
   "map.noResults": "Nenhum ponto corresponde ao filtro",
+  // As abas do painel de pontos. Caíam ao espanhol («Novedades», «Puntos», «Digitales») e o
+  // tour, que as nomeia, ficava falando de abas que a tela chamava de outro jeito.
+  "map.points": "Pontos",
+  "map.fold": "Recolher o painel de pontos",
+  "map.unfold": "Ver o painel de pontos",
+  "feed.title": "Novidades",
+  "panel.tab.digital": "Digitais",
 
   // «Perto» entra no português apesar de este dicionário ser fino a propósito: é a
   // primeira pergunta de quem abre isto na rua, e cair ao espanhol aqui seria cair
@@ -234,6 +241,7 @@ const pt: Partial<Dict> = {
   "consent.accept": "Aceitar",
   "consent.reject": "Recusar",
   "footer.cookies": "Cookies",
+  "account.language": "Idioma",
 };
 
 export default pt;

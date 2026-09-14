@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Center, Donation, SubmissionKind } from "@/domain/types";
 import {
   EMPTY_FILTER,
@@ -40,7 +40,6 @@ import { getSupabase } from "@/lib/supabase/client";
 import { useQuakes } from "@/features/hazard/useQuakes";
 import LayersPanel, { type HazardLayers } from "@/features/hazard/LayersPanel";
 import Brand from "@/features/app/Brand";
-import LangSwitcher from "@/features/app/LangSwitcher";
 import Filters from "@/features/centers/Filters";
 import TypeChips from "@/features/centers/TypeChips";
 import CenterCard from "@/features/centers/CenterCard";
@@ -67,6 +66,8 @@ import { CookiePrefsLink } from "@/features/consent/CookieConsent";
 import { PUBLIC_STEPS, STAFF_STEPS } from "@/features/tour/tourSteps";
 import { watchConnection } from "@/features/suggest/offlineQueue";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
+import { useNavStack, type NavEntry } from "@/features/app/useNavStack";
+import { useDismiss } from "@/ui/useDismiss";
 
 // Leaflet touches `window` at import time, so the map never renders on the server.
 const MapCanvas = dynamic(() => import("@/features/map/MapCanvas"), {
@@ -123,6 +124,59 @@ export type EntryAction =
   | "donate"
   /** Aterriza en la cuenta: es a donde manda `/cuenta` tras confirmar el correo. */
   | "account";
+
+/** La raíz de la pila: el mapa con su lista. Nunca se saca de ella. */
+const LIST: NavEntry<View> = { view: "list", id: null };
+
+/**
+ * Las pantallas donde se ESCRIBE algo. En escritorio el mapa sigue a la vista junto a la
+ * capa, y tocar un pin la sustituía por la ficha: se perdía lo escrito, o se quedaba sobre
+ * el mapa público el pin a medio colocar de alguien del equipo. Con una de éstas arriba, un
+ * pin no navega.
+ */
+const FORM_VIEWS: ReadonlySet<View> = new Set<View>(["suggest", "volunteer", "contact", "mine", "admin"]);
+
+/** Con qué pila arranca la página, según lo que traiga la URL. */
+function initialStack(centerId?: string, panel?: boolean, action?: EntryAction): NavEntry<View>[] {
+  if (centerId) return [LIST, { view: "detail", id: centerId }];
+  if (panel) return [LIST, { view: "admin", id: null }];
+  if (action) return [LIST, { view: action === "initiative" ? "suggest" : action, id: null }];
+  return [LIST];
+}
+
+/**
+ * La dirección de cada pantalla: la misma que `app/page.tsx` sabe abrir, así que recargar o
+ * copiar la barra lleva a donde se estaba. Y cerrar la pantalla la LIMPIA — antes un
+ * `?a=donate` sobrevivía a cerrar Donar y lo volvía a abrir al recargar. Los demás
+ * parámetros (`?lang=`) se conservan.
+ */
+function navUrl(entry: NavEntry<View>): string {
+  const url = new URL(window.location.href);
+  for (const key of ["c", "a", "panel", "mine"]) url.searchParams.delete(key);
+  switch (entry.view) {
+    case "detail":
+      if (entry.id) url.searchParams.set("c", entry.id);
+      break;
+    case "needs":
+    case "suggest":
+    case "volunteer":
+    case "donate":
+    case "account":
+      url.searchParams.set("a", entry.view);
+      break;
+    // Escríbenos no tiene dirección propia: se llega desde Donar, y recargar vuelve ahí.
+    case "contact":
+      url.searchParams.set("a", "donate");
+      break;
+    case "mine":
+      url.searchParams.set("mine", "1");
+      break;
+    case "admin":
+      url.searchParams.set("panel", "1");
+      break;
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
+}
 
 /**
  * The country app.
@@ -208,7 +262,6 @@ export default function AppShell({
     setDraftPin(at);
     pinDragRef.current?.(at);
   }, []);
-  const [selectedId, setSelectedId] = useState<string | null>(initialCenterId ?? null);
   // Which of the two lists the panel shows: places, or initiatives with no seat. The
   // map does not depend on it — digital markers are drawn either way — only the list.
   const [panelTab, setPanelTab] = useState<PanelTab>("points");
@@ -238,12 +291,30 @@ export default function AppShell({
     id: string;
     profile: InitiativeProfile;
   } | null>(null);
-  const [view, setView] = useState<View>(() => {
-    if (initialCenterId) return "detail";
-    if (initialPanel) return "admin";
-    if (!initialAction) return "list";
-    return initialAction === "initiative" ? "suggest" : initialAction;
+  // ── LA NAVEGACIÓN ES UNA PILA, Y EL HISTORIAL DEL NAVEGADOR LA REFLEJA ─────────
+  //
+  // Antes era un solo `view`: abrir algo lo sustituía y «Volver» siempre caía en la lista.
+  // Escríbenos volvía a la lista y no a Donar; un punto abierto desde Mi cuenta, igual. Y
+  // como nada escribía en el historial, el botón atrás del teléfono —el gesto con el que
+  // todo el mundo cierra algo— sacaba de la aplicación entera.
+  //
+  // Ahora cada pantalla es un paso de la pila y una entrada del historial: atrás, sea el
+  // del teléfono o «Volver», cierra SÓLO lo último. `view` y `selectedId` son la cima.
+  const {
+    top: navTop,
+    current: navCurrent,
+    push: navPush,
+    replaceTop: navReplaceTop,
+    openRoot: navOpenRoot,
+    back: navBack,
+    reset: navReset,
+  } = useNavStack<View>({
+    base: LIST,
+    initial: initialStack(initialCenterId, initialPanel, initialAction),
+    urlFor: navUrl,
   });
+  const view = navTop.view;
+  const selectedId = navTop.id;
 
   /**
    * Cambiar un filtro devuelve a la lista.
@@ -253,10 +324,13 @@ export default function AppShell({
    * es preguntar "qué hay", y la respuesta es la lista, no el punto que se estaba
    * mirando antes de preguntar.
    */
-  const changeFilter = useCallback((next: CenterFilter) => {
-    setFilter(next);
-    setView((current) => (current === "detail" ? "list" : current));
-  }, []);
+  const changeFilter = useCallback(
+    (next: CenterFilter) => {
+      setFilter(next);
+      if (navCurrent().view === "detail") navBack();
+    },
+    [navCurrent, navBack],
+  );
 
   // El menú del avatar. Vive acá y no dentro de `AccountMenu` porque abrirlo es lo que
   // dispara las dos consultas de abajo, y porque cerrarlo es parte de "abrir una vista".
@@ -296,6 +370,14 @@ export default function AppShell({
   // sits behind is the whole point (see useStaffSession).
   const [pending, setPending] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Los dos desplegables de este componente. `useDismiss` los cierra al tocar fuera, con
+  // Escape y con atrás, y cierra cualquier otro menú abierto cuando se abre uno.
+  const fabRef = useRef<HTMLDivElement>(null);
+  const closeFab = useCallback(() => setFabOpen(false), []);
+  useDismiss(fabOpen, closeFab, fabRef);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  useDismiss(settingsOpen, closeSettings, settingsRef);
   useEffect(() => {
     // Someone who arrived with an intent ("I want to help", "register my initiative")
     // gets what they asked for, not a tour over it. The flag is left unset, so the tour
@@ -360,6 +442,12 @@ export default function AppShell({
     [digitalAll, filter],
   );
   const listed = panelTab === "digital" ? visibleDigital : visible;
+
+  // Lo que la lista de puntos enseña ahora, para el ejemplo del recorrido (ver `openSample`).
+  const visibleRef = useRef(visible);
+  useEffect(() => {
+    visibleRef.current = visible;
+  }, [visible]);
 
   // El material del feed se pide UNA vez, al abrir su pestaña, y a partir de ahí el
   // scroll sólo revela lo que ya está en memoria. Ver `FeedPanel` para por qué no pagina
@@ -549,10 +637,7 @@ export default function AppShell({
         // razones: el dato que hace falta llega justo aquí, y un `setState` suelto en el
         // cuerpo de un efecto encadena un render de más.
         const primero = ids[0];
-        if (initialMine && primero) {
-          setSelectedId(primero);
-          setView("mine");
-        }
+        if (initialMine && primero) navOpenRoot({ view: "mine", id: primero });
       });
     });
     // `initialMine` es una constante de la carga de la página: no se lista como
@@ -563,9 +648,22 @@ export default function AppShell({
   const managed =
     managedFor && account.userId && managedFor.uid === account.userId ? managedFor.ids : [];
 
+  // La lista y la ficha comparten el mismo hueco del panel. Al abrir una ficha se anota por
+  // dónde iba la lista para devolverla ahí al volver: bajar cuarenta tarjetas, abrir una y
+  // encontrarse arriba del todo al salir es tener que buscarla otra vez.
+  const listRef = useRef<HTMLDivElement>(null);
+  const listScroll = useRef(0);
+
   const openCenter = useCallback((id: string) => {
-    setSelectedId(id);
-    setView("detail");
+    const cur = navCurrent();
+    if (FORM_VIEWS.has(cur.view)) return;
+    if (cur.view === "detail") {
+      // De ficha a ficha se sustituye: diez pines tocados no pueden ser diez «atrás».
+      navReplaceTop({ view: "detail", id });
+    } else {
+      listScroll.current = listRef.current?.scrollTop ?? 0;
+      navPush({ view: "detail", id });
+    }
     // Opening a digital initiative — from its ring on the map, a saved list, a shared
     // link — lands "Back" on the list it belongs to, not on the points list.
     //
@@ -584,28 +682,47 @@ export default function AppShell({
     // consultar un punto.
     setFolded(false);
     setOpen(true);
-  }, []);
+  }, [navCurrent, navPush, navReplaceTop]);
 
   function switchTab(next: PanelTab) {
     setPanelTab(next);
     // Switching lists is asking "what else is there": the answer is the list, with the
     // panel open — not the detail or the needs view that happened to be on screen.
-    setView("list");
-    setSelectedId(null);
+    navReset();
+    listScroll.current = 0;
+    if (listRef.current) listRef.current.scrollTop = 0;
     setFolded(false);
     setOpen(true);
   }
 
+  // Al volver de una ficha, la lista recupera por dónde iba.
+  const showingDetailNow = view === "detail";
+  useLayoutEffect(() => {
+    if (!showingDetailNow && listRef.current) listRef.current.scrollTop = listScroll.current;
+  }, [showingDetailNow]);
+
+  /** Cierra la pantalla de arriba y vuelve a la de debajo — la de verdad, no la lista. */
   function back() {
-    setView("list");
+    navBack();
     setJustConfirmed(false);
-    setSelectedId(null);
     // The menu is header state, not panel state, so it outlives the view that owns it —
     // without this it would be hanging open the next time the panel is opened.
     setSettingsOpen(false);
     // Leaving the panel takes the half-placed pin with it; otherwise it lingers over the
     // public map looking like a real point.
     setDraftPin(null);
+  }
+
+  /**
+   * Abrir una pantalla de primer nivel —desde Colaborar, el avatar o la cabecera— sustituye
+   * lo que hubiera encima de la lista en vez de apilarse. Ir de Donar a Mi cuenta desde el
+   * menú no es un paso más hondo, es cambiar de sitio: atrás tiene que volver al mapa.
+   */
+  function goRoot(entry: NavEntry<View>) {
+    setJustConfirmed(false);
+    setSettingsOpen(false);
+    setDraftPin(null);
+    navOpenRoot(entry);
   }
 
   /**
@@ -623,7 +740,10 @@ export default function AppShell({
     account.refresh();
     setPending(0);
     setUserMenu(false);
-    back();
+    navReset();
+    setJustConfirmed(false);
+    setSettingsOpen(false);
+    setDraftPin(null);
   }
 
   function closeTour() {
@@ -652,25 +772,32 @@ export default function AppShell({
    */
   const tourCtl = useMemo(
     () => ({
-      closeViews: () => setView("list"),
+      closeViews: () => navReset(),
       showSheet: (v: boolean) => {
         setFolded(false);
         setOpen(v);
       },
       setFabOpen,
-      clearCenter: () => setSelectedId(null),
+      setUserMenuOpen: setUserMenu,
+      clearCenter: () => {
+        if (navCurrent().view === "detail") navBack();
+      },
       openSample: () => {
-        const sample = centersRef.current[0];
+        // De lo que la lista enseña AHORA, y nunca una digital. Era el primer punto de la
+        // carga entera: con un tipo marcado en el paso de los filtros podía no estar en la
+        // lista, y si era una iniciativa sin sede, abrirla cambiaba el panel a la pestaña
+        // Digitales por debajo del recorrido.
+        const sample = visibleRef.current[0] ?? centersRef.current.find((c) => !isDigital(c));
         if (sample) openCenter(sample.id);
       },
       openDonate: () => {},
-      openVolunteer: () => setView("volunteer"),
-      openAdmin: () => setView("admin"),
+      openVolunteer: () => navOpenRoot({ view: "volunteer", id: null }),
+      openAdmin: () => navOpenRoot({ view: "admin", id: null }),
       switchTab: () => {},
       editSample: () => {},
       clearEdit: () => {},
     }),
-    [openCenter],
+    [openCenter, navReset, navCurrent, navBack, navOpenRoot],
   );
 
   // Ver el bloque del aviso más abajo para el orden de precedencia.
@@ -703,7 +830,7 @@ export default function AppShell({
         layers={layers}
         extra={extraLayers}
         extraOn={extraOn}
-        draftPin={draftPin}
+        draftPin={view === "admin" ? draftPin : null}
         onDraftPinMove={moveDraftPin}
       />
 
@@ -766,27 +893,15 @@ export default function AppShell({
         <div className="macbar">
           <Brand />
 
-          <Filters
-            filter={filter}
-            onChange={changeFilter}
-            centers={listed}
-            selectedId={selectedId}
-            onPickCenter={(id) => (id ? openCenter(id) : setSelectedId(null))}
-          />
+          <Filters filter={filter} onChange={changeFilter} />
 
           <div className="hright">
-            {site.features.suggestions ? (
-              <button
-                type="button"
-                className="gear"
-                data-tour="contact"
-                aria-label={t("suggest.cta")}
-                title={t("suggest.cta")}
-                onClick={() => setView("suggest")}
-              >
-                <Icon.mail />
-              </button>
-            ) : null}
+            {/* LA BARRA LLEVA DOS ACCIONES, NO SEIS.
+                Había además un sobre, un «?» y la bandera. El sobre abría «Falta un punto»,
+                que ya es la primera opción de Colaborar, y parecía «contacto» sin llevar al
+                formulario de contacto. La ayuda y el idioma se consultan una vez por visita
+                y ahora viven en el menú del avatar. En 390px eran seis controles, cuatro por
+                debajo de los 44px de ancho, peleando con el buscador por la misma fila. */}
 
             {/* The two ways to give, promoted out of the FAB menu and into the header,
                 where the original has them. Someone who came to help should not have to
@@ -803,15 +918,9 @@ export default function AppShell({
             {/* Colaborar: the way in for someone who wants to add something rather than find
                 something. Two clearly-named options — one unlabelled button was ambiguous. */}
             {site.features.suggestions || site.features.volunteerSignup || site.features.donations ? (
-              <div className="fabwrap" data-tour="fab">
+              <div className="fabwrap" data-tour="fab" ref={fabRef}>
                 {fabOpen ? (
                   <>
-                    <button
-                      type="button"
-                      className="fab-backdrop"
-                      aria-label={t("common.close")}
-                      onClick={() => setFabOpen(false)}
-                    />
                     <div className="fab-menu">
                       {site.features.suggestions ? (
                         <button
@@ -819,7 +928,7 @@ export default function AppShell({
                           className="fab-opt"
                           onClick={() => {
                             setFabOpen(false);
-                            setView("suggest");
+                            goRoot({ view: "suggest", id: null });
                           }}
                         >
                           <span className="fab-opt-ic">
@@ -837,7 +946,7 @@ export default function AppShell({
                           className="fab-opt"
                           onClick={() => {
                             setFabOpen(false);
-                            setView("donate");
+                            goRoot({ view: "donate", id: null });
                           }}
                         >
                           <span className="fab-opt-ic">
@@ -855,7 +964,7 @@ export default function AppShell({
                           className="fab-opt"
                           onClick={() => {
                             setFabOpen(false);
-                            setView("volunteer");
+                            goRoot({ view: "volunteer", id: null });
                           }}
                         >
                           <span className="fab-opt-ic">
@@ -881,19 +990,6 @@ export default function AppShell({
               </div>
             ) : null}
 
-            <button
-              type="button"
-              className="gear"
-              data-tour="help"
-              aria-label={t("map.help")}
-              title={t("map.help")}
-              onClick={() => setTourOpen(true)}
-            >
-              <Icon.question />
-            </button>
-
-            <LangSwitcher />
-
             {/* Tu cuenta, al final de la barra.
                 Este hueco lo ocupaba un candado que sólo sabía decir "entrar al panel del
                 equipo", y estaba en medio de la fila. Ahora es el avatar, en el sitio y con
@@ -908,20 +1004,16 @@ export default function AppShell({
               account={account}
               staff={staff}
               pending={pending}
-              volunteerEnabled={site.features.volunteerSignup}
-              onOpenAccount={() => setView("account")}
-              onOpenPanel={() => setView("admin")}
-              onOpenVolunteer={() => setView("volunteer")}
+              onOpenAccount={() => goRoot({ view: "account", id: null })}
+              onOpenPanel={() => goRoot({ view: "admin", id: null })}
+              onHelp={() => setTourOpen(true)}
               managesInitiative={managed.length > 0}
               onOpenInitiative={() => {
                 // El primero de la lista: gestionar varios puntos es raro dentro de lo
                 // raro, y un selector antes de haber visto ninguno sobra. El día que
                 // alguien tenga tres, la lista va aquí.
                 const primero = managed[0];
-                if (primero) {
-                  setSelectedId(primero);
-                  setView("mine");
-                }
+                if (primero) goRoot({ view: "mine", id: primero });
               }}
               onSignOut={() => void signOut()}
             />
@@ -1022,7 +1114,15 @@ export default function AppShell({
         ) : null}
 
         {showingDetail && selected ? (
-          <div className="list">
+          // La clave por punto hace que cada ficha se abra desde ARRIBA. Compartía elemento
+          // con la lista y heredaba su desplazamiento: la ficha salía por la mitad, con
+          // «Volver» fuera de la vista.
+          //
+          // `data-tour="ficha"` va AQUÍ y no en la capa de formularios, donde se quedó cuando
+          // la ficha dejó de ser una capa. El paso del recorrido abría un punto de ejemplo, no
+          // encontraba su ancla, lo cerraba en el acto y saltaba al siguiente: la ficha
+          // aparecía y desaparecía y el recorrido parecía retroceder o saltarse el paso.
+          <div className="list" key={`detail:${selected.id}`} data-tour="ficha">
             <button type="button" className="cdback" onClick={back}>
               <Icon.back />
               <span>{t("common.back")}</span>
@@ -1040,7 +1140,24 @@ export default function AppShell({
             </div>
           </div>
         ) : (
-        <div className="list">
+        <div className="list" key="list" ref={listRef}>
+          {/* La lista de necesidades no tenía título ni forma de salir: se llegaba desde la
+              barra de «N puntos necesitan ayuda» y, para irse, había que adivinar que una
+              pestaña devolvía a la lista general. */}
+          {activeView === "needs" ? (
+            <div className="listhead">
+              <button
+                type="button"
+                className="listhead-back"
+                onClick={back}
+                aria-label={t("common.back")}
+                title={t("common.back")}
+              >
+                <Icon.back />
+              </button>
+              <b className="listhead-title">{t("needs.listTitle")}</b>
+            </div>
+          ) : null}
           {/* «Cerca» sustituye el cuerpo de la lista, no el panel: el pie con privacidad y
               términos se queda: es la pestaña que pide la ubicación, y esconder ahí el
               enlace de privacidad sería justo al revés de lo que hay que hacer. */}
@@ -1089,7 +1206,8 @@ export default function AppShell({
                   data-tour="refbar"
                   onClick={() => {
                     setOpen(true);
-                    setView("needs");
+                    listScroll.current = 0;
+                    navPush({ view: "needs", id: null });
                   }}
                 >
                   <Icon.heart />
@@ -1151,7 +1269,7 @@ export default function AppShell({
       {/* La capa: formularios y panel del equipo, a altura completa. La ficha de un punto
           ya NO pasa por acá — vive dentro del panel de puntos, en lugar de su lista. */}
       {overlayOpen ? (
-        <div className="overlay" data-tour="ficha">
+        <div className="overlay">
           <div className="ovhead">
             <button type="button" className="oicon" onClick={back} aria-label={t("common.back")}>
               <Icon.back />
@@ -1178,7 +1296,7 @@ export default function AppShell({
                 around. */}
             {activeView === "admin" && staff.session ? (
               <>
-                <div className="admsettings">
+                <div className="admsettings" ref={settingsRef}>
                   <button
                     type="button"
                     className={`staff-guide${settingsOpen ? " staff-guide-on" : ""}`}
@@ -1191,12 +1309,6 @@ export default function AppShell({
                   </button>
                   {settingsOpen ? (
                     <>
-                      <button
-                        type="button"
-                        className="layers-backdrop"
-                        aria-label={t("common.close")}
-                        onClick={() => setSettingsOpen(false)}
-                      />
                       <div className="admmenu" role="group" aria-label={t("admin.settings")}>
                         {/* Only the password lives here. The other two session actions
                             are buttons in this same row — a menu for a single form is
@@ -1237,7 +1349,7 @@ export default function AppShell({
             {activeView === "donate" ? (
               <DonateView
                 donations={donations ?? []}
-                onWriteToUs={() => setView("contact")}
+                onWriteToUs={() => navPush({ view: "contact", id: null })}
                 onCopied={() => showToast(t("common.copied"))}
               />
             ) : null}
@@ -1250,7 +1362,7 @@ export default function AppShell({
                 account={account}
                 centers={centers}
                 onOpenCenter={openCenter}
-                onVolunteer={() => setView("volunteer")}
+                onVolunteer={() => navPush({ view: "volunteer", id: null })}
                 justConfirmed={justConfirmed}
               />
             ) : null}
@@ -1279,8 +1391,8 @@ export default function AppShell({
                    acá era pedirle la contraseña a alguien que ya la había puesto. */
                 <AccountPanel
                   onSignedIn={staff.refresh}
-                  onOpenAccount={() => setView("account")}
-                  onVolunteer={() => setView("volunteer")}
+                  onOpenAccount={() => navPush({ view: "account", id: null })}
+                  onVolunteer={() => navPush({ view: "volunteer", id: null })}
                 />
               ) : (
                 <PanelSkeleton />

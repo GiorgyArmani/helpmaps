@@ -1,11 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, useRef, type ReactNode } from "react";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
+import { useDismiss } from "@/ui/useDismiss";
 
 /**
- * Una lengüeta del canto que se despliega en panel.
+ * Un control del mapa que se despliega en panel: Capas, Noticias y las capas de la escena 3D.
  *
  * ── POR QUÉ EXISTE ──────────────────────────────────────────────────────────
  *
@@ -19,16 +20,22 @@ import { useI18n } from "@/i18n/context";
  * lista de interruptores y el de noticias es texto para leer. Eso viaja como clase, no
  * como copia del componente.
  *
- * ── LA LENGÜETA LLEVA SU PALABRA ────────────────────────────────────────────
+ * ── LLEVA SU PALABRA, Y AHORA SE PUEDE LEER ─────────────────────────────────
  *
- * Cerrada dice qué guarda, que es lo que un botón de icono no hace: un icono de capas
- * sobre un mapa no distingue "capas del mapa" de "cambiar el mapa base", y quien no lo
- * abre nunca se entera de que hay una capa encendida. Por eso `active` pinta la lengüeta
- * cerrada: el estado tiene que verse sin abrir nada.
+ * Cerrado dice qué guarda, que es lo que un botón de sólo icono no hace: un icono de capas
+ * sobre un mapa no distingue "capas del mapa" de "cambiar el mapa base", y quien no lo abre
+ * nunca se entera de que hay una capa encendida. Por eso `active` pinta el botón cerrado:
+ * el estado tiene que verse sin abrir nada.
+ *
+ * Era una lengüeta vertical pegada al canto: 27px de ancho y el rótulo girado, a 10px y en
+ * mayúsculas. La palabra estaba, pero había que torcer la cabeza para leerla y el pulgar
+ * tenía que acertar una franja más estrecha que la yema. Ahora es un botón de 44px de alto
+ * con icono y palabra en horizontal, separado del borde como los demás controles del mapa.
  */
 export default function SideTab({
   label,
   title,
+  icon,
   open,
   onOpenChange,
   active = false,
@@ -37,13 +44,15 @@ export default function SideTab({
   headClassName,
   children,
 }: {
-  /** El rótulo vertical de la lengüeta cerrada. Corto: es una columna de 26px. */
+  /** El rótulo del botón cerrado. Corto: una o dos palabras. */
   label: string;
-  /** El encabezado del panel abierto, y el nombre accesible en los dos estados. */
+  /** El encabezado del panel abierto. */
   title: string;
+  /** El icono que acompaña a la palabra en el botón cerrado. */
+  icon?: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Hay algo encendido detrás: se pinta la lengüeta cerrada. */
+  /** Hay algo encendido detrás: se pinta el botón cerrado. */
   active?: boolean;
   /** El envoltorio posicionado: `layersctl`, `newsctl`, `layersctl scene3d-layers`. */
   className: string;
@@ -52,36 +61,40 @@ export default function SideTab({
   children: ReactNode;
 }) {
   const { t } = useI18n();
+  const ref = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+  // Se cierra al tocar fuera, con Escape o con atrás, y abrir otro control o un menú de la
+  // barra lo cierra: Capas y Noticias abiertas a la vez se tapaban una a otra.
+  useDismiss(open, close, ref);
 
   if (!open) {
     return (
-      <div className={className}>
+      <div className={className} ref={ref}>
+        {/* Sin `aria-label`: el nombre accesible es la palabra que se VE. Con el título largo
+            como etiqueta, quien dicta «pulsa Noticias» no encontraba ningún botón con ese
+            nombre, porque se llamaba «Qué se está reportando». */}
         <button
           type="button"
-          className={`sidetab${active ? " sidetab-on" : ""}`}
+          className={`maptab${active ? " maptab-on" : ""}`}
           aria-expanded={false}
-          aria-label={title}
           title={title}
           onClick={() => onOpenChange(true)}
         >
-          <Icon.chevron className="sidetab-ch" />
-          <span className="sidetab-txt">{label}</span>
+          {icon ? (
+            <span className="maptab-ic" aria-hidden="true">
+              {icon}
+            </span>
+          ) : null}
+          <span className="maptab-txt">{label}</span>
         </button>
       </div>
     );
   }
 
   return (
-    <div className={className}>
-      {/* Cierra al tocar fuera. Es un botón y no un div para que también cierre con el
-          teclado, y sin fondo visible: oscurecer el mapa detrás de un panel que se abre
-          para MIRAR el mapa es trabajar en contra. */}
-      <button
-        type="button"
-        className="side-backdrop"
-        aria-label={t("common.close")}
-        onClick={() => onOpenChange(false)}
-      />
+    <div className={className} ref={ref}>
+      {/* Sin fondo que oscurezca: oscurecer el mapa detrás de un panel que se abre para
+          MIRAR el mapa es trabajar en contra. El cierre al tocar fuera lo pone `useDismiss`. */}
       <div className={panelClassName} role="group" aria-label={title}>
         <div className={headClassName}>
           <b>{title}</b>

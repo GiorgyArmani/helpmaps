@@ -7,6 +7,7 @@ import { useEmergency } from "@/features/app/SiteProvider";
 import { newsEnabled } from "@/domain/news";
 import BulletinBody from "@/features/news/BulletinBody";
 import SideTab from "@/ui/SideTab";
+import { Icon } from "@/ui/icons";
 
 /**
  * The bulletin, as a tab on the map.
@@ -81,6 +82,7 @@ export default function NewsTab() {
       headClassName="side-head"
       label={t("news.tab")}
       title={t("news.title")}
+      icon={<Icon.news />}
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
