@@ -74,6 +74,7 @@ export default function AccountView({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [subs, setSubs] = useState<MySubmission[] | null>(null);
   const [vol, setVol] = useState<MyVolunteerRequest | null>(null);
 
@@ -108,6 +109,7 @@ export default function AccountView({
   const startEdit = useCallback(() => {
     setName(account.profile?.displayName ?? "");
     setSaved(false);
+    setSaveFailed(false);
     setEditing(true);
   }, [account.profile]);
 
@@ -118,13 +120,16 @@ export default function AccountView({
       const clean = cleanDisplayName(name);
       if (!sb || displayNameInvalid(clean) || busy) return;
       setBusy(true);
+      setSaveFailed(false);
       try {
         await updateMyProfile(sb, { displayName: clean });
         setSaved(true);
         setEditing(false);
         account.refresh();
       } catch {
-        /* un nombre inválido no llega acá: lo corta el guardia de arriba */
+        // Un nombre inválido no llega acá: lo corta el guardia de arriba. Lo que llega es la
+        // red o la base, y eso se dice: callarlo deja a la persona creyendo que se guardó.
+        setSaveFailed(true);
       } finally {
         setBusy(false);
       }
@@ -182,6 +187,7 @@ export default function AccountView({
               </button>
             </div>
             {nameBad ? <p className="lerr">{t("register.errorName")}</p> : null}
+            {saveFailed ? <p className="lerr">{t("admin.saveError")}</p> : null}
           </form>
         ) : (
           <div className="acc-id-txt">

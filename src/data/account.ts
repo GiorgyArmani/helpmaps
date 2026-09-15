@@ -60,7 +60,14 @@ export async function fetchMyProfile(sb: SupabaseClient): Promise<Profile | null
   return toProfile(data as ProfileRow);
 }
 
-/** Cambiar el nombre para mostrar o el estado. Sólo el propio: lo impone la RLS. */
+/**
+ * Cambiar el nombre para mostrar o el estado. Sólo el propio: lo impone la RLS.
+ *
+ * Con nombre es un UPSERT, no un UPDATE. Las cuentas del equipo creadas antes de `010` no
+ * tienen fila en `profiles`, y un UPDATE sobre cero filas no da error: la pantalla decía
+ * «Guardado.» y seguía en «Sin nombre todavía». Sin nombre no se puede crear la fila
+ * (`display_name` es NOT NULL), así que ahí se exige que la fila exista y se dice si no.
+ */
 export async function updateMyProfile(
   sb: SupabaseClient,
   patch: { displayName?: string; region?: string | null },
@@ -72,8 +79,21 @@ export async function updateMyProfile(
   if (patch.region !== undefined) row.region = patch.region;
   if (Object.keys(row).length === 0) return;
 
-  const { error } = await sb.from("profiles").update(row).eq("user_id", auth.user.id);
+  if (patch.displayName !== undefined) {
+    const { error } = await sb
+      .from("profiles")
+      .upsert({ user_id: auth.user.id, ...row }, { onConflict: "user_id" });
+    if (error) throw error;
+    return;
+  }
+
+  const { data, error } = await sb
+    .from("profiles")
+    .update(row)
+    .eq("user_id", auth.user.id)
+    .select("user_id");
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error("sin perfil");
 }
 
 /**
