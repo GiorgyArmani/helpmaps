@@ -13,7 +13,7 @@ import { cleanName, isEmail } from "@/lib/sanitize";
  *   POST   { email, name?, password? }        create a volunteer account + welcome email
  *   PATCH  { id, action: approve|reject }     resolve a pending volunteer request
  *   GET                                       list the team
- *   DELETE { user_id }                        revoke a volunteer
+ *   DELETE { user_id }                        revoke a volunteer's panel access (keeps the account)
  *
  * WHY THIS ROUTE EXISTS AT ALL: creating an auth user needs the service role, and the
  * service role bypasses RLS completely. So the shape is always the same — verify the
@@ -97,9 +97,10 @@ interface Provisioned {
  * Create the auth user, grant the volunteer role, send the welcome. Shared by POST and
  * by approving a request.
  *
- * The auth user is deleted again if the role insert fails: an account with no role can
- * sign in and see nothing, which looks to the person like being rejected after being
- * told they were accepted.
+ * If the address already has an account, that account gets the role instead of a new
+ * one being created. A NEW auth user is deleted again if the role insert fails: an
+ * account with no role can sign in and see nothing, which looks to the person like being
+ * rejected after being told they were accepted.
  */
 async function provision(
   gate: StaffGate,
@@ -130,23 +131,41 @@ async function provision(
     // volunteer blocked behind an unconfirmed address is a volunteer who never starts.
     email_confirm: true,
   });
-  if (createErr || !created.user) {
-    const already = /already|registered|exists/i.test(createErr?.message ?? "");
+
+  let userId = created?.user?.id ?? null;
+  // Somebody who already has a personal account and then asks to volunteer. That is the
+  // normal path since accounts exist, and it used to fail the approval with
+  // `email_taken`. They keep their account and their password; they gain the role.
+  const existing = !userId && /already|registered|exists/i.test(createErr?.message ?? "");
+  if (existing) userId = await findUserIdByEmail(input.email);
+  if (!userId) {
     return NextResponse.json(
-      { error: already ? "email_taken" : "create_failed", detail: createErr?.message },
-      { status: already ? 409 : 400 },
+      { error: existing ? "email_taken" : "create_failed", detail: createErr?.message },
+      { status: existing ? 409 : 400 },
     );
+  }
+
+  if (existing) {
+    const { data: already } = await gate.sb
+      .from("staff_users")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (already) return NextResponse.json({ error: "already_staff" }, { status: 409 });
   }
 
   const { error: roleErr } = await gate.sb
     .from("staff_users")
-    .insert({ user_id: created.user.id, role: "volunteer", email: input.email });
+    .insert({ user_id: userId, role: "volunteer", email: input.email });
   if (roleErr) {
-    await admin.auth.admin.deleteUser(created.user.id).catch(() => {});
+    // Only undo an account this call created — never someone's pre-existing one.
+    if (!existing) await admin.auth.admin.deleteUser(userId).catch(() => {});
     return NextResponse.json({ error: "role_failed", detail: roleErr.message }, { status: 400 });
   }
 
-  const setPasswordUrl = await recoveryLink(input.email);
+  // An existing account already has a password it knows; minting a recovery link for it
+  // would only invite an unwanted reset.
+  const setPasswordUrl = existing ? null : await recoveryLink(input.email);
 
   const emailed = await sendVolunteerWelcome({
     to: input.email,
@@ -159,10 +178,28 @@ async function provision(
   // the recipient's inbox, rather than also in an admin's screen and browser history.
   return {
     ok: true,
-    user_id: created.user.id,
+    user_id: userId,
     emailed,
     ...(emailed || !setPasswordUrl ? {} : { setPasswordUrl }),
   };
+}
+
+/**
+ * The auth user behind an address. The admin API has no lookup by email, so this pages
+ * through the list — bounded, because a deployment is thousands of accounts, not millions.
+ */
+async function findUserIdByEmail(email: string): Promise<string | null> {
+  const admin = supabaseAdmin();
+  if (!admin) return null;
+  const perPage = 1000;
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) return null;
+    const hit = data.users.find((u) => u.email?.toLowerCase() === email);
+    if (hit) return hit.id;
+    if (data.users.length < perPage) return null;
+  }
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -334,9 +371,10 @@ export async function DELETE(req: Request) {
   const { error: delErr } = await gate.sb.from("staff_users").delete().eq("user_id", userId);
   if (delErr) return NextResponse.json({ error: "revoke_failed" }, { status: 400 });
 
-  // Access is already gone with the role row; removing the login is the second half.
-  const admin = supabaseAdmin();
-  if (admin) await admin.auth.admin.deleteUser(userId).catch(() => {});
+  // Only the role row goes. The login stays: since personal accounts exist, the same
+  // auth user carries a profile, favourites and earned experience, all `on delete
+  // cascade` — deleting it to take away panel access erased the person along with it.
+  // Without the row they are an ordinary account again, which is what revoking means.
 
   return NextResponse.json({ ok: true });
 }

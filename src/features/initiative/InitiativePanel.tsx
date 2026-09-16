@@ -14,7 +14,9 @@ import {
 import { Icon } from "@/ui/icons";
 import { PanelSkeleton } from "@/ui/Skeleton";
 import SupplyQuickAdd from "@/features/centers/SupplyQuickAdd";
-import ManagePanel from "./ManagePanel";
+import HoursPicker from "@/features/centers/HoursPicker";
+import { scheduleText } from "@/features/centers/HoursView";
+import ProfileEditor from "./ProfileEditor";
 import { Field } from "./forms";
 import { useI18n } from "@/i18n/context";
 import { getSupabase } from "@/lib/supabase/client";
@@ -86,6 +88,18 @@ export default function InitiativePanel({
   if (loading) return <PanelSkeleton />;
   if (!profile) return <p className="empty">{t("error.generic")}</p>;
 
+  // Terminado el onboarding, la organización entra a SU perfil y lo arregla en su sitio.
+  if (profile.onboarded_at) {
+    return (
+      <ProfileEditor
+        center={center}
+        profile={profile}
+        content={content}
+        onSaved={recargar}
+      />
+    );
+  }
+
   return (
     <div className="mine">
       <button type="button" className="cdback" onClick={onClose}>
@@ -98,11 +112,7 @@ export default function InitiativePanel({
         <h2 className="mine-name">{center.name}</h2>
       </div>
 
-      {profile.onboarded_at ? (
-        <ManagePanel center={center} profile={profile} content={content} onSaved={recargar} />
-      ) : (
-        <Onboarding center={center} profile={profile} onDone={recargar} />
-      )}
+      <Onboarding center={center} profile={profile} onDone={recargar} />
     </div>
   );
 }
@@ -186,14 +196,21 @@ function Onboarding({
         <>
           <h3 className="onb-t">{t("onb.s2.title")}</h3>
           <p className="onb-p">{t("onb.s2.body")}</p>
-          <Field label={t("onb.f.schedule")} hint={t("onb.f.scheduleHint")}>
-            <input
-              className="finput"
-              value={borrador.schedule ?? ""}
-              onChange={(e) => set("schedule", e.target.value || null)}
-              maxLength={120}
+          <div className="fld">
+            <span className="flabel">{t("onb.f.schedule")}</span>
+            <span className="fhint">{t("onb.f.scheduleHint")}</span>
+            <HoursPicker
+              value={borrador.hours}
+              onChange={(next) =>
+                setBorrador((b) => ({
+                  ...b,
+                  hours: next,
+                  schedule: scheduleText(next) ?? profile.schedule,
+                }))
+              }
+              legacyText={profile.schedule}
             />
-          </Field>
+          </div>
           <Field label={t("onb.f.contact")} hint={t("onb.f.contactHint")}>
             <input
               className="finput"

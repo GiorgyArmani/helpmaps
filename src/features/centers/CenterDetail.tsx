@@ -20,6 +20,7 @@ import {
   PostList,
 } from "@/features/centers/InitiativeSections";
 import ProfileTabs, { type ProfileTab } from "@/features/centers/ProfileTabs";
+import HoursView from "@/features/centers/HoursView";
 import { EMPTY_PROFILE, type InitiativeProfile } from "@/data/initiatives";
 
 /**
@@ -44,7 +45,7 @@ export default function CenterDetail({
 }) {
   const { regionLabel } = useSiteHelpers();
   const site = useSite();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const ago = useTimeAgo();
   const style = typeStyle(center.type);
   const info = center.info;
@@ -151,10 +152,18 @@ export default function CenterDetail({
                     <span className="dval">{center.address}</span>
                   </div>
                 ) : null}
-                {info?.schedule ? (
+                {info?.hours || info?.schedule ? (
                   <div className="drow">
                     <span className="dlabel">{t("center.scheduleTitle")}</span>
-                    <span className="dval">{info.schedule}</span>
+                    <span className="dval">
+                      <HoursView
+                        hours={info.hours}
+                        schedule={info.schedule}
+                        status={info.status}
+                        t={t}
+                        lang={lang}
+                      />
+                    </span>
                   </div>
                 ) : null}
                 {info?.category ? (
@@ -227,7 +236,7 @@ export default function CenterDetail({
       id: "agenda",
       label: t("tab.agenda"),
       count: activities.length,
-      content: <ActivityList activities={activities} />,
+      content: <ActivityList activities={activities} where={digital ? null : center.address} />,
     });
   }
 

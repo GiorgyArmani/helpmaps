@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Center, CenterStatus, HelpKind, LocationType } from "@/domain/types";
 import { mapCenter, mapCenters } from "@/domain/center";
+import type { WeeklyHours } from "@/domain/hours";
 
 // All reads and writes against `locations` + `center_info` go through this module, so
 // the column list lives in exactly one place. Never `select("*")` on a table whose shape
@@ -11,10 +12,18 @@ const LOCATION_COLUMNS =
   "coverage_regions,coverage_municipalities";
 
 const INFO_COLUMNS =
-  "location_id,status,receives,needs,help,category,description,schedule,contact_name," +
+  "location_id,status,receives,needs,help,category,description,schedule,hours,contact_name," +
   "social_url,website,instagram,is_animal,last_confirmed_at,updated_at,source,external_id";
 
 const SELECT = `${LOCATION_COLUMNS},info:center_info(${INFO_COLUMNS})`;
+
+// ── Before `018_horario` ───────────────────────────────────────────────────
+//
+// Same reasoning as the block below, one migration later: a database that has not run
+// `db/12_horario.sql` answers 42703 for `hours`. Without this middle step that error
+// would fall all the way back to the pre-011 list and silently drop websites and
+// Instagram handles too — losing two working columns over one missing one.
+const PRE_HOURS_SELECT = SELECT.replace("schedule,hours,", "schedule,");
 
 // ── Before `011_digitales` ─────────────────────────────────────────────────
 //
@@ -36,6 +45,22 @@ const LEGACY_SELECT = `${LEGACY_LOCATION_COLUMNS},info:center_info(${LEGACY_INFO
 /** Postgres `undefined_column`, as PostgREST relays it. */
 function isMissingColumn(error: unknown): boolean {
   return Boolean(error && typeof error === "object" && (error as { code?: string }).code === "42703");
+}
+
+/**
+ * Run a read with the full column list, then each older one in turn, stopping at the
+ * first answer that is not "no such column". Every read in this module goes through it.
+ */
+async function withFallback<T extends { error: unknown }>(run: (columns: string) => PromiseLike<T>): Promise<T> {
+  let result = await run(SELECT);
+  if (result.error && isMissingColumn(result.error)) {
+    result = await run(PRE_HOURS_SELECT);
+    if (result.error && isMissingColumn(result.error)) {
+      warnLegacy();
+      result = await run(LEGACY_SELECT);
+    }
+  }
+  return result;
 }
 
 let warnedLegacy = false;
@@ -74,11 +99,7 @@ export async function fetchCenters(
     scopeTo(sb.from("locations").select(columns).eq("active", true), emergencyId).order("name", {
       ascending: true,
     });
-  let { data, error } = await run(SELECT);
-  if (error && isMissingColumn(error)) {
-    warnLegacy();
-    ({ data, error } = await run(LEGACY_SELECT));
-  }
+  const { data, error } = await withFallback(run);
   if (error) throw error;
   return mapCenters(data as unknown as Record<string, unknown>[]);
 }
@@ -92,11 +113,7 @@ export async function fetchAllCenters(
     scopeTo(sb.from("locations").select(columns), emergencyId).order("updated_at", {
       ascending: false,
     });
-  let { data, error } = await run(SELECT);
-  if (error && isMissingColumn(error)) {
-    warnLegacy();
-    ({ data, error } = await run(LEGACY_SELECT));
-  }
+  const { data, error } = await withFallback(run);
   if (error) throw error;
   return mapCenters(data as unknown as Record<string, unknown>[]);
 }
@@ -114,11 +131,7 @@ export async function fetchCenter(
 ): Promise<Center | null> {
   const run = (columns: string) =>
     scopeTo(sb.from("locations").select(columns).eq("id", id), emergencyId).maybeSingle();
-  let { data, error } = await run(SELECT);
-  if (error && isMissingColumn(error)) {
-    warnLegacy();
-    ({ data, error } = await run(LEGACY_SELECT));
-  }
+  const { data, error } = await withFallback(run);
   if (error) throw error;
   if (!data) return null;
   return mapCenter(data as unknown as Record<string, unknown>);
@@ -152,6 +165,7 @@ export interface CenterDraft {
     category: string | null;
     description: string | null;
     schedule: string | null;
+    hours: WeeklyHours | null;
     contact_name: string | null;
     social_url: string | null;
     website: string | null;
@@ -227,6 +241,7 @@ export async function saveCenter(
     category: draft.info.category,
     description: draft.info.description,
     schedule: draft.info.schedule,
+    hours: draft.info.hours,
     contact_name: draft.info.contact_name,
     social_url: draft.info.social_url,
     website: draft.info.website,
@@ -241,14 +256,22 @@ export async function saveCenter(
   let { error: infoError } = await sb
     .from("center_info")
     .upsert(info, { onConflict: "location_id" });
+  // Without `018_horario` the marked hours cannot be stored, but `schedule` already
+  // carries them as text, so the point still says when it opens.
   if (infoError && isMissingColumn(infoError)) {
-    warnLegacy();
-    const legacyInfo = { ...info };
-    delete legacyInfo.website;
-    delete legacyInfo.instagram;
+    const withoutHours = { ...info };
+    delete withoutHours.hours;
     ({ error: infoError } = await sb
       .from("center_info")
-      .upsert(legacyInfo, { onConflict: "location_id" }));
+      .upsert(withoutHours, { onConflict: "location_id" }));
+    if (infoError && isMissingColumn(infoError)) {
+      warnLegacy();
+      delete withoutHours.website;
+      delete withoutHours.instagram;
+      ({ error: infoError } = await sb
+        .from("center_info")
+        .upsert(withoutHours, { onConflict: "location_id" }));
+    }
   }
   if (infoError) throw infoError;
 }
@@ -315,10 +338,9 @@ export async function fetchCenterById(
   sb: SupabaseClient,
   id: string,
 ): Promise<Center | null> {
-  const intento = await sb.from("locations").select(SELECT).eq("id", id).maybeSingle();
-  const { data, error } = isMissingColumn(intento.error)
-    ? await sb.from("locations").select(LEGACY_SELECT).eq("id", id).maybeSingle()
-    : intento;
+  const { data, error } = await withFallback((columns) =>
+    sb.from("locations").select(columns).eq("id", id).maybeSingle(),
+  );
   if (error || !data) return null;
-  return mapCenter(data as Record<string, unknown>);
+  return mapCenter(data as unknown as Record<string, unknown>);
 }

@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AuditEntry, Center, Donation, StaffSession, Submission } from "@/domain/types";
+import type {
+  AuditEntry,
+  Center,
+  Donation,
+  StaffRole,
+  StaffSession,
+  Submission,
+} from "@/domain/types";
 import { isAdminRole } from "@/domain/types";
 import {
   deleteCenter,
@@ -41,6 +48,15 @@ import { coverageLabel } from "@/features/centers/coverage";
 
 type Tab = "activity" | "centers" | "submissions" | "reports" | "volunteers" | "donations";
 type TypeFilter = "all" | "points" | "digital";
+type VolView = "requests" | "team";
+
+/** A row of `GET /api/staff/volunteers`. */
+interface StaffMember {
+  user_id: string;
+  role: StaffRole;
+  email: string | null;
+  created_at: string;
+}
 
 /**
  * The digital hints a public submission may carry (see `app/api/suggest/route.ts`, which
@@ -120,6 +136,11 @@ export default function AdminPanel({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The volunteers tab holds both halves of access: who is asking, and who already has
+  // it. Without the second there was no way to take access away from the panel at all.
+  const [volView, setVolView] = useState<VolView>("requests");
+  /** `null` while it has not been fetched (or needs fetching again). */
+  const [team, setTeam] = useState<StaffMember[] | null>(null);
 
   // La emergencia que se está administrando. En un despliegue que todavía no adoptó la
   // tabla es null, y entonces el panel se comporta como siempre: una sola emergencia
@@ -259,7 +280,83 @@ export default function AdminPanel({
       if (action === "reject") setNotice(t("admin.volRejected"));
       else if (data.emailed) setNotice(t("admin.volApproved"));
       else setNotice(t("admin.volApprovedNoMail", { p: data.setPasswordUrl ?? "—" }));
+      // The team list no longer matches; it is fetched again when next opened.
+      if (action === "approve") setTeam(null);
       await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("admin.saveError"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Listed through the server route, which checks the caller is an admin first. */
+  async function loadTeam() {
+    setTeam(null);
+    try {
+      const res = await fetch("/api/staff/volunteers");
+      const data: { staff?: StaffMember[]; error?: string } = await res
+        .json()
+        .catch(() => ({}));
+      if (!res.ok) setError(data.error ?? t("admin.saveError"));
+      setTeam(data.staff ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("admin.saveError"));
+      setTeam([]);
+    }
+  }
+
+  function openVolView(next: VolView) {
+    setVolView(next);
+    if (next === "team" && team === null) void loadTeam();
+  }
+
+  /**
+   * Takes the volunteer role away. The person keeps their account — profile, favourites,
+   * experience — and simply stops seeing the panel. Admin rows never offer this: the
+   * route refuses them, so an admin cannot lock the deployment out of itself.
+   */
+  async function revokeMember(member: StaffMember) {
+    const email = member.email ?? member.user_id;
+    if (!window.confirm(t("admin.team.revokeConfirm", { email }))) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/staff/volunteers", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ user_id: member.user_id }),
+      });
+      const data: { error?: string } = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? t("admin.saveError"));
+        return;
+      }
+      setTeam((prev) => prev?.filter((m) => m.user_id !== member.user_id) ?? null);
+      setNotice(t("admin.team.revoked", { email }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("admin.saveError"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendWelcome(member: StaffMember) {
+    const email = member.email ?? member.user_id;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/staff/volunteers", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ user_id: member.user_id }),
+      });
+      const data: { emailed?: boolean; error?: string } = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? t("admin.saveError"));
+        return;
+      }
+      setNotice(t(data.emailed ? "admin.team.resent" : "admin.team.resendFailed", { email }));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.saveError"));
     } finally {
@@ -797,43 +894,126 @@ export default function AdminPanel({
 
       {tab === "volunteers" && isAdmin ? (
         <div className="stack">
-          {volunteers.length === 0 ? <p className="mut">{t("admin.none")}</p> : null}
-          {volunteers.map((v) => (
-            <article key={v.id} className="subcard">
-              <div className="subcard-head">
-                <span className="aname">{v.name}</span>
-                <span>{ago(v.created_at)}</span>
+          <div className="seg" role="group" aria-label={t("admin.tab.volunteers")}>
+            {(["requests", "team"] as VolView[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={`segb${volView === v ? " segb-on" : ""}`}
+                aria-pressed={volView === v}
+                onClick={() => openVolView(v)}
+              >
+                {t(`admin.team.view.${v}` as DictKey)}
+                {v === "requests" && volunteers.length > 0 ? ` (${volunteers.length})` : ""}
+              </button>
+            ))}
+          </div>
+
+          {volView === "requests" ? (
+            <>
+              {volunteers.length === 0 ? <p className="mut">{t("admin.none")}</p> : null}
+              {volunteers.map((v) => (
+                <article key={v.id} className="subcard">
+                  <div className="subcard-head">
+                    <span className="aname">{v.name}</span>
+                    <span>{ago(v.created_at)}</span>
+                  </div>
+                  <div className="subcard-head">
+                    <span>{v.email}</span>
+                    {v.phone ? <span>{v.phone}</span> : null}
+                    {v.region ? <span>{helpers.regionLabel(v.region)}</span> : null}
+                    {v.profile ? <span>{v.profile}</span> : null}
+                  </div>
+                  {v.motivation ? <p className="subcard-msg">{v.motivation}</p> : null}
+                  <div className="subcard-acts">
+                    {/* Approve creates the account (or reuses the person's existing one),
+                        grants the role and emails the welcome with the manual. Panel access
+                        publishes live onto the map, so it stays an explicit human decision. */}
+                    <button
+                      type="button"
+                      className="btnp"
+                      disabled={busy}
+                      onClick={() => void reviewVolunteer(v.id, "approve")}
+                    >
+                      {t("admin.approve")}
+                    </button>
+                    <button
+                      type="button"
+                      className="btng"
+                      disabled={busy}
+                      onClick={() => void reviewVolunteer(v.id, "reject")}
+                    >
+                      {t("admin.reject")}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </>
+          ) : team === null ? (
+            // The rows' own shape while the list arrives, so nothing jumps when it lands.
+            <div aria-busy="true" aria-label={t("admin.team.view.team")}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="arow">
+                  <div className="ai">
+                    <div className="skel skel-title" />
+                    <div className="skel skel-line skel-line-short" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {team.length === 0 ? <p className="mut">{t("admin.team.empty")}</p> : null}
+              <div>
+                {team.map((m) => {
+                  const self = m.user_id === session.userId;
+                  // The route refuses anything but a volunteer, so the UI does not offer it.
+                  const revocable = m.role === "volunteer" && !self;
+                  return (
+                    <div key={m.user_id} className="arow">
+                      <div className="ai">
+                        <div className="aname">
+                          {m.email ?? m.user_id}
+                          {self ? ` · ${t("admin.team.you")}` : ""}
+                        </div>
+                        <div className="asub">
+                          {t(`admin.role.${m.role}` as DictKey)} ·{" "}
+                          {t("admin.team.since", { ago: ago(m.created_at) })}
+                        </div>
+                      </div>
+                      {revocable ? (
+                        <div className="aacts team-acts">
+                          <button
+                            type="button"
+                            className="amini"
+                            disabled={busy}
+                            aria-label={t("admin.team.resend")}
+                            title={t("admin.team.resend")}
+                            onClick={() => void resendWelcome(m)}
+                          >
+                            <Icon.mail />
+                          </button>
+                          <button
+                            type="button"
+                            className="amini del"
+                            disabled={busy}
+                            aria-label={t("admin.team.revoke")}
+                            title={t("admin.team.revoke")}
+                            onClick={() => void revokeMember(m)}
+                          >
+                            <Icon.close />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="subcard-head">
-                <span>{v.email}</span>
-                {v.phone ? <span>{v.phone}</span> : null}
-                {v.region ? <span>{helpers.regionLabel(v.region)}</span> : null}
-                {v.profile ? <span>{v.profile}</span> : null}
-              </div>
-              {v.motivation ? <p className="subcard-msg">{v.motivation}</p> : null}
-              <div className="subcard-acts">
-                {/* Approve creates the account, grants the role and emails the welcome
-                    with the manual (POST /api/staff/volunteers). Panel access publishes
-                    live onto the map, so it stays an explicit human decision. */}
-                <button
-                  type="button"
-                  className="btnp"
-                  disabled={busy}
-                  onClick={() => void reviewVolunteer(v.id, "approve")}
-                >
-                  {t("admin.approve")}
-                </button>
-                <button
-                  type="button"
-                  className="btng"
-                  disabled={busy}
-                  onClick={() => void reviewVolunteer(v.id, "reject")}
-                >
-                  {t("admin.reject")}
-                </button>
-              </div>
-            </article>
-          ))}
+              {team.some((m) => m.role !== "volunteer") ? (
+                <p className="mut small">{t("admin.team.adminNote")}</p>
+              ) : null}
+            </>
+          )}
         </div>
       ) : null}
     </div>

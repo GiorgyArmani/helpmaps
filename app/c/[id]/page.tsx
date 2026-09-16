@@ -26,6 +26,7 @@ import {
   PostList,
 } from "@/features/centers/InitiativeSections";
 import ProfileTabs, { type ProfileTab } from "@/features/centers/ProfileTabs";
+import HoursView from "@/features/centers/HoursView";
 import type { DictKey } from "@/i18n";
 import { currentEmergencyId } from "@/server/emergency";
 
@@ -186,10 +187,18 @@ export default async function CenterPage({ params, searchParams }: Params) {
                 <span className="dval">{center.address}</span>
               </div>
             ) : null}
-            {info?.schedule ? (
+            {info?.hours || info?.schedule ? (
               <div className="drow">
                 <span className="dlabel">{t("center.scheduleTitle")}</span>
-                <span className="dval">{info.schedule}</span>
+                <span className="dval">
+                  <HoursView
+                    hours={info.hours}
+                    schedule={info.schedule}
+                    status={info.status}
+                    t={t}
+                    lang={lang}
+                  />
+                </span>
               </div>
             ) : null}
             {info?.category ? (
@@ -253,7 +262,7 @@ export default async function CenterPage({ params, searchParams }: Params) {
       id: "agenda",
       label: t("tab.agenda"),
       count: activities.length,
-      content: <ActivityList activities={activities} />,
+      content: <ActivityList activities={activities} where={digital ? null : center.address} />,
     });
   }
 
@@ -293,78 +302,90 @@ export default async function CenterPage({ params, searchParams }: Params) {
       </div>
 
       <div className="prof-body">
-        <div className="prof-id">
-          <span className="prof-photo" style={{ color: style.color }}>
-            {images.photo ? (
-              // Sin `next/image`: la URL sale del bucket que cada país configura por su
-              // cuenta, y un dominio no declarado en `next.config.ts` tumbaría el render
-              // de la página entera en vez de dejar una foto rota.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={images.photo} alt="" />
-            ) : (
-              <TypeGlyph name={style.icon} size={40} />
-            )}
-          </span>
-          <h1 className="prof-name">{center.name}</h1>
-          <p className="prof-meta">
-            {t(`type.${center.type}` as DictKey)}
-            {place ? ` · ${place}` : ""}
-          </p>
-          <span className={`prof-status prof-status-${status ?? "unknown"}`}>
-            {status ? t(`status.${status}`) : t("status.unknown")}
-          </span>
+        {/* En escritorio, el nombre a la izquierda y las acciones a la derecha, en una sola
+            franja bajo la portada: la cabecera de un perfil y no una ficha estrecha. En el
+            teléfono esta envoltura no cambia nada: todo sigue apilado. */}
+        <div className="prof-head">
+          <div className="prof-id">
+            <span className="prof-photo" style={{ color: style.color }}>
+              {images.photo ? (
+                // Sin `next/image`: la URL sale del bucket que cada país configura por su
+                // cuenta, y un dominio no declarado en `next.config.ts` tumbaría el render
+                // de la página entera en vez de dejar una foto rota.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={images.photo} alt="" />
+              ) : (
+                <TypeGlyph name={style.icon} size={40} />
+              )}
+            </span>
+            <h1 className="prof-name">{center.name}</h1>
+            <p className="prof-meta">
+              {t(`type.${center.type}` as DictKey)}
+              {place ? ` · ${place}` : ""}
+            </p>
+            <span className={`prof-status prof-status-${status ?? "unknown"}`}>
+              {status ? t(`status.${status}`) : t("status.unknown")}
+            </span>
+            {/* El aviso va ANTES que las acciones: que el punto siga existiendo pesa más que
+                lo que esté pidiendo. */}
+            {status === "cerrado" ? (
+              <p className="prof-warn">{t("status.closedWarning")}</p>
+            ) : status === "lleno" ? (
+              <p className="prof-warn">{t("status.fullWarning")}</p>
+            ) : isStale(center) ? (
+              <p className="prof-warn">
+                {t("status.staleWarning", { n: staleDays ?? MAPCFG.staleAfterDays })}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="dactions">
+            {hasCoords(center) && !digital ? (
+              <a
+                className="btnp"
+                href={directionsUrl(center)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon.directions />
+                {t("center.directions")}
+              </a>
+            ) : null}
+            {center.whatsapp ? (
+              <a
+                className="btng"
+                href={whatsappHref(center.whatsapp)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon.whatsapp />
+                {t("center.whatsapp")}
+              </a>
+            ) : null}
+            {center.phone ? (
+              <a className="btng" href={telHref(center.phone)}>
+                <Icon.phone />
+                {t("center.call")}
+              </a>
+            ) : null}
+            {/* Al mapa, con este punto ya abierto: quien llegó por un enlace y quiere ver
+                qué hay alrededor no debería tener que buscarlo otra vez. */}
+            <Link className="btng" href={`/?c=${center.id}`}>
+              <Icon.target />
+              {t("entry.enter")}
+            </Link>
+          </div>
         </div>
 
-        {/* El aviso va ANTES que nada: que el punto siga existiendo pesa más que lo que
-            esté pidiendo. */}
-        {status === "cerrado" ? (
-          <p className="prof-warn">{t("status.closedWarning")}</p>
-        ) : status === "lleno" ? (
-          <p className="prof-warn">{t("status.fullWarning")}</p>
-        ) : isStale(center) ? (
-          <p className="prof-warn">
-            {t("status.staleWarning", { n: staleDays ?? MAPCFG.staleAfterDays })}
-          </p>
-        ) : null}
-
-        <div className="dactions">
-          {hasCoords(center) && !digital ? (
-            <a
-              className="btnp"
-              href={directionsUrl(center)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon.directions />
-              {t("center.directions")}
-            </a>
-          ) : null}
-          {center.whatsapp ? (
-            <a
-              className="btng"
-              href={whatsappHref(center.whatsapp)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon.whatsapp />
-              {t("center.whatsapp")}
-            </a>
-          ) : null}
-          {center.phone ? (
-            <a className="btng" href={telHref(center.phone)}>
-              <Icon.phone />
-              {t("center.call")}
-            </a>
-          ) : null}
-          {/* Al mapa, con este punto ya abierto: quien llegó por un enlace y quiere ver
-              qué hay alrededor no debería tener que buscarlo otra vez. */}
-          <Link className="btng" href={`/?c=${center.id}`}>
-            <Icon.target />
-            {t("entry.enter")}
-          </Link>
+        {/* Dos columnas en pantalla ancha: la información fija a un lado y lo que se explora
+            en pestañas al otro. En el teléfono la columna no se pinta y la información sigue
+            siendo la primera pestaña. */}
+        <div className={`prof-grid${tabs.length > 1 ? " prof-grid-two" : ""}`}>
+          {tabs.length > 1 ? <aside className="prof-side">{tabs[0]!.content}</aside> : null}
+          <div className="prof-main">
+            <ProfileTabs tabs={tabs} initial={inicial} wideOmit="info" />
+          </div>
         </div>
-
-        <ProfileTabs tabs={tabs} initial={inicial} />
       </div>
     </main>
 

@@ -11,6 +11,8 @@ import { useI18n } from "@/i18n/context";
 import CenterManagers from "@/features/admin/CenterManagers";
 import SupplyPicker from "@/features/centers/SupplyPicker";
 import SupplyQuickAdd from "@/features/centers/SupplyQuickAdd";
+import HoursPicker from "@/features/centers/HoursPicker";
+import { scheduleText } from "@/features/centers/HoursView";
 import { geocode, matchRegion, type GeoResult } from "@/features/admin/geocode";
 import type { DictKey } from "@/i18n";
 import { useSite } from "@/features/app/SiteProvider";
@@ -84,6 +86,7 @@ export default function CenterForm({
     category: info?.category ?? "",
     description: info?.description ?? prefill?.description ?? "",
     schedule: info?.schedule ?? "",
+    hours: info?.hours ?? null,
     contactName: info?.contact_name ?? "",
     socialUrl: info?.social_url ?? "",
     website: info?.website ?? prefill?.website ?? "",
@@ -218,7 +221,10 @@ export default function CenterForm({
         help: form.help,
         category: form.category.trim() || null,
         description: form.description.trim() || null,
-        schedule: form.schedule.trim() || null,
+        // Lo marcado manda, y su resumen en texto va también a `schedule` para la API y
+        // las bases sin `db/12_horario.sql`. Sin nada marcado se conserva el texto de antes.
+        schedule: scheduleText(form.hours) ?? (form.schedule.trim() || null),
+        hours: form.hours,
         contact_name: form.contactName.trim() || null,
         social_url: form.socialUrl.trim() || null,
         website: form.website.trim() || null,
@@ -447,13 +453,17 @@ export default function CenterForm({
           </div>
         </div>
 
-        <div className="frow">
-          <Field label={t("form.category")}>
-            <Input value={form.category} onChange={(e) => set("category", e.target.value)} />
-          </Field>
-          <Field label={t("form.schedule")}>
-            <Input value={form.schedule} onChange={(e) => set("schedule", e.target.value)} />
-          </Field>
+        <Field label={t("form.category")}>
+          <Input value={form.category} onChange={(e) => set("category", e.target.value)} />
+        </Field>
+
+        <div className="fld">
+          <span className="flabel">{t("form.schedule")}</span>
+          <HoursPicker
+            value={form.hours}
+            onChange={(next) => set("hours", next)}
+            legacyText={form.schedule || null}
+          />
         </div>
 
         <Field label={t("form.description")}>

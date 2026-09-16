@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Activity, Campaign, InitiativePost } from "@/domain/types";
 import type { InitiativeProfile } from "@/data/initiatives";
 import { Icon } from "@/ui/icons";
@@ -9,6 +9,10 @@ import { getSupabase } from "@/lib/supabase/client";
 import { useAccount } from "@/features/account/useAccount";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import { BRAND } from "@/config";
+import { fetchMyAttendance, joinActivity, leaveActivity } from "@/data/events";
+import { downloadIcs, googleCalendarUrl, type CalendarEvent } from "@/lib/calendar";
+
+const noSubscribe = () => () => {};
 
 /**
  * Lo que una iniciativa cuenta de sí misma dentro de su ficha: lo que está recaudando, lo
@@ -50,12 +54,12 @@ export default function InitiativeSections({
 
   return (
     <>
-      {campaigns.length > 0 ? <CampaignList campaigns={campaigns} /> : null}
+      {campaigns.length > 0 ? <CampaignList campaigns={campaigns} titled /> : null}
       {/* Debajo de las campañas: quien acaba de leer una meta concreta es justo quien
           quiere saber por dónde aportar. */}
       {hayDonacion ? <DonateBox donate={donate} locationId={locationId} /> : null}
-      {activities.length > 0 ? <ActivityList activities={activities} /> : null}
-      {posts.length > 0 ? <PostList posts={posts} campaigns={campaigns} /> : null}
+      {activities.length > 0 ? <ActivityList activities={activities} titled /> : null}
+      {posts.length > 0 ? <PostList posts={posts} campaigns={campaigns} titled /> : null}
     </>
   );
 }
@@ -165,11 +169,16 @@ export function DonateBox({
 
 // ── Campañas ───────────────────────────────────────────────────────────────
 
-export function CampaignList({ campaigns }: { campaigns: Campaign[] }) {
+/**
+ * `titled` sólo donde las secciones van seguidas. Dentro de una pestaña el título repetía
+ * el nombre de la pestaña que se acaba de tocar —«Novedades» y debajo «Lo que ya hizo»—, y
+ * era una línea menos de contenido en la pantalla de un teléfono.
+ */
+export function CampaignList({ campaigns, titled = false }: { campaigns: Campaign[]; titled?: boolean }) {
   const { t } = useI18n();
   return (
     <section className="isec">
-      <h3 className="dsection">{t("campaign.title")}</h3>
+      {titled ? <h3 className="dsection">{t("campaign.title")}</h3> : null}
       {campaigns.map((c) => (
         <CampaignCard key={c.id} campaign={c} />
       ))}
@@ -177,7 +186,7 @@ export function CampaignList({ campaigns }: { campaigns: Campaign[] }) {
   );
 }
 
-function CampaignCard({ campaign }: { campaign: Campaign }) {
+export function CampaignCard({ campaign }: { campaign: Campaign }) {
   const { t, lang } = useI18n();
   const ago = useTimeAgo();
 
@@ -190,7 +199,13 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
   const alcanzada = campaign.status === "reached" || campaign.raised_amount >= campaign.goal_amount;
 
   return (
-    <article className="icamp">
+    <article className={`icamp${campaign.image_url ? " icamp-withimg" : ""}`}>
+      {campaign.image_url ? (
+        // Sin `next/image`: el bucket es de cada país. La proporción reserva el hueco antes
+        // de que llegue la imagen, para que el texto de abajo no salte al cargar.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="icamp-img" src={campaign.image_url} alt="" loading="lazy" decoding="async" />
+      ) : null}
       <div className="icamp-head">
         <h4 className="icamp-t">{campaign.title}</h4>
         {alcanzada ? <span className="icamp-done">{t("campaign.reached")}</span> : null}
@@ -242,21 +257,62 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
 
 // ── Agenda ─────────────────────────────────────────────────────────────────
 
-export function ActivityList({ activities }: { activities: Activity[] }) {
+export function ActivityList({
+  activities,
+  titled = false,
+  where = null,
+  extra,
+}: {
+  activities: Activity[];
+  titled?: boolean;
+  /** Dónde es, cuando el evento no dice otro sitio: la dirección de la sede. */
+  where?: string | null;
+  /**
+   * Lo que ve la organización bajo cada evento suyo (quién va). Con esto no se ofrece
+   * «Me apunto»: apuntarse a tu propio evento no le dice nada a nadie.
+   */
+  extra?: (activity: Activity) => React.ReactNode;
+}) {
   const { t, lang } = useI18n();
+  const account = useAccount(true);
+  const [mine, setMine] = useState<Set<string>>(() => new Set());
+
+  // La fecha y la hora, sólo en el navegador. El servidor formatea en SU zona horaria —UTC
+  // en producción—, así que la página pública llegaba diciendo «2:00 p. m.» para un evento
+  // de las 10:00 hasta que hidrataba, y encima la diferencia rompía la hidratación. El
+  // hueco se reserva con un espacio para que nada salte al aparecer.
+  const enCliente = useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
+
+  // A qué se apuntó ya esta persona. Una consulta por lista, no una por evento.
+  useEffect(() => {
+    const sb = getSupabase();
+    if (!sb || !account.userId) return;
+    let vivo = true;
+    void fetchMyAttendance(sb, account.userId).then((ids) => {
+      if (vivo) setMine(ids);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [account.userId]);
+
   return (
     <section className="isec">
-      <h3 className="dsection">{t("activity.title")}</h3>
+      {titled ? <h3 className="dsection">{t("activity.title")}</h3> : null}
       {activities.map((a) => (
         <article key={a.id} className="iact">
           <span className="iact-when">
-            <b>{formatDayNumber(a.starts_at, lang)}</b>
-            <span>{formatMonthShort(a.starts_at, lang)}</span>
+            <b>{enCliente ? formatDayNumber(a.starts_at, lang) : " "}</b>
+            <span>{enCliente ? formatMonthShort(a.starts_at, lang) : " "}</span>
           </span>
           <span className="iact-body">
             <span className="iact-t">{a.title}</span>
             <span className="iact-meta">
-              {formatTime(a.starts_at, lang)}
+              {enCliente ? formatTime(a.starts_at, lang) : " "}
               {a.place ? ` · ${a.place}` : ""}
             </span>
             {a.description ? <span className="iact-d">{a.description}</span> : null}
@@ -266,6 +322,23 @@ export function ActivityList({ activities }: { activities: Activity[] }) {
                 {t("activity.needsVolunteers")}
               </span>
             ) : null}
+            {extra ? extra(a) : null}
+            <EventActions
+              activity={a}
+              canJoin={!extra}
+              where={where}
+              userId={account.userId}
+              checked={account.checked}
+              going={mine.has(a.id)}
+              onChange={(on) =>
+                setMine((prev) => {
+                  const next = new Set(prev);
+                  if (on) next.add(a.id);
+                  else next.delete(a.id);
+                  return next;
+                })
+              }
+            />
           </span>
         </article>
       ))}
@@ -273,14 +346,149 @@ export function ActivityList({ activities }: { activities: Activity[] }) {
   );
 }
 
+/** Un evento, tal como lo lleva un calendario. */
+export function toCalendarEvent(a: Activity, where: string | null): CalendarEvent {
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  return {
+    uid: `${a.id}@helpmaps`,
+    title: a.title,
+    description: a.description,
+    startsAt: a.starts_at,
+    endsAt: a.ends_at,
+    location: a.place ?? where,
+    url: origin ? `${origin}/c/${a.location_id}?tab=agenda` : null,
+  };
+}
+
+/**
+ * «Me apunto» y llevarlo al calendario.
+ *
+ * Apuntarse es declarado: le dice a la organización cuánta gente espera y deja el evento en
+ * «Mis eventos». NO suma experiencia; eso lo hará el QR de reconocimiento, cuando la
+ * organización confirme que la persona vino.
+ *
+ * Al apuntarse se abren solas las opciones de calendario: es el momento en que la intención
+ * está fresca, y el recordatorio del teléfono es lo que hace que de verdad vaya.
+ */
+function EventActions({
+  activity,
+  canJoin,
+  where,
+  userId,
+  checked,
+  going,
+  onChange,
+}: {
+  activity: Activity;
+  canJoin: boolean;
+  where: string | null;
+  userId: string | null;
+  checked: boolean;
+  going: boolean;
+  onChange: (going: boolean) => void;
+}) {
+  const { t } = useI18n();
+  const [busy, setBusy] = useState(false);
+  const [fallo, setFallo] = useState(false);
+  const [cal, setCal] = useState(false);
+  // El contador se mueve con el toque, sin esperar a recargar el evento.
+  const [delta, setDelta] = useState(0);
+  const count = Math.max(0, activity.going_count + delta);
+
+  async function toggle() {
+    const sb = getSupabase();
+    if (!sb || !userId || busy) return;
+    setBusy(true);
+    setFallo(false);
+    const next = !going;
+    try {
+      if (next) await joinActivity(sb, activity.id, userId);
+      else await leaveActivity(sb, activity.id, userId);
+      onChange(next);
+      setDelta((d) => d + (next ? 1 : -1));
+      setCal(next);
+    } catch {
+      setFallo(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const ev = toCalendarEvent(activity, where);
+
+  return (
+    <span className="iact-acts">
+      <span className="iact-row">
+        {!canJoin || !checked ? null : userId ? (
+          <button
+            type="button"
+            className={`iact-join${going ? " iact-join-on" : ""}`}
+            aria-pressed={going}
+            disabled={busy}
+            onClick={() => void toggle()}
+          >
+            {going ? <Icon.check /> : <Icon.plus />}
+            {going ? t("event.going") : t("event.join")}
+          </button>
+        ) : (
+          <a className="iact-join" href="/login">
+            <Icon.user />
+            {t("event.signInToJoin")}
+          </a>
+        )}
+        <button
+          type="button"
+          className={`iact-cal${cal ? " iact-cal-on" : ""}`}
+          aria-expanded={cal}
+          onClick={() => setCal((v) => !v)}
+        >
+          <Icon.clock />
+          {t("event.addToCalendar")}
+        </button>
+      </span>
+
+      {canJoin && count > 0 ? (
+        <span className="iact-count">{t(count === 1 ? "event.goingOne" : "event.goingN", { n: count })}</span>
+      ) : null}
+      {fallo ? <span className="lerr">{t("error.generic")}</span> : null}
+
+      {cal ? <CalendarChoices event={ev} hint={going} /> : null}
+    </span>
+  );
+}
+
+/** Google Calendar o un `.ics`. Se reusa donde se crea un evento y en «Mis eventos». */
+export function CalendarChoices({ event, hint = false }: { event: CalendarEvent; hint?: boolean }) {
+  const { t } = useI18n();
+  return (
+    <span className="iact-calmenu">
+      {hint ? <span className="iact-calhint">{t("event.calHint")}</span> : null}
+      <a className="btng" href={googleCalendarUrl(event)} target="_blank" rel="noopener noreferrer">
+        {t("event.google")}
+      </a>
+      <button type="button" className="btng" onClick={() => downloadIcs(event, BRAND.platform)}>
+        {t("event.ics")}
+      </button>
+    </span>
+  );
+}
+
 // ── Lo que ya hizo ─────────────────────────────────────────────────────────
 
-export function PostList({ posts, campaigns }: { posts: InitiativePost[]; campaigns: Campaign[] }) {
+export function PostList({
+  posts,
+  campaigns,
+  titled = false,
+}: {
+  posts: InitiativePost[];
+  campaigns: Campaign[];
+  titled?: boolean;
+}) {
   const { t } = useI18n();
   const ago = useTimeAgo();
   return (
     <section className="isec">
-      <h3 className="dsection">{t("post.title")}</h3>
+      {titled ? <h3 className="dsection">{t("post.title")}</h3> : null}
       {posts.map((p) => {
         // El título de la campaña a la que rinde cuentas, si sigue viva. Si se cerró, la
         // entrada se queda igual: lo que se entregó siguió pasando aunque la meta ya no

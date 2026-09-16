@@ -2,6 +2,7 @@ import type { Center, CenterInfo, CenterStatus, Location, LocationType } from "@
 import { helpKinds, isLocationType, toCenterStatus } from "@/domain/types";
 import type { Region } from "@/config/types";
 import { MAPCFG } from "@/config";
+import { parseHours } from "@/domain/hours";
 
 // Everything the app decides ABOUT a point lives here: no component re-implements
 // "is this stale", "is this asking for help", "does this match the search".
@@ -34,6 +35,7 @@ export function mapCenterInfo(row: Row | null | undefined): CenterInfo | null {
     category: str(row.category),
     description: str(row.description),
     schedule: str(row.schedule),
+    hours: parseHours(row.hours),
     contact_name: str(row.contact_name),
     social_url: str(row.social_url),
     website: str(row.website),

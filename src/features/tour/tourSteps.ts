@@ -313,9 +313,9 @@ export const STAFF_STEPS: TourStep[] = [
     eyebrow: { es: "El panel", en: "The panel", pt: "O painel" },
     title: { es: "Qué hay en cada pestaña", en: "What is in each tab", pt: "O que há em cada aba" },
     body: {
-      es: "Novedades te dice qué cambió y qué está pendiente. Puntos es donde publicas y editas. Sugerencias son los aportes del público esperando confirmación. Solicitudes son quienes piden sumarse.",
-      en: "Activity tells you what changed and what is pending. Points is where you publish and edit. Suggestions are public contributions waiting for confirmation. Requests are people asking to join.",
-      pt: "Novidades mostra o que mudou e o que está pendente. Pontos é onde você publica e edita. Sugestões são contribuições do público aguardando confirmação. Solicitações são quem pede para entrar.",
+      es: "Novedades te dice qué cambió y qué está pendiente. Puntos es donde publicas y editas. Sugerencias son los aportes del público esperando confirmación. Voluntariado reúne las solicitudes para sumarse y el equipo con acceso, donde se revoca.",
+      en: "Activity tells you what changed and what is pending. Points is where you publish and edit. Suggestions are public contributions waiting for confirmation. Volunteers holds requests to join and the team with access, where it is revoked.",
+      pt: "Novidades mostra o que mudou e o que está pendente. Pontos é onde você publica e edita. Sugestões são contribuições do público aguardando confirmação. Voluntariado reúne os pedidos para entrar e a equipe com acesso, onde ele é revogado.",
     },
   },
   {

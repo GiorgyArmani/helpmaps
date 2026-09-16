@@ -74,6 +74,23 @@ export async function shrinkImage(file: File): Promise<File> {
 }
 
 /**
+ * Las medidas de una imagen, sin subirla. Null si el navegador no la puede abrir.
+ *
+ * La usa el perfil para avisar ANTES de que una portada vertical o una foto diminuta
+ * aparezca recortada o borrosa delante de todo el mundo.
+ */
+export async function imageSize(file: File): Promise<{ width: number; height: number } | null> {
+  try {
+    const bitmap = await crearBitmap(file);
+    const size = { width: bitmap.width, height: bitmap.height };
+    cerrar(bitmap);
+    return size;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * `createImageBitmap` decodifica FUERA DEL HILO PRINCIPAL: la interfaz no se congela
  * mientras se abre una foto de ocho megapíxeles. `<img>` con un object URL decodifica en el
  * hilo principal y deja la pantalla clavada un segundo largo en un teléfono modesto. El

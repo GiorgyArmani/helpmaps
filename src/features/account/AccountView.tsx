@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Center } from "@/domain/types";
 import { useI18n } from "@/i18n/context";
 import Recognition from "@/features/account/Recognition";
+import MyEvents from "@/features/account/MyEvents";
 import type { DictKey } from "@/i18n";
 import { Icon } from "@/ui/icons";
 import { Button, Input, Notice, Spinner } from "@/ui/primitives";
@@ -218,6 +219,10 @@ export default function AccountView({
           Antes de los puntos guardados: guardar un refugio es para ti, aportar es lo que
           hiciste por otros, y es lo que da sentido a volver a esta pantalla. */}
       {account.userId ? <Recognition userId={account.userId} /> : null}
+
+      {/* ── Mis eventos ─────────────────────────────────────────────────────
+          Justo después de lo aportado: es lo que viene, y lo que más fácil se olvida. */}
+      {account.userId ? <MyEvents userId={account.userId} onOpenCenter={onOpenCenter} /> : null}
 
       {/* ── Tus puntos ──────────────────────────────────────────────────── */}
       <section className="acc-sec">

@@ -1,3 +1,5 @@
+import type { WeeklyHours } from "@/domain/hours";
+
 // Domain model — mirrors the Supabase schema in `db/`. Country-agnostic by construction:
 // a region is a `string` code resolved against the active CountryConfig, never a union of
 // one country's provinces. That single change is what makes this repo cloneable.
@@ -109,7 +111,10 @@ export interface CenterInfo {
   /** Free text category — initiatives appear faster than any enum could track. */
   category: string | null;
   description: string | null;
+  /** Free text, as written by hand. Kept for the rows that predate `hours`. */
   schedule: string | null;
+  /** Opening hours marked day by day (`db/12_horario.sql`). Wins over `schedule` when set. */
+  hours: WeeklyHours | null;
   contact_name: string | null;
   social_url: string | null;
   /** Website, if any. Digital initiatives are mostly reached through this and Instagram. */
@@ -237,6 +242,8 @@ export interface Campaign {
   ends_on: string | null;
   status: CampaignStatus;
   updated_at: string | null;
+  /** Foto o banner de la campaña (`db/13_eventos.sql`). Null = sin imagen. */
+  image_url: string | null;
 }
 
 export type ActivityStatus = "draft" | "scheduled" | "done" | "cancelled";
@@ -253,6 +260,8 @@ export interface Activity {
   place: string | null;
   needs_volunteers: boolean;
   status: ActivityStatus;
+  /** Cuántas personas se apuntaron. Lo mantiene un trigger; 0 sin `db/13_eventos.sql`. */
+  going_count: number;
 }
 
 export type PostKind = "avance" | "entrega" | "necesidad";

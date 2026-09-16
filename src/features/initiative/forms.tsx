@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import type { InitiativeProfile, CampaignDraft } from "@/data/initiatives";
-import { createPost, saveActivity, saveCampaign, uploadPostImage } from "@/data/initiatives";
+import {
+  createPost,
+  saveActivity,
+  saveCampaign,
+  uploadCampaignImage,
+  uploadPostImage,
+} from "@/data/initiatives";
+import { imageSize } from "@/lib/image";
+import type { CalendarEvent } from "@/lib/calendar";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
 import { getSupabase } from "@/lib/supabase/client";
@@ -28,12 +36,14 @@ export function CampaignForm({ locationId, onSaved }: { locationId: string; onSa
     // Nace ACTIVA: quien acaba de escribir una meta quiere que se vea. Un borrador por
     // defecto es una campaña que nadie publica nunca porque nadie sabe que hay que hacerlo.
     status: "active",
+    image_url: null,
   });
   const [guardando, setGuardando] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const listo = d.title.trim().length >= 3 && d.purpose.trim().length >= 10 && d.goal_amount > 0
-    && d.goal_unit.trim().length > 0;
+    && d.goal_unit.trim().length > 0 && !subiendo;
 
   async function guardar() {
     const sb = getSupabase();
@@ -74,6 +84,12 @@ export function CampaignForm({ locationId, onSaved }: { locationId: string; onSa
       <Field label={t("mine.f.until")}>
         <input className="finput" type="date" value={d.ends_on ?? ""} onChange={(e) => setD({ ...d, ends_on: e.target.value || null })} />
       </Field>
+      <CampaignImagePicker
+        locationId={locationId}
+        value={d.image_url}
+        onChange={(url) => setD((x) => ({ ...x, image_url: url }))}
+        onBusy={setSubiendo}
+      />
       {error ? <p className="onb-err" role="status">{error}</p> : null}
       <button type="button" className="btnp" onClick={() => void guardar()} disabled={!listo || guardando}>
         {guardando ? t("common.saving") : t("mine.publish")}
@@ -82,7 +98,90 @@ export function CampaignForm({ locationId, onSaved }: { locationId: string; onSa
   );
 }
 
-export function ActivityForm({ locationId, onSaved }: { locationId: string; onSaved: () => void }) {
+/**
+ * La foto o banner de una campaña.
+ *
+ * Sube al elegirla, como la foto de una publicación: el envío espera mientras se escribe el
+ * resto, y «Publicar» no se queda pensando. La proporción es 16:9 —la de la tarjeta— y el
+ * aviso de medidas va delante, no después de ver la imagen recortada.
+ */
+export function CampaignImagePicker({
+  locationId,
+  value,
+  onChange,
+  onBusy,
+}: {
+  locationId: string;
+  value: string | null;
+  onChange: (url: string | null) => void;
+  onBusy?: (busy: boolean) => void;
+}) {
+  const { t } = useI18n();
+  const [subiendo, setSubiendo] = useState(false);
+  const [fallo, setFallo] = useState(false);
+  const [aviso, setAviso] = useState(false);
+
+  async function elegir(file: File | null) {
+    const sb = getSupabase();
+    if (!sb || !file) return;
+    setSubiendo(true);
+    onBusy?.(true);
+    setFallo(false);
+    setAviso(false);
+    try {
+      const size = await imageSize(file);
+      // Muy vertical o muy pequeña: se sube igual, pero se dice cómo va a quedar.
+      if (size && (size.width / size.height < 1.4 || size.width < 800)) setAviso(true);
+      onChange(await uploadCampaignImage(sb, locationId, file));
+    } catch {
+      setFallo(true);
+    } finally {
+      setSubiendo(false);
+      onBusy?.(false);
+    }
+  }
+
+  return (
+    <Field label={t("campaign.image")} hint={t("campaign.imageHint")}>
+      <label className="mine-drop mine-drop-wide camp-drop">
+        {value ? (
+          // eslint-disable-next-line @next/next/no-img-element -- bucket por país
+          <img src={value} alt="" />
+        ) : (
+          <span className="mine-drop-empty">
+            <Icon.camera />
+            {subiendo ? t("pedit.uploading") : t("mine.imagePick")}
+          </span>
+        )}
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          disabled={subiendo}
+          onChange={(e) => {
+            void elegir(e.target.files?.[0] ?? null);
+            e.target.value = "";
+          }}
+        />
+      </label>
+      {value ? (
+        <button type="button" className="mine-camp-btn" onClick={() => onChange(null)}>
+          {t("mine.imageClear")}
+        </button>
+      ) : null}
+      {aviso ? <span className="fhint">{t("campaign.imageWarn")}</span> : null}
+      {fallo ? <span className="onb-err">{t("mine.imageFail")}</span> : null}
+    </Field>
+  );
+}
+
+export function ActivityForm({
+  locationId,
+  onSaved,
+}: {
+  locationId: string;
+  /** Recibe el evento ya publicado, para ofrecer llevarlo al calendario. */
+  onSaved: (event: CalendarEvent) => void;
+}) {
   const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [when, setWhen] = useState("");
@@ -100,18 +199,28 @@ export function ActivityForm({ locationId, onSaved }: { locationId: string; onSa
     setGuardando(true);
     setError(null);
     try {
-      await saveActivity(sb, {
+      // `datetime-local` da hora local sin zona. `new Date()` la interpreta en la del
+      // navegador, que es la de quien la escribe, y `toISOString()` la manda en UTC.
+      const startsAt = new Date(when).toISOString();
+      const id = await saveActivity(sb, {
         location_id: locationId,
         title: title.trim(),
         description: description.trim() || null,
-        // `datetime-local` da hora local sin zona. `new Date()` la interpreta en la del
-        // navegador, que es la de quien la escribe, y `toISOString()` la manda en UTC.
-        starts_at: new Date(when).toISOString(),
+        starts_at: startsAt,
         place: place.trim() || null,
         needs_volunteers: vol,
         status: "scheduled",
       });
-      onSaved();
+      const origin = window.location.origin;
+      onSaved({
+        uid: `${id ?? `${locationId}-${startsAt}`}@helpmaps`,
+        title: title.trim(),
+        description: description.trim() || null,
+        startsAt,
+        endsAt: null,
+        location: place.trim() || null,
+        url: `${origin}/c/${locationId}?tab=agenda`,
+      });
     } catch {
       setError(t("error.generic"));
     } finally {

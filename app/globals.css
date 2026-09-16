@@ -3583,6 +3583,24 @@ a.hub-card:hover {
   color: inherit;
 }
 
+/* The team list's actions take someone's access away, so a thumb has to be able to hit
+   the right one: full 44px targets with the 8px gap between them, not the 34px of the
+   denser point list. */
+.team-acts {
+  gap: 8px;
+}
+
+.team-acts .amini {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+}
+
+.team-acts .amini svg {
+  width: 17px;
+  height: 17px;
+}
+
 
 /* Already indented and already padded by the overlay body, which the rail is now the
    first child of — a second copy of both just pushed it away from the header it belongs
@@ -8228,4 +8246,1453 @@ fieldset.fieldset {
   width: 62%;
   height: 44px;
   border-radius: var(--r-md);
+}
+
+/* ─────────────────────────  El horario marcado  ─────────────────────────
+ *
+ * Primero la respuesta —abierto o cerrado ahora— y debajo la semana. El punto de color no
+ * va solo: siempre lleva la palabra, porque el color no puede ser lo único que lo dice.
+ */
+
+.hours {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dval .hours {
+  align-items: flex-end;
+}
+
+.hours-now {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--mut-track);
+}
+
+.hours-now b {
+  font-weight: 700;
+}
+
+.hours-now-open {
+  color: var(--ok);
+}
+
+.hours-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+.hours-when {
+  font-weight: 500;
+  color: var(--mut-track);
+}
+
+.hours-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hours-line {
+  display: flex;
+  gap: 10px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.hours-days {
+  min-width: 64px;
+  font-weight: 600;
+}
+
+.hours-shifts {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.dval .hours-line {
+  justify-content: flex-end;
+}
+
+.dval .hours-days {
+  min-width: 0;
+}
+
+/* ── El selector ──────────────────────────────────────────────────────── */
+
+.hpick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Siete columnas iguales: a 390px cada día mide unos 46px, por encima del mínimo del
+   pulgar, y los siete caben en una fila sin partirse. */
+.hpick-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.hpick-day {
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #fff;
+  color: var(--mut-track);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease),
+    border-color var(--t-tap) var(--ease);
+}
+
+.hpick-day-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.hpick-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hpick-preset {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hpick-preset-on {
+  background: var(--soft);
+  border-color: var(--ink);
+}
+
+.hpick .mine-check {
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.hpick .mine-check input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.hpick-shifts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hpick-shift {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hpick-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.hpick-time {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hpick-time .finput {
+  min-height: 48px;
+  padding: 10px;
+}
+
+.hpick-remove {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--mut);
+  cursor: pointer;
+}
+
+.hpick-remove svg {
+  width: 16px;
+  height: 16px;
+}
+
+.hpick-warn {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--danger);
+}
+
+.hpick-add {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hpick-add svg {
+  width: 16px;
+  height: 16px;
+}
+
+.hpick-daygroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.hpick-dayname {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.hpick-legacy {
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ─────────────────────  El perfil de la organización  ─────────────────────
+ *
+ * La misma página que ve el público —portada, foto, nombre, pestañas— con los controles
+ * donde van las cosas. Reusa las piezas de `/c/<id>` (`.prof-cover`, `.prof-photo`,
+ * `.prof-name`) para que lo que se edita sea lo mismo que se publica.
+ */
+
+.pedit {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 28px;
+}
+
+.pedit-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pedit-back,
+.pedit-gear {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--t-tap) var(--ease);
+}
+
+.pedit-back:hover,
+.pedit-gear:hover {
+  background: var(--soft);
+}
+
+.pedit-back svg,
+.pedit-gear svg {
+  width: 19px;
+  height: 19px;
+}
+
+.pedit-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+}
+
+.pedit-bar-title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.pedit-bar-sub {
+  margin: -6px 0 0;
+  font-size: 0.8125rem;
+  color: var(--mut-track);
+}
+
+/* Editar / Vista pública: un interruptor de dos posiciones, no dos botones sueltos. */
+.pedit-mode {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--soft);
+}
+
+.pedit-modeb {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--mut-track);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease);
+}
+
+.pedit-modeb svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.pedit-modeb-on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-1);
+}
+
+/* La portada, como tarjeta dentro del canalón y no a sangre: el panel ya pone el margen, y
+   un bloque que se lo salta es justo lo que el sistema visual prohíbe. */
+.pedit-cover.prof-cover {
+  height: 140px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.pedit-coverwrap {
+  position: relative;
+}
+
+/* Portada y foto en modo edición: la imagen entera es el botón. */
+.pedit-pick {
+  display: block;
+  cursor: pointer;
+}
+
+.pedit-pick:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.pedit-imgbtn.pedit-cover-cta {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  pointer-events: none;
+}
+
+.pedit-imgbtn.pedit-cover-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.pedit-imgbtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--e-2);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.pedit-imgbtn svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* El `input` de archivo, invisible y encima de su etiqueta: el control de fábrica no se
+   puede estilar y se dibuja distinto en cada navegador. */
+.pedit-file {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pedit-photo-wrap {
+  position: relative;
+  z-index: 1;
+  width: max-content;
+  margin: -52px 0 -6px 14px;
+}
+
+.pedit-photo.prof-photo {
+  position: relative;
+  margin-bottom: 0;
+}
+
+.pedit-photo.pedit-pick {
+  display: flex;
+}
+
+.pedit-photo-busy {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+}
+
+.pedit-photo-btn {
+  position: absolute;
+  right: -12px;
+  bottom: -8px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--e-2);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.pedit-photo-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pedit-id {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.pedit-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--mut-track);
+}
+
+.pedit-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pedit-status .mine-st {
+  min-height: 44px;
+}
+
+.pedit-claims {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  box-shadow: var(--e-1);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pedit-claims svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.pedit-claims > svg:first-child {
+  color: var(--danger);
+}
+
+.pedit-claims > svg:last-child {
+  color: var(--mut);
+}
+
+.pedit-claims span {
+  flex: 1 1 auto;
+}
+
+.pedit-claims b,
+.pedit-count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+}
+
+.pedit-complete {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: var(--soft);
+}
+
+.pedit-complete-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.pedit-complete-head b {
+  flex: 0 0 auto;
+}
+
+.pedit-complete-bar {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 999px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.pedit-complete-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ok);
+  transition: width var(--t-ui) var(--ease);
+}
+
+.pedit-complete-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--mut-track);
+}
+
+.pedit-complete-next {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pedit-complete-next svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.pedit-complete-next {
+  position: relative;
+  overflow: hidden;
+}
+
+.pedit-quick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pedit-q {
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  box-shadow: var(--e-1);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform var(--t-tap) var(--ease),
+    box-shadow var(--t-tap) var(--ease);
+}
+
+.pedit-q:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+.pedit-q svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pedit-tabs {
+  scroll-margin-top: 8px;
+}
+
+.ptab-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Dentro de una pestaña, el título de la sección repite el nombre de la pestaña. */
+.ptab-body .isec .dsection {
+  display: none;
+}
+
+.pedit-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pedit-new svg {
+  width: 17px;
+  height: 17px;
+}
+
+.pedit-none {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+/* Una campaña publicada con su control debajo, pegados: se leen como una sola pieza. */
+.pedit-camp .icamp {
+  margin-bottom: 0;
+  border-radius: var(--r-md) var(--r-md) 0 0;
+}
+
+.pedit-camp-btn,
+.pedit-camp-edit {
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  background: var(--soft);
+}
+
+.pedit-camp-btn {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pedit-camp-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pedit-camp-edit {
+  padding: 12px;
+}
+
+.pedit-danger {
+  color: var(--danger);
+}
+
+/* El compositor de cualquier red: tu foto y una línea que invita a escribir. */
+.pedit-composer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 16px 8px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--e-1);
+  color: var(--mut-track);
+  font-family: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pedit-composer > svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  color: var(--mut);
+}
+
+.pedit-composer-av {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--soft);
+  overflow: hidden;
+}
+
+.pedit-composer-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pedit-composer-q {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pedit-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  box-shadow: var(--e-2);
+}
+
+/* Los formularios de publicar traen su propia caja gris; dentro de esta tarjeta sobra. */
+.pedit-compose .mine-form {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+/* ── Los bloques editables ─────────────────────────────────────────────── */
+
+.ecards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ecard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  transition: box-shadow var(--t-ui) var(--ease);
+}
+
+.ecard-open {
+  box-shadow: var(--e-2);
+}
+
+.ecard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+}
+
+.ecard-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mut-track);
+}
+
+.ecard-title svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* El lápiz mide 44px de área aunque dibuje 18: se come el margen de la tarjeta para no
+   empujar el título hacia abajo. */
+.ecard-edit {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin: -6px -10px -6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--mut);
+  cursor: pointer;
+  transition: background var(--t-tap) var(--ease);
+}
+
+.ecard-edit:hover {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.ecard-edit svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ecard-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--mut-track);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ecard-empty svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.ecard-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ecard-body .dtags,
+.ecard-body .dneed {
+  margin-bottom: 0;
+}
+
+.ecard-body .dneed {
+  align-self: stretch;
+}
+
+/* Dentro de la tarjeta, la tabla pierde su marco: ya tiene uno alrededor. */
+.ecard .drows {
+  align-self: stretch;
+  border: 0;
+  border-radius: 0;
+}
+
+.ecard .drow {
+  padding: 10px 0;
+}
+
+.ecard-text {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.ecard-pre {
+  white-space: pre-line;
+}
+
+.ecard-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.ecard-link svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.ecard-lock {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--mut-track);
+}
+
+.ecard-lock svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.ecard-acts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ecard-acts .btnp,
+.ecard-acts .btng {
+  min-height: 44px;
+  padding: 11px 12px;
+}
+
+.ecard .claim:first-of-type {
+  border-top: 0;
+}
+
+/* ── Configuración de la organización ──────────────────────────────────── */
+
+.org-soon {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--mut-track);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.org-url {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  word-break: break-all;
+}
+
+/* «Cuánto» y «de qué» a la misma altura aunque sólo uno lleve pista. */
+.pedit-compose .mine-two {
+  align-items: flex-end;
+}
+
+/* Las medidas recomendadas, bajo las imágenes y sólo al editar. */
+.pedit-imghint,
+.pedit-imgwarn {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--mut-track);
+}
+
+.pedit-imghint svg,
+.pedit-imgwarn svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+/* Lo que va a pasarle a la imagen elegida: se lee, no alarma. */
+.pedit-imgwarn {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--soft);
+  color: var(--ink);
+}
+
+/* ─────────────────  Eventos: apuntarse y llevarlos al calendario  ─────────────────
+ *
+ * Dos botones por evento y nada más a la vista: «Me apunto» y «Al calendario». Las opciones
+ * de calendario sólo se despliegan al pedirlas —o solas, justo después de apuntarse, que es
+ * cuando la intención está fresca—.
+ */
+
+.iact-body {
+  flex: 1 1 auto;
+}
+
+.iact-acts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.iact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.iact-join,
+.iact-cal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease),
+    border-color var(--t-tap) var(--ease);
+}
+
+.iact-join svg,
+.iact-cal svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+/* Apuntarse es la acción: lleva el color. «Voy» queda en verde, con su palomita, para que
+   se vea sin leer que ya está hecho. */
+.iact-join:not(.iact-join-on):not(a) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.iact-join-on {
+  background: color-mix(in srgb, var(--ok) 12%, #fff);
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--line));
+  color: var(--ok);
+}
+
+.iact-join:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.iact-cal-on {
+  background: var(--soft);
+}
+
+.iact-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mut-track);
+}
+
+.iact-calmenu {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.iact-calmenu .btng {
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.iact-calhint {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--mut-track);
+}
+
+/* ── Campañas con imagen ──────────────────────────────────────────────── */
+
+/* La imagen va a sangre dentro de la tarjeta, con su proporción reservada: el texto de
+   debajo no salta cuando termina de llegar. */
+.icamp-withimg {
+  overflow: hidden;
+  padding-top: 0;
+}
+
+.icamp-img {
+  display: block;
+  width: calc(100% + 28px);
+  max-width: none;
+  margin: 0 -14px 12px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--soft);
+}
+
+.camp-drop {
+  aspect-ratio: 16 / 9;
+}
+
+/* ── Lo que ve la organización de sus eventos ─────────────────────────── */
+
+.pedit-created {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 14px;
+  border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--line));
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--ok) 6%, #fff);
+}
+
+.pedit-created .ecard-title {
+  color: var(--ok);
+}
+
+.pedit-att {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.pedit-att-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pedit-att-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pedit-att-btn[aria-expanded="true"] > svg:last-child {
+  transform: rotate(90deg);
+}
+
+.pedit-att-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pedit-att-skel {
+  display: block;
+  width: 60%;
+  height: 28px;
+}
+
+/* ── Mis eventos, en la cuenta ────────────────────────────────────────── */
+
+.myev {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.myev-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.myev-item:last-child {
+  border-bottom: 0;
+}
+
+.myev-soon .iact-when {
+  border-color: var(--accent);
+}
+
+.myev-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.myev-body .iact-row,
+.myev-body .iact-calmenu {
+  align-self: stretch;
+  margin-top: 6px;
+}
+
+.myev-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.myev-org {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.myev-org svg {
+  width: 14px;
+  height: 14px;
+  color: var(--mut);
+}
+
+/* ─────────────────  El perfil público, en pantalla ancha  ─────────────────
+ *
+ * Por debajo de 1024px el perfil es la columna de siempre. Por encima dejaba de parecer un
+ * perfil: una tarjeta de 720px en mitad de un monitor se lee como una ficha suelta, no
+ * como el sitio de una organización. Aquí pasa a la forma que cualquiera reconoce de una
+ * red social: portada ancha, foto grande montada sobre ella, el nombre con sus acciones en
+ * una franja, y debajo dos columnas —la información fija a la izquierda, lo que se explora
+ * (campañas, agenda, novedades) a la derecha—.
+ */
+
+.prof-side {
+  display: none;
+}
+
+.prof-id .prof-warn {
+  align-self: stretch;
+}
+
+@media (min-width: 1024px) {
+  .profpage {
+    background: #fff;
+  }
+
+  .prof {
+    max-width: 1120px;
+    margin: 0 auto;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .prof-cover {
+    height: 300px;
+    border-radius: 0 0 var(--r-lg) var(--r-lg);
+  }
+
+  .prof-body {
+    padding: 0 32px;
+  }
+
+  .prof-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 32px;
+  }
+
+  .prof-head .prof-id {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-top: -72px;
+  }
+
+  .prof-head .prof-photo {
+    width: 144px;
+    height: 144px;
+    border-radius: 34px;
+    border-width: 5px;
+  }
+
+  .prof-name {
+    font-size: 2rem;
+  }
+
+  .prof-meta {
+    font-size: 0.9375rem;
+  }
+
+  /* Las acciones en fila, a la derecha del nombre: en escritorio hay sitio para la
+     palabra al lado del icono, y apiladas bajo el nombre empujaban todo hacia abajo. */
+  .prof-head .dactions {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin: 0 0 4px;
+    max-width: 520px;
+  }
+
+  .prof-head .dactions .btnp,
+  .prof-head .dactions .btng {
+    flex-direction: row;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .prof-grid {
+    margin-top: 28px;
+  }
+
+  .prof-grid-two {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+
+  /* La información, fija mientras se baja por las novedades: es la que se consulta —
+     horario, dirección— mientras se lee lo demás. */
+  .prof-grid-two .prof-side {
+    display: block;
+    position: sticky;
+    top: 24px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: #fff;
+  }
+
+  .prof-side > :first-child {
+    margin-top: 0;
+  }
+
+  /* Dentro de la columna, las pestañas ya no necesitan salirse del canalón. */
+  .prof-main .ptabs2 {
+    margin: 0;
+    padding: 0;
+  }
 }

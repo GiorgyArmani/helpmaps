@@ -315,6 +315,26 @@ export const Icon = {
       <path d="M8 9h5M8 12.5h5M8 16h3" />
     </Svg>
   ),
+  camera: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M4 8a1 1 0 0 1 1-1h2.5l1.5-2h6l1.5 2H19a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Z" />
+      <circle cx="12" cy="12.5" r="3.5" />
+    </Svg>
+  ),
+  eye: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </Svg>
+  ),
+  qr: (p: IconProps) => (
+    <Svg {...p}>
+      <rect x="4" y="4" width="6" height="6" rx="1" />
+      <rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <path d="M14 14h2v2h-2zM18 14h2M14 18v2M17 17h3v3h-3" />
+    </Svg>
+  ),
 } as const;
 
 export type IconName = keyof typeof Icon;

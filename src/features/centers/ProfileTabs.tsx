@@ -1,6 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+
+const WIDE = "(min-width: 1024px)";
+
+function subscribeWide(cb: () => void): () => void {
+  const mq = window.matchMedia(WIDE);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
 
 /**
  * Las pestañas del perfil de un punto.
@@ -43,6 +51,9 @@ export interface ProfileTab {
 export default function ProfileTabs({
   tabs,
   initial,
+  active: controlled,
+  onChange,
+  wideOmit,
 }: {
   tabs: ProfileTab[];
   /**
@@ -51,18 +62,40 @@ export default function ProfileTabs({
    * sitio donde lo que te trajo no está.
    */
   initial?: string;
+  /**
+   * Controlada desde fuera. El perfil editable la usa para que «Publicar» lleve a la
+   * pestaña de novedades con el compositor abierto, en vez de dejar a la persona buscándolo.
+   */
+  active?: string;
+  onChange?: (id: string) => void;
+  /**
+   * Una pestaña que en pantalla ancha no va aquí porque se pinta en la columna lateral. El
+   * perfil público de escritorio pone la información a un lado, fija, y deja las pestañas
+   * para lo que se explora; en el teléfono sigue siendo la primera pestaña.
+   */
+  wideOmit?: string;
 }) {
   // La abierta se guarda POR LISTA DE PESTAÑAS, no suelta: al pasar de un punto a otro la
   // ficha cambia entera y la tercera pestaña del anterior puede no existir en el nuevo.
   // Derivarlo aquí evita corregirlo después desde un efecto, que encadena un render de más
   // y deja un parpadeo con el contenido equivocado.
+  // En el servidor no hay ventana: se pinta la versión de teléfono, y al hidratar en
+  // escritorio se quita la pestaña que ya está en la columna.
+  const wide = useSyncExternalStore(
+    subscribeWide,
+    () => window.matchMedia(WIDE).matches,
+    () => false,
+  );
+  if (wide && wideOmit && tabs.length > 1) tabs = tabs.filter((t) => t.id !== wideOmit);
+
   const clave = tabs.map((t) => t.id).join("|");
   const primera = (initial && tabs.some((t) => t.id === initial) ? initial : tabs[0]?.id) ?? "";
   const [abierta, setAbierta] = useState<{ clave: string; id: string }>({
     clave,
     id: primera,
   });
-  const activa = abierta.clave === clave ? abierta.id : primera;
+  const interna = abierta.clave === clave ? abierta.id : primera;
+  const activa = controlled && tabs.some((t) => t.id === controlled) ? controlled : interna;
   const actual = tabs.find((t) => t.id === activa) ?? tabs[0];
 
   if (tabs.length <= 1) return <>{tabs[0]?.content ?? null}</>;
@@ -80,7 +113,10 @@ export default function ProfileTabs({
             role="tab"
             aria-selected={tab.id === activa}
             className={`ptab2${tab.id === activa ? " ptab2-on" : ""}`}
-            onClick={() => setAbierta({ clave, id: tab.id })}
+            onClick={() => {
+              setAbierta({ clave, id: tab.id });
+              onChange?.(tab.id);
+            }}
           >
             {tab.label}
             {tab.count === null ? null : <span className="ptab2-n">{tab.count}</span>}

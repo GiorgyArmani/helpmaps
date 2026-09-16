@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Activity, Campaign, InitiativePost } from "@/domain/types";
 import { shrinkImage } from "@/lib/image";
+import { parseHours, type WeeklyHours } from "@/domain/hours";
 
 // Lecturas y escrituras contra `campaigns`, `activities` e `initiative_posts`.
 // Una lista de columnas explícita, como en el resto de módulos de datos: nunca
@@ -18,6 +19,13 @@ const CAMPAIGN_COLUMNS =
 
 const ACTIVITY_COLUMNS =
   "id,location_id,title,description,starts_at,ends_at,place,needs_volunteers,status";
+
+// Las columnas de `db/13_eventos.sql`, pedidas aparte de las de siempre: en una base que
+// todavía no la corrió, pedirlas da 42703 y se vuelve a la lista de antes, sin imagen de
+// campaña ni contador de asistentes. Una bandera por columna, como las de cobro e imágenes.
+const CAMPAIGN_COLUMNS_13 = `${CAMPAIGN_COLUMNS},image_url`;
+const ACTIVITY_COLUMNS_13 = `${ACTIVITY_COLUMNS},going_count`;
+let columnasEventosAusentes = false;
 
 const POST_COLUMNS = "id,location_id,campaign_id,kind,body,photo_url,created_at";
 
@@ -101,6 +109,7 @@ function mapCampaign(row: Row): Campaign {
     ends_on: text(row.ends_on),
     status: (row.status as Campaign["status"]) ?? "draft",
     updated_at: text(row.updated_at),
+    image_url: text(row.image_url),
   };
 }
 
@@ -115,6 +124,7 @@ function mapActivity(row: Row): Activity {
     place: text(row.place),
     needs_volunteers: row.needs_volunteers === true,
     status: (row.status as Activity["status"]) ?? "scheduled",
+    going_count: typeof row.going_count === "number" ? row.going_count : 0,
   };
 }
 
@@ -216,12 +226,18 @@ export async function fetchImages(
  */
 export async function fetchCampaigns(sb: SupabaseClient, locationId: string): Promise<Campaign[]> {
   if (tablasAusentes) return [];
-  const { data, error } = await sb
-    .from("campaigns")
-    .select(CAMPAIGN_COLUMNS)
-    .eq("location_id", locationId)
-    .in("status", ["active", "reached"])
-    .order("starts_on", { ascending: false });
+  const leer = (columnas: string) =>
+    sb
+      .from("campaigns")
+      .select(columnas)
+      .eq("location_id", locationId)
+      .in("status", ["active", "reached"])
+      .order("starts_on", { ascending: false });
+  let { data, error } = await leer(columnasEventosAusentes ? CAMPAIGN_COLUMNS : CAMPAIGN_COLUMNS_13);
+  if (faltaLaColumna(error)) {
+    columnasEventosAusentes = true;
+    ({ data, error } = await leer(CAMPAIGN_COLUMNS));
+  }
   if (faltaLaTabla(error)) tablasAusentes = true;
   if (error || !data) return [];
   return (data as unknown as Row[]).map(mapCampaign);
@@ -238,14 +254,20 @@ export async function fetchCampaigns(sb: SupabaseClient, locationId: string): Pr
 export async function fetchActivities(sb: SupabaseClient, locationId: string): Promise<Activity[]> {
   if (tablasAusentes) return [];
   const desde = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-  const { data, error } = await sb
-    .from("activities")
-    .select(ACTIVITY_COLUMNS)
-    .eq("location_id", locationId)
-    .eq("status", "scheduled")
-    .gte("starts_at", desde)
-    .order("starts_at", { ascending: true })
-    .limit(20);
+  const leer = (columnas: string) =>
+    sb
+      .from("activities")
+      .select(columnas)
+      .eq("location_id", locationId)
+      .eq("status", "scheduled")
+      .gte("starts_at", desde)
+      .order("starts_at", { ascending: true })
+      .limit(20);
+  let { data, error } = await leer(columnasEventosAusentes ? ACTIVITY_COLUMNS : ACTIVITY_COLUMNS_13);
+  if (faltaLaColumna(error)) {
+    columnasEventosAusentes = true;
+    ({ data, error } = await leer(ACTIVITY_COLUMNS));
+  }
   if (faltaLaTabla(error)) tablasAusentes = true;
   if (error || !data) return [];
   return (data as unknown as Row[]).map(mapActivity);
@@ -339,10 +361,11 @@ export interface CampaignDraft {
   raised_amount: number;
   ends_on: string | null;
   status: Campaign["status"];
+  image_url: string | null;
 }
 
 export async function saveCampaign(sb: SupabaseClient, draft: CampaignDraft): Promise<void> {
-  const row = {
+  const row: Record<string, unknown> = {
     location_id: draft.location_id,
     title: draft.title,
     purpose: draft.purpose,
@@ -351,14 +374,29 @@ export async function saveCampaign(sb: SupabaseClient, draft: CampaignDraft): Pr
     raised_amount: draft.raised_amount,
     ends_on: draft.ends_on,
     status: draft.status,
+    image_url: draft.image_url,
   };
   // `raised_declared_at` no se manda: lo sella un trigger cuando el número cambia (ver la
   // sección 6 de la migración). Una fecha de declaración puesta por el cliente es una
   // fecha que el cliente puede elegir.
-  const { error } = draft.id
-    ? await sb.from("campaigns").update(row).eq("id", draft.id)
-    : await sb.from("campaigns").insert(row);
+  const escribir = () =>
+    draft.id ? sb.from("campaigns").update(row).eq("id", draft.id) : sb.from("campaigns").insert(row);
+  let { error } = await escribir();
+  // Sin `db/13_eventos.sql` la campaña se guarda igual, sin su imagen.
+  if (faltaLaColumna(error)) {
+    delete row.image_url;
+    ({ error } = await escribir());
+  }
   if (error) throw error;
+}
+
+/** La foto o banner de una campaña. Sólo sube: la dirección viaja en `saveCampaign`. */
+export async function uploadCampaignImage(
+  sb: SupabaseClient,
+  locationId: string,
+  file: File,
+): Promise<string> {
+  return subirImagen(sb, locationId, "campaign", file);
 }
 
 export interface ActivityDraft {
@@ -372,7 +410,8 @@ export interface ActivityDraft {
   status: Activity["status"];
 }
 
-export async function saveActivity(sb: SupabaseClient, draft: ActivityDraft): Promise<void> {
+/** Devuelve el id del evento: quien lo acaba de crear lo lleva a su calendario con él. */
+export async function saveActivity(sb: SupabaseClient, draft: ActivityDraft): Promise<string | null> {
   const row = {
     location_id: draft.location_id,
     title: draft.title,
@@ -382,10 +421,14 @@ export async function saveActivity(sb: SupabaseClient, draft: ActivityDraft): Pr
     needs_volunteers: draft.needs_volunteers,
     status: draft.status,
   };
-  const { error } = draft.id
-    ? await sb.from("activities").update(row).eq("id", draft.id)
-    : await sb.from("activities").insert(row);
+  if (draft.id) {
+    const { error } = await sb.from("activities").update(row).eq("id", draft.id);
+    if (error) throw error;
+    return draft.id;
+  }
+  const { data, error } = await sb.from("activities").insert(row).select("id").maybeSingle();
   if (error) throw error;
+  return data ? String((data as Row).id) : null;
 }
 
 export interface PostDraft {
@@ -414,6 +457,8 @@ export interface CenterProfileDraft {
   description: string | null;
   category: string | null;
   schedule: string | null;
+  /** El horario marcado. Al guardarlo, `schedule` debe llevar su resumen en texto. */
+  hours: WeeklyHours | null;
   contact_name: string | null;
   needs: string | null;
   receives: string[];
@@ -445,6 +490,7 @@ export async function saveCenterProfile(
     description: draft.description,
     category: draft.category,
     schedule: draft.schedule,
+    hours: draft.hours,
     contact_name: draft.contact_name,
     needs: draft.needs,
     receives: draft.receives,
@@ -455,7 +501,13 @@ export async function saveCenterProfile(
     updated_at: new Date().toISOString(),
   };
   if (markOnboarded) row.onboarded_at = new Date().toISOString();
-  const { error } = await sb.from("center_info").upsert(row, { onConflict: "location_id" });
+  let { error } = await sb.from("center_info").upsert(row, { onConflict: "location_id" });
+  // Una base sin `db/12_horario.sql`: se guarda sin la columna. No se pierde el horario,
+  // porque `schedule` ya lleva su resumen en texto.
+  if (faltaLaColumna(error)) {
+    delete row.hours;
+    ({ error } = await sb.from("center_info").upsert(row, { onConflict: "location_id" }));
+  }
   if (error) throw error;
 }
 
@@ -592,18 +644,19 @@ export interface CenterProfile extends CenterProfileDraft {
 }
 
 const PROFILE_COLUMNS =
-  "location_id,status,description,category,schedule,contact_name,needs,receives,website,instagram,donate_info,donate_url,onboarded_at";
+  "location_id,status,description,category,schedule,hours,contact_name,needs,receives,website,instagram,donate_info,donate_url,onboarded_at";
+/** Lo mismo antes de `db/12_horario.sql`. */
+const PROFILE_COLUMNS_SIN_HORARIO = PROFILE_COLUMNS.replace("schedule,hours,", "schedule,");
 
 export async function fetchCenterProfile(
   sb: SupabaseClient,
   locationId: string,
 ): Promise<CenterProfile | null> {
   if (columnasCobroAusentes) return null;
-  const { data, error } = await sb
-    .from("center_info")
-    .select(PROFILE_COLUMNS)
-    .eq("location_id", locationId)
-    .maybeSingle();
+  const leer = (columnas: string) =>
+    sb.from("center_info").select(columnas).eq("location_id", locationId).maybeSingle();
+  let { data, error } = await leer(PROFILE_COLUMNS);
+  if (faltaLaColumna(error)) ({ data, error } = await leer(PROFILE_COLUMNS_SIN_HORARIO));
   if (faltaLaColumna(error)) columnasCobroAusentes = true;
   if (error || !data) return null;
   const row = data as unknown as Row;
@@ -613,6 +666,7 @@ export async function fetchCenterProfile(
     description: text(row.description),
     category: text(row.category),
     schedule: text(row.schedule),
+    hours: parseHours(row.hours),
     contact_name: text(row.contact_name),
     needs: text(row.needs),
     receives: Array.isArray(row.receives)
@@ -634,6 +688,7 @@ export function emptyProfile(locationId: string): CenterProfile {
     description: null,
     category: null,
     schedule: null,
+    hours: null,
     contact_name: null,
     needs: null,
     receives: [],
