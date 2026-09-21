@@ -1103,11 +1103,18 @@ a {
 }
 
 .layers-note,
+.layers-fresh,
 .layers-src {
   margin: 0;
   font-size: 0.6563rem;
   line-height: 1.4;
   color: var(--mut);
+}
+
+/* Cuándo llegaron los datos, bajo el título. Sin separador ni margen propios: la
+   separación la pone el `gap` de `.layers-panel`, como a cualquier otro hijo suyo. */
+.layers-fresh {
+  font-variant-numeric: tabular-nums;
 }
 
 .layers-src {
@@ -1472,7 +1479,7 @@ a {
 }
 
 .st-warn {
-  --c: #b45309;
+  --c: var(--warn);
 }
 
 .st-off {
@@ -9694,5 +9701,476 @@ fieldset.fieldset {
   .prof-main .ptabs2 {
     margin: 0;
     padding: 0;
+  }
+}
+
+/* ═══ ZONAS AFECTADAS ═══════════════════════════════════════════════════════
+   Dónde pegó esto, dibujado por el equipo. Tres piezas: lo que se ve en el mapa, la
+   barra con la que se dibuja y el editor dentro del panel.
+
+   Nada de acá inventa su borde ni su sombra: la elevación sale de `--e-1/2/3`, el borde
+   de `--line` y los colores de los tokens de marca. La gravedad se distingue por color
+   Y por texto, siempre las dos: el color solo deja fuera a quien no lo distingue, y a
+   cualquiera que esté mirando el teléfono a pleno sol.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* El rótulo sobre la zona. No intercepta nada: debajo hay pines que hay que poder tocar. */
+.zonelbl-wrap {
+  background: none;
+  border: none;
+  pointer-events: none;
+}
+
+.zonelbl {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--c, var(--dec));
+  border-radius: var(--r-sm);
+  box-shadow: var(--e-1);
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* La gravedad, en palabra. Sobre fondo claro va `--mut-track`, que sí llega a 4,5:1. */
+.zonelbl i {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.6875rem;
+  color: var(--mut-track);
+}
+
+.zonelbl-s1 { --c: var(--adm); }
+.zonelbl-s2 { --c: var(--warn); }
+.zonelbl-s3 { --c: var(--danger); }
+
+/* ── Dibujar ───────────────────────────────────────────────────────────────
+   El vértice: una pelota de 13px dentro de un área de toque de 44. Sin ese colchón, un
+   punto de contorno es imposible de agarrar con el pulgar y la única salida es hacer la
+   pelota enorme, que tapa justo el sitio que se está marcando. */
+.vtx {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+
+.vtx::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--danger);
+  box-shadow: var(--e-2);
+}
+
+.leaflet-dragging .vtx {
+  cursor: grabbing;
+}
+
+/* El mapa está escribiendo. La cruz lo dice sin una palabra, y gana sobre el `grab` que
+   Leaflet le pone a su contenedor. */
+.leaflet-container.map-drawing,
+.leaflet-container.map-drawing .leaflet-grab {
+  cursor: crosshair;
+}
+
+/* La capa del equipo se aparta mientras se dibuja. `display: none` y no desmontarla: al
+   volver, el panel sigue en su pestaña y con sus listas cargadas. */
+.overlay-away {
+  display: none;
+}
+
+/* La barra de dibujo: lo único que queda sobre el mapa. Abajo, que es donde llega el
+   pulgar, y con el hueco de la barra del sistema respetado. */
+.zonebar {
+  position: absolute;
+  left: var(--gut);
+  right: var(--gut);
+  bottom: calc(var(--gut) + env(safe-area-inset-bottom, 0px));
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--e-3);
+  padding: 12px;
+}
+
+.zonebar-say {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 140px;
+}
+
+.zonebar-say b {
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zonebar-say span {
+  font-size: 0.75rem;
+  color: var(--mut-track);
+}
+
+.zonebar-acts {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* ── El editor, dentro del panel del equipo ────────────────────────────────
+   Sin márgenes laterales propios: el canalón lo pone el panel que los envuelve. */
+.zoneform,
+.zonelist {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.zoneintro,
+.zonehint,
+.zoneempty {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+.zoneempty {
+  padding: 18px 0;
+  text-align: center;
+}
+
+/* Una zona de la lista. La pastilla de color abre la fila y el texto la explica. */
+.zonerow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--e-1);
+  padding: 12px;
+}
+
+.zonerow-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.zonerow-main b {
+  font-size: 0.875rem;
+}
+
+.zonerow-meta,
+.zonerow-note {
+  font-size: 0.75rem;
+  color: var(--mut-track);
+}
+
+.zonerow-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zonedot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex: 0 0 auto;
+  background: var(--c, var(--dec));
+}
+
+.zonedot-s1 { --c: var(--adm); }
+.zonedot-s2 { --c: var(--warn); }
+.zonedot-s3 { --c: var(--danger); }
+
+/* La gravedad: tres botones, no un desplegable. Se ven los tres a la vez, cada uno dice
+   su nombre y ninguno depende de su color para entenderse. */
+.zonesev {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.zonesev legend {
+  padding: 0 0 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.zonesev-row {
+  display: flex;
+  gap: 8px;
+}
+
+.zonesev-b {
+  flex: 1 1 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 6px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--t-tap) ease, box-shadow var(--t-tap) ease;
+}
+
+.zonesev-b i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c, var(--dec));
+  flex: 0 0 auto;
+}
+
+.zonesev-b.is-on {
+  border-color: var(--c, var(--accent));
+  box-shadow: inset 0 0 0 1px var(--c, var(--accent));
+}
+
+.zonesev-s1 { --c: var(--adm); }
+.zonesev-s2 { --c: var(--warn); }
+.zonesev-s3 { --c: var(--danger); }
+
+/* Cuántos puntos lleva el contorno, y el botón para ir a marcarlos. */
+.zonedraw {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--soft);
+  border-radius: var(--r-md);
+  padding: 12px;
+}
+
+.zonedraw-n {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.zoneacts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── «Estás dentro», en el panel de capas ──────────────────────────────────
+   La respuesta directa a la pregunta con la que entra la gente. Con icono y con la
+   gravedad escrita: el color de la zona no puede ser lo único que lo diga. */
+.layers-inside {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  background: var(--soft);
+  border-left: 3px solid var(--c, var(--dec));
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.layers-inside svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--c, var(--dec));
+}
+
+.layers-inside i {
+  display: block;
+  font-style: normal;
+  color: var(--mut-track);
+}
+
+.layers-inside-s1 { --c: var(--adm); }
+.layers-inside-s2 { --c: var(--warn); }
+.layers-inside-s3 { --c: var(--danger); }
+
+@media (prefers-reduced-motion: reduce) {
+  .zonesev-b {
+    transition: none;
+  }
+}
+
+/* Dibujando un contorno, la pantalla es el mapa y la barra, y nada más.
+   La hoja de puntos ocupaba la mitad de abajo —justo donde cae el pulgar—, la barra de
+   búsqueda tapaba la franja de arriba, y las lengüetas laterales eran dos sitios donde un
+   toque destinado al mapa se iba a otra parte. Con ellas puestas, un vértice que caía
+   debajo no se podía agarrar: la comprobación de Playwright lo dijo textualmente —«la
+   barra de búsqueda intercepta los eventos»— y lo que le pasa a un robot con un vértice
+   ahí, le pasa igual a un dedo.
+
+   Se ocultan con CSS, no se desmontan: al terminar, todo vuelve como estaba. */
+.app-drawing .sheet,
+.app-drawing .sidetabs,
+.app-drawing .topbar {
+  display: none;
+}
+
+/* En escritorio la barra no se estira de canto a canto: con dos botones y un rótulo,
+   1.400px de ancho dejan el texto en una punta y las acciones en la otra. Centrada y
+   acotada, se lee de una vez. En el teléfono sigue ocupando el ancho, que es lo correcto
+   ahí: el pulgar llega a todo. */
+@media (min-width: 900px) {
+  .zonebar {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(560px, calc(100vw - var(--gut) * 2));
+  }
+}
+
+/* Cerca, la zona se queda en su contorno: el relleno ya no dibuja una forma —no cabe en la
+   pantalla— y sólo tiñe lo que hay que leer. El borde sigue diciendo por dónde pasa.
+   Una regla de CSS gana sobre el atributo de presentación que escribe Leaflet, así que
+   esto no obliga a redibujar ningún polígono. */
+.map-near .zonepoly {
+  fill-opacity: 0.05;
+}
+
+/* ── La zona abierta, encima de su lista ───────────────────────────────────
+   Mismo esqueleto que `.listhead` —franja de lado a lado, su ✕ de 44px a la izquierda—
+   más una pleca de color con la gravedad. El color acompaña; lo que informa es el texto,
+   que dice la gravedad con su palabra. */
+.zonehead {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px calc(var(--fold-size) + var(--fold-inset) + 8px) 10px 2px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--c, var(--dec));
+  background: #fff;
+}
+
+.zonehead-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 9px;
+}
+
+.zonehead-main b {
+  font-size: 0.9375rem;
+  line-height: 1.25;
+}
+
+.zonehead-meta {
+  font-size: 0.75rem;
+  color: var(--mut-track);
+  font-variant-numeric: tabular-nums;
+}
+
+.zonehead-note {
+  font-style: normal;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--soft);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
+  margin-top: 4px;
+}
+
+.zonehead-s1 { --c: var(--adm); }
+.zonehead-s2 { --c: var(--warn); }
+.zonehead-s3 { --c: var(--danger); }
+
+/* ── El rótulo de la zona es su asa ────────────────────────────────────────
+   El polígono NO se toca: ocupa media pantalla y haría que cualquier toque en el mapa
+   —incluido el que iba a un refugio— abriera la zona. El rótulo sí, y por eso lleva
+   galón, cursor y un colchón invisible hasta los 44px de alto que pide un pulgar. */
+.zonelbl {
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow var(--t-tap) ease, border-color var(--t-tap) ease;
+}
+
+.zonelbl::after {
+  content: "";
+  position: absolute;
+  inset: -11px -8px;
+}
+
+.zonelbl-go {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  color: var(--mut-track);
+  align-self: center;
+}
+
+.zonelbl:hover,
+.zonelbl.is-on {
+  border-color: var(--c, var(--dec));
+  box-shadow: var(--e-2);
+}
+
+.zonelbl-wrap {
+  pointer-events: auto;
+}
+
+/* «Estás dentro» pasó de aviso a botón: mantiene su aspecto y gana el galón y el toque. */
+button.layers-inside {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 0.75rem;
+  border: none;
+  border-left: 3px solid var(--c, var(--dec));
+  cursor: pointer;
+  align-items: center;
+  min-height: 44px;
+}
+
+button.layers-inside svg:last-child {
+  width: 13px;
+  height: 13px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  color: var(--mut-track);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zonelbl {
+    transition: none;
   }
 }

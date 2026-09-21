@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import "../inicio/entry.css";
 import "../auth.css";
 import { Icon } from "@/ui/icons";
+import { safeNext } from "@/lib/safeNext";
 
 /**
  * Team sign-in as a standalone page.
@@ -30,19 +31,6 @@ export default function LoginPage() {
       <LoginBody />
     </Suspense>
   );
-}
-
-/**
- * A dónde ir tras entrar.
- *
- * Sólo rutas de ESTE sitio: una que empiece por `//` o por un esquema es una redirección
- * abierta, y una pantalla de acceso que manda a donde le digan es la pieza con la que se
- * monta un phishing convincente — el dominio de la barra es el bueno hasta el segundo
- * antes de dejar de serlo.
- */
-function safeNext(value: string | null): string | null {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
-  return value;
 }
 
 function LoginBody() {
@@ -68,7 +56,7 @@ function LoginBody() {
         </header>
 
         <div className="auth-card">
-          <LoginForm onSignedIn={() => router.replace(next ?? "/?panel=1")} />
+          <LoginForm next={next} onSignedIn={() => router.replace(next ?? "/?panel=1")} />
         </div>
 
         {/* Sin «¿no tienes cuenta?» aquí: `LoginForm` ya lo trae, porque también se usa

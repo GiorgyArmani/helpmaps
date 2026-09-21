@@ -29,6 +29,7 @@ export function themeCss(brand: BrandConfig = BRAND): string {
 --ok:${c.ok};
 --adm:${c.info};
 --dec:${c.neutral};
+--warn:${c.warn};
 --danger:${c.danger};
 --r-sm:${brand.radius.sm}px;
 --r-md:${brand.radius.md}px;

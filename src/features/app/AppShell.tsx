@@ -7,16 +7,21 @@ import type { Center, Donation, SubmissionKind } from "@/domain/types";
 import {
   EMPTY_FILTER,
   filterCenters,
+  hasCoords,
   isDigital,
   pointsNeedingHelp,
   type CenterFilter,
 } from "@/domain/center";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
+import type { DictKey } from "@/i18n";
 import { useCenters } from "@/features/app/useCenters";
 import { useEmergency, useSite } from "@/features/app/SiteProvider";
 import NewsTab from "@/features/news/NewsTab";
 import { buildingLayers, defaultLayerState, mapLayers } from "@/domain/layers";
+import type { AffectedZone } from "@/domain/area";
+import { pointInRing } from "@/domain/area";
+import { ZoneDrawBar, type ZoneDraft } from "@/features/area/ZoneEditor";
 import { useStaffSession } from "@/features/admin/useStaffSession";
 import AccountPanel from "@/features/account/AccountPanel";
 import AccountMenu from "@/features/account/AccountMenu";
@@ -223,10 +228,15 @@ export default function AppShell({
   // hacía que configurar "solo epicentros" en el registro no cambiara nada.
   const [layers, setLayers] = useState<HazardLayers>(() => ({
     ...site.hazard.seismic.defaultOn,
+    // Las zonas arrancan encendidas siempre que existan: son la respuesta a «¿me tocó a
+    // mí?», que es la pregunta con la que entra la mayoría. Apagarlas es una decisión de
+    // quien mira, no un valor por defecto.
+    zones: true,
   }));
   // Las capas que declara ESTA emergencia. Vacío en un despliegue que todavía no adoptó la
   // tabla, y entonces el panel muestra solo los interruptores sísmicos de siempre.
   const emergency = useEmergency();
+  const emergencyZones = useMemo(() => emergency?.zones ?? [], [emergency]);
   const declaredLayers = useMemo(() => emergency?.layers ?? [], [emergency]);
   // El mapa principal dibuja las capas 2D; las de edificios 3D no se dibujan acá porque
   // son otro renderizador entero, y solo alimentan el botón que lleva a su vista.
@@ -246,6 +256,30 @@ export default function AppShell({
    * Now the pin is on the map beside the form, and dragging it writes the numbers back.
    */
   const [draftPin, setDraftPin] = useState<{ lat: number; lng: number } | null>(null);
+  /**
+   * Las zonas afectadas, sembradas de lo que trajo el servidor y actualizadas al guardar.
+   *
+   * En estado y no leídas de `emergency` en cada render porque se EDITAN desde acá mismo:
+   * la identidad de la emergencia la resolvió el servidor al pintar la página y no vuelve
+   * a cambiar sola, así que sin esto habría que recargar para ver el contorno que uno
+   * acaba de dibujar.
+   */
+  const [zones, setZones] = useState<AffectedZone[]>(() => emergencyZones);
+  /** La zona a medio dibujar. La miran el panel, el mapa y la barra de dibujo. */
+  const [zoneDraft, setZoneDraft] = useState<ZoneDraft | null>(null);
+  /**
+   * La zona ABIERTA: la que alguien tocó para ver qué hay dentro.
+   *
+   * Dibujarla contesta «hasta dónde llegó»; abrirla contesta la siguiente, que es la que
+   * de verdad mueve a alguien: «y ahí dentro, ¿qué hay?». La lista del panel pasa a ser
+   * la de esa zona y el mapa la encuadra.
+   */
+  const [zoneFocus, setZoneFocus] = useState<AffectedZone | null>(null);
+  const drawingZone = zoneDraft?.drawing === true;
+
+  const setZoneRing = useCallback((ring: [number, number][]) => {
+    setZoneDraft((current) => (current ? { ...current, ring } : current));
+  }, []);
   // Filled by whichever staff form is open. Dragging the pin calls straight into it, so
   // the coordinates land in the form as an event rather than as a cascade of renders.
   const pinDragRef = useRef<((at: { lat: number; lng: number }) => void) | null>(null);
@@ -355,6 +389,23 @@ export default function AppShell({
   // tapped "I want to help" asked for that list.
   const [open, setOpen] = useState(initialAction === "needs");
   const [folded, setFolded] = useState(false);
+
+  const openZone = useCallback((zone: AffectedZone) => {
+    setZoneFocus(zone);
+    // El filtro es geométrico: lo que caiga dentro del anillo, sea del estado que sea.
+    setFilter((f) => ({ ...f, zone: zone.ring }));
+    setPanelTab("points");
+    // La hoja SUBE. Con ella abajo, abrir una zona dejaba la respuesta —quién hay dentro—
+    // asomando dos líneas por el borde inferior: el mapa se movía y no pasaba nada más.
+    setOpen(true);
+    setFolded(false);
+  }, []);
+
+  const closeZone = useCallback(() => {
+    setZoneFocus(null);
+    setFilter((f) => ({ ...f, zone: null }));
+  }, []);
+
   const [toast, setToast] = useState<string | null>(null);
   // Loaded the first time the panel is opened, not with the map: most visits never open
   // it, and this is a screen budgeted for one bar of signal.
@@ -377,15 +428,17 @@ export default function AppShell({
   useEffect(() => {
     // Someone who arrived with an intent ("I want to help", "register my initiative")
     // gets what they asked for, not a tour over it. The flag is left unset, so the tour
-    // still greets them on a plain visit.
-    if (initialAction) return;
+    // still greets them on a plain visit. Same for someone who just accepted a center
+    // invitation (`?mine=1`): their initiative's onboarding is already on screen, and a
+    // 13-step tour of the public map on top of it buries the one thing they came to do.
+    if (initialAction || initialMine) return;
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reading an external store at mount
       if (!window.localStorage.getItem(TOUR_KEY)) setTourOpen(true);
     } catch {
       /* private mode: no tour rather than a tour on every load */
     }
-  }, [initialAction]);
+  }, [initialAction, initialMine]);
 
   // First time a staff member opens the panel, walk them through it. This IS the
   // onboarding: the welcome email links to the written manual, but somebody who just got
@@ -433,8 +486,29 @@ export default function AppShell({
   const physical = useMemo(() => centers.filter((c) => !isDigital(c)), [centers]);
   const digitalAll = useMemo(() => centers.filter(isDigital), [centers]);
   const visible = useMemo(() => filterCenters(physical, filter), [physical, filter]);
+  /**
+   * Lo que hay dentro de la zona abierta, SIN los demás filtros.
+   *
+   * Sobre `visible` no: esa lista lleva encima el tipo que se haya marcado y lo que se
+   * esté buscando, así que tocar «Refugios» hacía que la cabecera dijera «56 puntos
+   * dentro» de una zona que tiene 186. Una zona tiene los que tiene; lo que cambia con
+   * los filtros es lo que se está MIRANDO, y de eso ya informa la fila de contadores.
+   *
+   * El recuento de los que piden algo sale de `pointsNeedingHelp` —la misma función que
+   * la barra de abajo— y no de `hasNeed` a secas: aquélla cuenta también los cerrados, y
+   * un punto cerrado que dejó escrito lo que le hacía falta ya no está pidiendo ayuda.
+   * Dos cifras de lo mismo en la misma pantalla tienen que salir de la misma pregunta.
+   */
+  const zoneInside = useMemo(
+    () => (zoneFocus ? filterCenters(physical, { ...EMPTY_FILTER, zone: zoneFocus.ring }) : []),
+    [zoneFocus, physical],
+  );
+  const zoneNeeds = useMemo(() => pointsNeedingHelp(zoneInside).length, [zoneInside]);
+  // Sin `zone`: una iniciativa digital no está DENTRO de ninguna zona —no tiene sede, sirve
+  // regiones enteras— y esconderla al abrir un área quitaría de en medio justo a quien sí
+  // puede ayudar ahí sin estar ahí.
   const visibleDigital = useMemo(
-    () => filterCenters(digitalAll, { ...filter, types: [] }),
+    () => filterCenters(digitalAll, { ...filter, types: [], zone: null }),
     [digitalAll, filter],
   );
   const listed = panelTab === "digital" ? visibleDigital : visible;
@@ -520,24 +594,44 @@ export default function AppShell({
     () => digitalCovering(nearSource, nearZone?.code ?? null),
     [nearSource, nearZone],
   );
-  // El feed, ordenado. `account.favourites` sube lo guardado al principio y la posición
-  // —si la hay— pesa la cercanía. Todo aquí, con lo que ya está en memoria.
-  const feedItems = useMemo(
-    () =>
-      buildFeed({
-        centers,
-        posts: feedPosts,
-        campaigns: feedCampaigns,
-        from: myLocation.fix,
-        saved: account.favourites,
-        mode: feedMode,
-      }),
-    [centers, feedPosts, feedCampaigns, myLocation.fix, account.favourites, feedMode],
-  );
+  /**
+   * El feed, ordenado. `account.favourites` sube lo guardado al principio y la posición
+   * —si la hay— pesa la cercanía. Todo aquí, con lo que ya está en memoria.
+   *
+   * Con una zona abierta, el feed es EL DE SUS PUNTOS. Dibujar la zona contesta hasta
+   * dónde llegó y abrirla contesta quién hay dentro; esto contesta la tercera, que es la
+   * que tiene fecha: qué está pasando ahí esta semana. Se filtra sobre el resultado y no
+   * sobre `centers` porque ese mapa es el índice con el que cada publicación encuentra su
+   * punto: recortarlo dejaría publicaciones huérfanas fuera del feed en vez de fuera de
+   * la zona.
+   *
+   * Las iniciativas sin sede se quedan fuera, como en la lista: no están dentro de ningún
+   * sitio. Siguen enteras en su pestaña, que la zona no toca.
+   */
+  const feedItems = useMemo(() => {
+    const all = buildFeed({
+      centers,
+      posts: feedPosts,
+      campaigns: feedCampaigns,
+      from: myLocation.fix,
+      saved: account.favourites,
+      mode: feedMode,
+    });
+    if (!zoneFocus) return all;
+    return all.filter(
+      (item) =>
+        hasCoords(item.center) &&
+        pointInRing(zoneFocus.ring, item.center.lat, item.center.lng),
+    );
+  }, [centers, feedPosts, feedCampaigns, myLocation.fix, account.favourites, feedMode, zoneFocus]);
 
+  // Con un filtro de sitio puesto —una región, o una zona afectada abierta— la barra de
+  // «N necesitan ayuda» tiene que contar DENTRO de ese sitio. Contando el país entero
+  // mientras la lista enseña un barrio, los dos números de la misma pantalla se
+  // contradicen y el grande hace pequeño al que importa.
   const needing = useMemo(
-    () => pointsNeedingHelp(filter.region ? visible : physical),
-    [visible, physical, filter.region],
+    () => pointsNeedingHelp(filter.region || filter.zone ? visible : physical),
+    [visible, physical, filter.region, filter.zone],
   );
   const selected: Center | null = useMemo(
     () =>
@@ -809,7 +903,7 @@ export default function AppShell({
   // El menú de Colaborar ya no comparte columna con los controles del mapa: se despliega
   // desde la barra de arriba y no los cruza, así que no hace falta apartarlos.
   return (
-    <div className={`app${folded ? " sheetmin" : ""}`}>
+    <div className={`app${folded ? " sheetmin" : ""}${drawingZone ? " app-drawing" : ""}`}>
       <MapCanvas
         centers={visible}
         digital={visibleDigital}
@@ -823,6 +917,13 @@ export default function AppShell({
         extraOn={extraOn}
         draftPin={view === "admin" ? draftPin : null}
         onDraftPinMove={moveDraftPin}
+        zones={zones}
+        showZones={layers.zones}
+        draftRing={drawingZone ? (zoneDraft?.ring ?? []) : null}
+        onDraftRingChange={setZoneRing}
+        editingZoneId={zoneDraft?.id ?? null}
+        onZoneSelect={openZone}
+        focusZoneId={zoneFocus?.id ?? null}
       />
 
       {/* Aparece cuando hay ALGO que mostrar en 3D: un conjunto de edificios, o los puntos
@@ -858,6 +959,9 @@ export default function AppShell({
           extra={extraLayers}
           extraOn={extraOn}
           onExtraChange={setExtraOn}
+          zones={zones}
+          here={myLocation.fix}
+          onZoneOpen={openZone}
         />
         <NewsTab />
       </div>
@@ -1151,6 +1255,37 @@ export default function AppShell({
               <b className="listhead-title">{t("needs.listTitle")}</b>
             </div>
           ) : null}
+
+          {/* La zona abierta, encima de su propia lista.
+              Dice tres cosas y en este orden: cuál es, cuánto de grave, y qué hay dentro
+              —cuántos puntos y cuántos de ellos están pidiendo algo—. La nota de quien la
+              dibujó va debajo: es lo único de acá que no sale de un cálculo, sino de
+              alguien que estuvo ahí. */}
+          {zoneFocus && activeView === "list" ? (
+            <div className={`zonehead zonehead-s${zoneFocus.severity}`}>
+              <button
+                type="button"
+                className="listhead-back"
+                onClick={closeZone}
+                aria-label={t("common.close")}
+                title={t("common.close")}
+              >
+                <Icon.close />
+              </button>
+              <div className="zonehead-main">
+                <b>{zoneFocus.label}</b>
+                <span className="zonehead-meta">
+                  {t(`area.sev.${zoneFocus.severity}` as DictKey)}
+                  {" · "}
+                  {t(zoneInside.length === 1 ? "area.insideOne" : "area.insideN", {
+                    n: zoneInside.length,
+                  })}
+                  {zoneNeeds > 0 ? ` · ${t("area.insideNeeds", { n: zoneNeeds })}` : ""}
+                </span>
+                {zoneFocus.note ? <em className="zonehead-note">{zoneFocus.note}</em> : null}
+              </div>
+            </div>
+          ) : null}
           {/* «Cerca» sustituye el cuerpo de la lista, no el panel: el pie con privacidad y
               términos se queda: es la pestaña que pide la ubicación, y esconder ahí el
               enlace de privacidad sería justo al revés de lo que hay que hacer. */}
@@ -1261,8 +1396,12 @@ export default function AppShell({
 
       {/* La capa: formularios y panel del equipo, a altura completa. La ficha de un punto
           ya NO pasa por acá — vive dentro del panel de puntos, en lugar de su lista. */}
+      {/* Dibujando, la capa del equipo se APARTA —no se desmonta—: en un teléfono es
+          opaca y tapa el mapa entero, y hay que ver dónde se está tocando. Oculta con CSS
+          en vez de sacada del árbol, así que al volver el panel está como se dejó: misma
+          pestaña, mismas listas cargadas, mismo texto a medio escribir. */}
       {overlayOpen ? (
-        <div className="overlay">
+        <div className={`overlay${drawingZone ? " overlay-away" : ""}`}>
           <div className="ovhead">
             <button type="button" className="oicon" onClick={back} aria-label={t("common.back")}>
               <Icon.back />
@@ -1349,6 +1488,10 @@ export default function AppShell({
                   onDraftPin={setDraftPin}
                   onPinDrag={pinDragRef}
                   onPendingChange={setPending}
+                  zones={zones}
+                  onZones={setZones}
+                  zoneDraft={zoneDraft}
+                  onZoneDraft={setZoneDraft}
                 />
               ) : staff.checked ? (
                 /* No es del equipo. Puede ser que no haya entrado, o que haya entrado con
@@ -1366,6 +1509,11 @@ export default function AppShell({
             ) : null}
           </div>
         </div>
+      ) : null}
+
+      {/* Lo único que queda sobre el mapa mientras se marca un contorno. */}
+      {zoneDraft && drawingZone ? (
+        <ZoneDrawBar draft={zoneDraft} onDraft={setZoneDraft} />
       ) : null}
 
       {toast ? <div className="toast">{toast}</div> : null}

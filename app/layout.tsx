@@ -10,6 +10,7 @@ import ServiceWorkerRegister from "@/features/app/ServiceWorkerRegister";
 import Analytics from "@/features/app/Analytics";
 import CookieConsent from "@/features/consent/CookieConsent";
 import RecoveryRedirect from "@/features/account/RecoveryRedirect";
+import PendingInviteRedirect from "@/features/account/PendingInviteRedirect";
 
 /**
  * La tipografía de la plataforma.
@@ -123,6 +124,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         maintenance: resolved.maintenance,
         notice: resolved.notice,
         layers: resolved.layers,
+        zones: resolved.zones,
         news: resolved.news,
       }
     : null;
@@ -138,6 +140,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             porque Supabase descartó el `redirectTo`, esto lo lleva a `/reset` con el
             token intacto. Ver el componente — el arreglo de verdad es de configuración. */}
         <RecoveryRedirect />
+        {/* Lo mismo para quien creó su cuenta desde una invitación: la confirmación
+            aterriza en el mapa, y esto lo devuelve a la invitación que dejó a medias. */}
+        <PendingInviteRedirect />
         <SiteProvider site={site} emergency={identity}>
           <I18nProvider initial={site.language.default}>
             {children}

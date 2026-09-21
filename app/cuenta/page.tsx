@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useI18n } from "@/i18n/context";
 import { getSupabase } from "@/lib/supabase/client";
 import { Spinner } from "@/ui/primitives";
+import { safeNext } from "@/lib/safeNext";
+import { readPendingInvite } from "@/features/account/pendingInvite";
 
 /**
  * `/cuenta` — ya no es una página, es un aterrizaje.
@@ -40,12 +42,20 @@ export default function AccountLanding() {
     void (async () => {
       // El código es de un solo uso; que falle no cambia el destino, sólo significa que
       // se llega sin sesión y la cuenta muestra el formulario de acceso.
-      const code = new URLSearchParams(window.location.search).get("code");
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
       if (sb && code) await sb.auth.exchangeCodeForSession(code).catch(() => null);
+
+      // Quien se registró desde una invitación vuelve a ella, no al mapa: venía a
+      // gestionar su punto, y dejarlo en la cuenta de una persona cualquiera era perderlo.
+      const invite = readPendingInvite();
+      const next =
+        safeNext(params.get("next")) ??
+        (invite ? `/invitacion?t=${encodeURIComponent(invite)}` : null);
 
       // `replace` y no `push`: volver atrás desde el mapa no debe devolver a un enlace de
       // confirmación ya gastado.
-      window.location.replace("/?a=account");
+      window.location.replace(next ?? "/?a=account");
     })();
   }, []);
 

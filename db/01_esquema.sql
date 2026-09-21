@@ -1359,6 +1359,25 @@ alter table public.emergencies add column if not exists news jsonb not null defa
 
 
 -- ---------------------------------------------------------------------------
+-- Zonas afectadas, por emergencia.
+--
+--   [{ "id": "zulia-norte", "label": "Norte de Zulia", "severity": 2,
+--      "ring": [[10.1,-71.9], …], "note": "Sin agua desde el martes" }]
+--
+-- Dónde pegó esto, dibujado por el equipo desde el mapa. Para un terremoto suele sobrar
+-- —los contornos de intensidad de USGS son una medición y ganan siempre—; para una
+-- inundación o un incendio es lo único que contesta hasta dónde llegó.
+--
+-- El anillo va en [lat, lng] (el orden de Leaflet, no el de GeoJSON) y ABIERTO: el último
+-- vértice no repite el primero. `[]` es el caso normal y se comporta como antes de existir
+-- la columna.
+--
+-- Va acá además de en `db/14_area.sql` por la misma razón que `news`: este archivo es
+-- idempotente y es lo que corre una base nueva. El 14 existe para la que ya está viva.
+alter table public.emergencies add column if not exists area jsonb not null default '[]'::jsonb;
+
+
+-- ---------------------------------------------------------------------------
 -- Boletines generados.
 --
 -- Histórico, no una sola fila que se pisa. Dos razones: la portada ofrece navegar los

@@ -8,6 +8,7 @@ import { isPwnedPassword } from "@/lib/passwordBreach";
 import { cleanDisplayName, displayNameInvalid } from "@/domain/account";
 import { sendAccountConfirm } from "@/lib/email";
 import { isKnownRegion } from "@/config";
+import { safeNext } from "@/lib/safeNext";
 
 /**
  * Crear una cuenta de persona. Pública, sin invitación.
@@ -63,6 +64,10 @@ export async function POST(req: Request) {
   const displayName = cleanDisplayName(raw.displayName);
   const region =
     typeof raw.region === "string" && isKnownRegion(raw.region) ? raw.region : null;
+  // A dónde volver tras confirmar — una invitación, típicamente. Viaja dentro del
+  // `redirectTo` y lo aplica `/cuenta`. Si Supabase descarta el destino (lo hace, ver
+  // `RecoveryRedirect.tsx`), la invitación la rescata `PendingInviteRedirect`.
+  const next = safeNext(raw.next);
 
   if (!isEmail(email)) {
     return NextResponse.json({ error: "invalid_email" }, { status: 400 });
@@ -99,7 +104,7 @@ export async function POST(req: Request) {
     email,
     password,
     options: {
-      redirectTo: absoluteUrl("/cuenta"),
+      redirectTo: absoluteUrl(next ? `/cuenta?next=${encodeURIComponent(next)}` : "/cuenta"),
       data: { display_name: displayName, region },
     },
   });

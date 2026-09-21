@@ -31,6 +31,16 @@ export interface Quake {
   place: string;
   /** Event origin time, epoch ms. */
   time: number;
+  /**
+   * When USGS last REVISED the event, epoch ms. Not the same as `time`: a magnitude gets
+   * corrected, a ShakeMap gets recomputed, an alert level moves — and `time` never
+   * changes while any of that happens, because the rupture happened when it happened.
+   *
+   * It is what lets a refresh tell "same event, nothing new" from "same event, revised",
+   * and therefore skip re-downloading a 100 KB footprint that is byte for byte the one
+   * already on screen.
+   */
+  updated: number | null;
   alert: QuakeAlert | null;
   /** Peak modelled shaking intensity (MMI) anywhere on the ShakeMap. */
   maxMmi: number | null;
@@ -123,6 +133,26 @@ export function intensityKey(mmi: number): string {
  */
 export function byImpact(a: Quake, b: Quake): number {
   return b.magnitude - a.magnitude || b.time - a.time;
+}
+
+/**
+ * The catalogue after a partial refresh: `changed` wins over `prev`, by event id.
+ *
+ * A refresh asks USGS only for what it has touched since the last poll (`updatedafter`),
+ * which in the normal case is nothing at all — a few hundred bytes instead of the whole
+ * catalogue, on the connection this app is designed for. What comes back is REVISIONS of
+ * events we already hold plus whatever is new, so it is merged rather than substituted.
+ *
+ * Two things a partial refresh cannot see, and the reason `useQuakes` still does a full
+ * fetch every hour: an event RETIRED from the catalogue, and one revised down below
+ * `minMagnitude` — in both cases USGS simply stops mentioning it, which is indistinguishable
+ * from "unchanged" over this channel.
+ */
+export function mergeQuakes(prev: Quake[], changed: Quake[], maxEvents: number): Quake[] {
+  if (changed.length === 0) return prev;
+  const by = new Map(prev.map((q) => [q.id, q]));
+  for (const q of changed) by.set(q.id, q);
+  return [...by.values()].sort(byImpact).slice(0, maxEvents);
 }
 
 /** The event a first-time visitor is asking about: the strongest one in the window. */

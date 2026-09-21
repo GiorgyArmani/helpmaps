@@ -32,7 +32,29 @@ import type { SiteConfig } from "@/config/types";
 
 const COLUMNS =
   "id,slug,host,country_code,country_name,name,hazard_type,status," +
-  "region_noun,geo,regions,legal,brand,features,language,hazard,layers,news,maintenance,notice";
+  "region_noun,geo,regions,legal,brand,features,language,hazard,layers,area,news,maintenance,notice";
+
+/**
+ * El mismo SELECT sin `area`, para una base que todavía no corrió `db/14_area.sql`.
+ *
+ * Existe porque el fallo por defecto de PostgREST ante una columna que no existe es
+ * DEVOLVER UN ERROR PARA TODA LA FILA, y este archivo trata cualquier error como «no hay
+ * emergencia»: el sitio se caería al preset compilado y perdería de golpe su marca, sus
+ * regiones y su boletín. Todo eso por una columna que sólo sirve para dibujar polígonos.
+ *
+ * Así que si falta, se pide otra vez sin ella y se avisa en el log qué hay que correr. La
+ * emergencia se sirve entera, sin zonas, que es exactamente como estaba antes.
+ */
+const COLUMNS_SIN_AREA = COLUMNS.replace(",area", "");
+
+/** ¿El error es «esa columna no existe»? Postgres dice 42703; PostgREST, PGRST204. */
+function isMissingColumn(error: { code?: string; message?: string }): boolean {
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    (typeof error.message === "string" && error.message.includes("area"))
+  );
+}
 
 /**
  * In-memory, per-host, short-lived.
@@ -110,9 +132,21 @@ async function fetchBy(
   const sb = preview ? supabaseAdmin() : supabasePublic();
   if (!sb) return null;
 
-  const base = sb.from("emergencies").select(COLUMNS).eq(column, value);
+  const ask = (columns: string) => {
+    const base = sb.from("emergencies").select(columns).eq(column, value);
+    return (preview ? base : base.neq("status", "draft")).maybeSingle();
+  };
 
-  const { data, error } = await (preview ? base : base.neq("status", "draft")).maybeSingle();
+  let { data, error } = await ask(COLUMNS);
+
+  // Una migración sin correr no puede costar la emergencia entera. Ver `COLUMNS_SIN_AREA`.
+  if (error && isMissingColumn(error)) {
+    console.error(
+      "[emergency] la base no tiene la columna `area`: corré `db/14_area.sql` (o volvé a " +
+        "correr `db/01_esquema.sql`). Mientras tanto se sirve esta emergencia sin zonas.",
+    );
+    ({ data, error } = await ask(COLUMNS_SIN_AREA));
+  }
 
   // A missing table is the expected state on a deployment that has not run the migration,
   // so it is not worth a line in the log on every request. Anything else is.

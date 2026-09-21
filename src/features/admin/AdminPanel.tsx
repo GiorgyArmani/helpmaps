@@ -41,12 +41,14 @@ import { useI18n, useTimeAgo } from "@/i18n/context";
 import { fetchPendingReports, resolveReports, type ReportGroup } from "@/data/account";
 import CenterForm, { type CenterPrefill } from "@/features/admin/CenterForm";
 import DonationForm from "@/features/admin/DonationForm";
+import ZoneEditor, { type ZoneDraft } from "@/features/area/ZoneEditor";
+import type { AffectedZone } from "@/domain/area";
 import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 import { isDigital } from "@/domain/center";
 import { coverageLabel } from "@/features/centers/coverage";
 
-type Tab = "activity" | "centers" | "submissions" | "reports" | "volunteers" | "donations";
+type Tab = "activity" | "centers" | "submissions" | "reports" | "volunteers" | "donations" | "area";
 type TypeFilter = "all" | "points" | "digital";
 type VolView = "requests" | "team";
 
@@ -97,8 +99,18 @@ export default function AdminPanel({
   onPinDrag,
   onDraftPin,
   onPendingChange,
+  zones,
+  onZones,
+  zoneDraft,
+  onZoneDraft,
 }: {
   session: StaffSession;
+  /** Las zonas afectadas vigentes y el trazo a medio hacer: los tiene la carcasa, porque
+   *  el mapa los dibuja y este panel los edita. */
+  zones: AffectedZone[];
+  onZones: (next: AffectedZone[]) => void;
+  zoneDraft: ZoneDraft | null;
+  onZoneDraft: (next: ZoneDraft | null) => void;
   /** Slot the map's pin-drag writes through, straight into the open form. */
   onPinDrag: React.MutableRefObject<((at: { lat: number; lng: number }) => void) | null>;
   /** Publishes the edited point's coordinates so the map can draw them. */
@@ -483,6 +495,20 @@ export default function AdminPanel({
             label={t("admin.tab.volunteers")}
             icon={<Icon.volunteer />}
             count={volunteers.length}
+          />
+        ) : null}
+        {/* Sólo admin: la fila de la emergencia la escriben `emergencies_super_write` y
+            `emergencies_admin_notice`, y un voluntario no pasa ninguna de las dos. La
+            pestaña no está para esconder el botón —la base decide igual—, sino para no
+            ofrecer una herramienta que va a fallar al guardar. */}
+        {isAdmin ? (
+          <TabButton
+            id="area"
+            tab={tab}
+            onClick={setTab}
+            label={t("admin.tab.area")}
+            icon={<Icon.layers />}
+            count={zones.length}
           />
         ) : null}
       </nav>
@@ -890,6 +916,17 @@ export default function AdminPanel({
             </article>
           ))}
         </div>
+      ) : null}
+
+      {tab === "area" && isAdmin ? (
+        <ZoneEditor
+          emergencyId={emergencyId}
+          zones={zones}
+          onZones={onZones}
+          draft={zoneDraft}
+          onDraft={onZoneDraft}
+          canWrite={isAdmin}
+        />
       ) : null}
 
       {tab === "volunteers" && isAdmin ? (

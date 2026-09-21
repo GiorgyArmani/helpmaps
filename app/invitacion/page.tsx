@@ -5,14 +5,36 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabase } from "@/lib/supabase/client";
 import { acceptInvite } from "@/data/initiatives";
-import { Button, Notice, Spinner } from "@/ui/primitives";
+import { Button, Field, Input, Notice } from "@/ui/primitives";
+import { MIN_PASSWORD_PUBLIC, publicPasswordTooShort } from "@/lib/password";
+import { cleanDisplayName, displayNameInvalid } from "@/domain/account";
+import { clearPendingInvite, savePendingInvite } from "@/features/account/pendingInvite";
 import { useI18n } from "@/i18n/context";
 import { useSite } from "@/features/app/SiteProvider";
 import "../inicio/entry.css";
 import "../auth.css";
 import { Icon } from "@/ui/icons";
 
-type Phase = "checking" | "needsAccount" | "ready" | "working" | "done" | "failed";
+type Phase =
+  | "checking"
+  | "create"
+  | "needsAccount"
+  | "ready"
+  | "working"
+  | "done"
+  | "failed";
+
+interface InviteInfo {
+  place?: string;
+  email?: string | null;
+  error?: string;
+}
+
+/** Los fallos de la invitación que tienen su propio mensaje. */
+type DeadInvite = "used" | "expired" | "not_found";
+function isDead(code: string | undefined): code is DeadInvite {
+  return code === "used" || code === "expired" || code === "not_found";
+}
 
 /**
  * Aceptar una invitación a gestionar un punto.
@@ -30,9 +52,18 @@ type Phase = "checking" | "needsAccount" | "ready" | "working" | "done" | "faile
  *
  * ── SI NO TIENE CUENTA ──────────────────────────────────────────────────────
  *
- * La invitación se guarda y se manda a crear cuenta. Al volver, el token sigue donde
- * estaba. Pedirle que se registre y luego perder la invitación por el camino sería la
- * forma más rápida de perder a la persona.
+ * Si la invitación nombra un correo, la cuenta se crea AQUÍ MISMO: nombre y contraseña,
+ * el correo ya viene puesto, y de ahí directo al onboarding de su punto. Sin segundo
+ * correo de confirmación — el token llegó a esa dirección, y eso ya la prueba. Ver
+ * `app/api/account/invite/route.ts`.
+ *
+ * Antes se mandaba a `/registro`, que perdía el `next` y cuyo enlace de confirmación
+ * aterrizaba en el mapa: quien venía a gestionar su iniciativa acababa en el flujo de una
+ * persona cualquiera. Eso pasó con una invitación real.
+ *
+ * Si la invitación NO tiene correo (viajó por WhatsApp), sigue el registro normal, con el
+ * token en el `next` y guardado en el navegador (`pendingInvite.ts`) para rescatarlo
+ * aunque Supabase descarte el destino del enlace de confirmación.
  */
 export default function InvitePage() {
   return (
@@ -54,6 +85,8 @@ function InviteBody() {
   // efecto, que encadena un render y enseña un momento de carga que no existe.
   const [phase, setPhase] = useState<Phase>(() => (token ? "checking" : "failed"));
   const [error, setError] = useState<string | null>(null);
+  const [place, setPlace] = useState("");
+  const [inviteEmail, setInviteEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const sb = getSupabase();
@@ -64,9 +97,39 @@ function InviteBody() {
         if (!cancelled) setPhase("failed");
         return;
       }
-      const { data } = await sb.auth.getSession();
+      // La sesión y la invitación a la vez: son dos viajes independientes, y en una
+      // conexión mala cada viaje en serie es un segundo más de esqueleto.
+      const [{ data }, info] = await Promise.all([
+        sb.auth.getSession(),
+        fetch(`/api/account/invite?t=${encodeURIComponent(token)}`)
+          .then(async (r) => ({
+            ok: r.ok,
+            body: (await r.json().catch(() => ({}))) as InviteInfo,
+          }))
+          .catch(() => ({ ok: false, body: {} as InviteInfo })),
+      ]);
       if (cancelled) return;
-      setPhase(data.session ? "ready" : "needsAccount");
+
+      if (info.ok) {
+        setPlace(info.body.place ?? "");
+        setInviteEmail(info.body.email ?? null);
+      } else if (isDead(info.body.error)) {
+        // Una invitación gastada no se acepta con cuenta ni sin ella: decirlo ya, antes
+        // de pedirle a nadie que cree una cuenta para nada.
+        clearPendingInvite();
+        setError(t(`invite.${info.body.error}`));
+        setPhase("failed");
+        return;
+      }
+
+      if (data.session) {
+        setPhase("ready");
+        return;
+      }
+      // Se guarda por si la persona se va a `/registro` o a `/login`: vuelva por donde
+      // vuelva, la invitación la espera. Ver `pendingInvite.ts`.
+      savePendingInvite(token);
+      setPhase(info.ok && info.body.email ? "create" : "needsAccount");
     })();
     return () => {
       cancelled = true;
@@ -80,6 +143,7 @@ function InviteBody() {
     setError(null);
     try {
       await acceptInvite(sb, token);
+      clearPendingInvite();
       setPhase("done");
       // Directo a «Tu iniciativa», que abre en el onboarding. Ese es el momento en que
       // la persona tiene toda la información en la cabeza; mandarla al mapa a buscar la
@@ -92,6 +156,10 @@ function InviteBody() {
       setError(e instanceof Error ? e.message : t("error.generic"));
     }
   }, [token, router, t]);
+
+  // El token viaja en el `next` para que volver aquí sea automático.
+  const next = `/invitacion?t=${token}`;
+  const loginHref = `/login?next=${encodeURIComponent(next)}`;
 
   return (
     <main className="entry auth">
@@ -107,28 +175,42 @@ function InviteBody() {
           </Link>
           <div className="entry-brand">{site.country.host}</div>
           <h1 className="entry-h1">{t("invite.title")}</h1>
-          <p className="entry-lead">{t("invite.subtitle")}</p>
+          <p className="entry-lead">
+            {place ? t("invite.subtitlePlace", { place }) : t("invite.subtitle")}
+          </p>
         </header>
 
-        <div className="auth-card">
-          {phase === "checking" ? <Spinner /> : null}
+        <div className="auth-card" aria-busy={phase === "checking"}>
+          {phase === "checking" ? (
+            // El hueco del formulario que viene, no una ruleta: cuando llega ocupa el
+            // mismo sitio y no empuja nada.
+            <div className="form" aria-hidden="true">
+              <div className="skel skel-line" />
+              <div className="skel skel-line skel-line-short" />
+              <div className="skel skel-field" />
+              <div className="skel skel-field" />
+              <div className="skel skel-field" />
+            </div>
+          ) : null}
+
+          {phase === "create" && inviteEmail ? (
+            <CreateAndAccept
+              token={token}
+              email={inviteEmail}
+              loginHref={loginHref}
+              onAccountReady={() => void accept()}
+            />
+          ) : null}
 
           {phase === "needsAccount" ? (
             <div className="form">
               <p className="small mut" style={{ margin: 0 }}>
                 {t("invite.needsAccount")}
               </p>
-              {/* El token viaja en el `next` para que volver aquí sea automático. */}
-              <Link
-                className="btnp"
-                href={`/registro?next=${encodeURIComponent(`/invitacion?t=${token}`)}`}
-              >
+              <Link className="btnp" href={`/registro?next=${encodeURIComponent(next)}`}>
                 {t("register.title")}
               </Link>
-              <Link
-                className="btng"
-                href={`/login?next=${encodeURIComponent(`/invitacion?t=${token}`)}`}
-              >
+              <Link className="btng" href={loginHref}>
                 {t("account.signIn")}
               </Link>
             </div>
@@ -168,5 +250,148 @@ function InviteBody() {
         </p>
       </div>
     </main>
+  );
+}
+
+/**
+ * Crear la cuenta sin salir de la invitación.
+ *
+ * Dos campos, no tres: el correo lo pone la invitación y se enseña de sólo lectura, para
+ * que la persona sepa con qué dirección entrará después sin poder cambiarla — otra
+ * dirección ya no estaría probada por el token.
+ *
+ * Al terminar entra con esa contraseña y canjea en el mismo gesto: un solo botón entre
+ * abrir el correo y estar dentro de su punto.
+ */
+function CreateAndAccept({
+  token,
+  email,
+  loginHref,
+  onAccountReady,
+}: {
+  token: string;
+  email: string;
+  loginHref: string;
+  onAccountReady: () => void;
+}) {
+  const { t } = useI18n();
+  const [displayName, setDisplayName] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [exists, setExists] = useState(false);
+
+  const nameBad = displayName.length > 0 && displayNameInvalid(cleanDisplayName(displayName));
+  const passBad = password.length > 0 && publicPasswordTooShort(password);
+  const canSubmit =
+    !busy &&
+    !displayNameInvalid(cleanDisplayName(displayName)) &&
+    !publicPasswordTooShort(password);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/account/invite", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token, displayName: cleanDisplayName(displayName), password }),
+      });
+      const data: { error?: string } = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (data.error === "exists") {
+          setExists(true);
+          return;
+        }
+        setError(
+          data.error === "pwned_password"
+            ? t("password.pwned")
+            : data.error === "password_too_short"
+              ? t("password.tooShort", { n: MIN_PASSWORD_PUBLIC })
+              : data.error === "invalid_display_name"
+                ? t("register.errorName")
+                : isDead(data.error)
+                  ? t(`invite.${data.error}`)
+                  : t("admin.saveError"),
+        );
+        return;
+      }
+      // La cuenta ya existe y está confirmada: entrar y canjear, sin pasar por ningún
+      // correo más.
+      const { error: signInError } = await sb.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+      onAccountReady();
+    } catch {
+      setError(t("error.network"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (exists) {
+    return (
+      <div className="form">
+        <Notice tone="info">{t("invite.exists")}</Notice>
+        <Link className="btnp" href={loginHref}>
+          {t("account.signIn")}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <form className="form" onSubmit={(e) => void submit(e)}>
+      <p className="small mut" style={{ margin: 0 }}>
+        {t("invite.createLead")}
+      </p>
+
+      <Field label={t("register.email")} hint={t("invite.emailFixed")}>
+        <Input type="email" value={email} readOnly autoComplete="username" />
+      </Field>
+
+      <Field label={t("register.displayName")} hint={t("register.displayNameHint")}>
+        <Input
+          required
+          autoFocus
+          autoComplete="nickname"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+        />
+      </Field>
+      {nameBad ? <p className="lerr">{t("register.errorName")}</p> : null}
+
+      <Field label={t("register.password")} hint={t("password.hint", { n: MIN_PASSWORD_PUBLIC })}>
+        <Input
+          required
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </Field>
+      {passBad ? (
+        <p className="lerr">{t("password.tooShort", { n: MIN_PASSWORD_PUBLIC })}</p>
+      ) : null}
+
+      {error ? <Notice tone="danger">{error}</Notice> : null}
+
+      <Button type="submit" loading={busy} disabled={!canSubmit} block>
+        {busy ? t("register.submitting") : t("invite.createSubmit")}
+      </Button>
+
+      <p className="small mut" style={{ margin: 0 }}>
+        {t("register.haveAccount")}{" "}
+        <Link className="linkish" href={loginHref}>
+          {t("account.signIn")}
+        </Link>
+      </p>
+    </form>
   );
 }

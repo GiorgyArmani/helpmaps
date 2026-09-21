@@ -10,6 +10,8 @@ import type {} from "leaflet.markercluster";
 import type {
   Map as LeafletMap,
   LayerGroup,
+  LeafletMouseEvent,
+  Marker,
   DivIconOptions,
   MarkerClusterGroup,
 } from "leaflet";
@@ -20,6 +22,9 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import type { Center } from "@/domain/types";
 import type { IntensityContour, Quake } from "@/domain/hazard";
 import type { GeoJsonObject } from "geojson";
+import type { AffectedZone } from "@/domain/area";
+import { ringCenter } from "@/domain/area";
+import { zoneColor, zoneFillOpacity } from "@/features/map/zoneStyle";
 import type { EmergencyLayer } from "@/domain/layers";
 import { coveragePins, hasCoords, hasNeed, statusOf } from "@/domain/center";
 import { MAPCFG, pinTypes, typeStyle } from "@/config";
@@ -54,6 +59,26 @@ interface Props {
   draftPin: { lat: number; lng: number } | null;
   /** Fired when the draft pin is dragged, so the form's coordinates follow it. */
   onDraftPinMove: (at: { lat: number; lng: number }) => void;
+  /** Zonas afectadas publicadas por esta emergencia. */
+  zones: AffectedZone[];
+  /** Si la capa de zonas está encendida. */
+  showZones: boolean;
+  /**
+   * El anillo que el equipo está dibujando AHORA, o null cuando no se dibuja nada.
+   *
+   * Mientras no sea null, un toque en el mapa añade un vértice y cada vértice se puede
+   * arrastrar. Es la única parte del mapa que ESCRIBE, y por eso se entra a ella a
+   * propósito desde el panel en vez de estar siempre viva: en un mapa donde cualquiera
+   * toca para ver una ficha, un clic que además dibuja es una trampa.
+   */
+  draftRing: [number, number][] | null;
+  onDraftRingChange: (ring: [number, number][]) => void;
+  /** La zona que se está editando: no se pinta dos veces mientras se dibuja encima. */
+  editingZoneId: string | null;
+  /** Abrir una zona: quién hay dentro y qué está pasando ahí. */
+  onZoneSelect: (zone: AffectedZone) => void;
+  /** La zona abierta ahora mismo. El mapa la encuadra y la marca más gruesa. */
+  focusZoneId: string | null;
 }
 
 /**
@@ -98,6 +123,16 @@ function loadGeoJson(url: string): Promise<GeoJsonObject> {
 
 /** El zoom a partir del cual los pines tienen sitio para llevar su nombre al lado. */
 const LABEL_ZOOM = 14;
+
+/**
+ * A partir de acá, una zona afectada deja de rellenarse y se queda en su contorno.
+ *
+ * El relleno existe para VER la zona de lejos, en el encuadre del país. Pasado el nivel de
+ * municipio la zona ya no cabe en la pantalla: el relleno deja de dibujar una forma y pasa
+ * a ser un filtro de color sobre las calles, los nombres y los propios puntos de ayuda —
+ * justo lo que alguien que ya está dentro abrió el mapa para leer.
+ */
+const ZONE_NEAR_ZOOM = 11;
 
 /**
  * El pin de un punto: pastilla blanca, glifo del tipo, y el corazón si pide algo ahora.
@@ -153,6 +188,13 @@ export default function MapCanvas({
   extraOn,
   draftPin,
   onDraftPinMove,
+  zones,
+  showZones,
+  draftRing,
+  onDraftRingChange,
+  editingZoneId,
+  onZoneSelect,
+  focusZoneId,
 }: Props) {
   const site = useSite();
   const helpers = useSiteHelpers();
@@ -174,6 +216,9 @@ export default function MapCanvas({
   // no reconstruir la capa entera cada vez que alguien toca un pin.
   const selectedRef = useRef<string | null>(null);
   const hazardRef = useRef<LayerGroup | null>(null);
+  // Las zonas afectadas publicadas, y aparte el anillo que se está dibujando.
+  const zoneRef = useRef<LayerGroup | null>(null);
+  const drawRef = useRef<LayerGroup | null>(null);
   // Las capas propias de la emergencia, montadas por id.
   const overlayRef = useRef<LayerGroup | null>(null);
   const mountedRef = useRef<Record<string, import("leaflet").Layer>>({});
@@ -183,6 +228,11 @@ export default function MapCanvas({
   // Same trick as `selectRef`: the drag handler is bound once when the marker is built,
   // so it has to read the CURRENT callback rather than the one captured that render.
   const draftMoveRef = useRef(onDraftPinMove);
+  // Mismo motivo: el `click` del mapa y el `dragend` de cada vértice se enganchan una vez
+  // y tienen que escribir sobre el anillo VIGENTE, no sobre el que había al engancharse.
+  const ringRef = useRef<[number, number][] | null>(draftRing);
+  const ringChangeRef = useRef(onDraftRingChange);
+  const zoneSelectRef = useRef(onZoneSelect);
   const [ready, setReady] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState(false);
@@ -196,6 +246,15 @@ export default function MapCanvas({
   useEffect(() => {
     draftMoveRef.current = onDraftPinMove;
   }, [onDraftPinMove]);
+
+  useEffect(() => {
+    ringRef.current = draftRing;
+    ringChangeRef.current = onDraftRingChange;
+  }, [draftRing, onDraftRingChange]);
+
+  useEffect(() => {
+    zoneSelectRef.current = onZoneSelect;
+  }, [onZoneSelect]);
 
   // ── init ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -227,8 +286,13 @@ export default function MapCanvas({
       // Orden de pintado, de abajo hacia arriba: mapa base, capas de la emergencia, capa
       // sísmica, pines. El temblor y los daños son contexto; los puntos de ayuda son la
       // respuesta, y la respuesta va siempre encima.
+      // Las zonas van abajo del todo: son el contexto más ancho de la pantalla, y una
+      // mancha de país entero por encima de una capa de daño la borraría.
+      zoneRef.current = L.layerGroup().addTo(map);
       overlayRef.current = L.layerGroup().addTo(map);
       hazardRef.current = L.layerGroup().addTo(map);
+      // El anillo en edición, encima de todo lo que se dibuja: se está tocando.
+      drawRef.current = L.layerGroup().addTo(map);
 
       // El plugin se carga después de Leaflet porque se engancha a su namespace.
       await import("leaflet.markercluster");
@@ -356,6 +420,203 @@ export default function MapCanvas({
       cancelled = true;
     };
   }, [ready, quakes, contours, layers.intensity, layers.epicenters, t, lang]);
+
+  // ── zonas afectadas ─────────────────────────────────────────────────────
+  //
+  // Los polígonos que dibuja el equipo: dónde pegó esto. En un terremoto suele sobrar
+  // —la huella de USGS es una medición y gana—, pero en una inundación o un incendio es
+  // lo ÚNICO que contesta hasta dónde llegó.
+  //
+  // Se redibujan enteras al cambiar, como la capa sísmica: son unas pocas figuras y
+  // reconstruirlas no cuesta nada medible.
+  useEffect(() => {
+    if (!ready) return;
+    const layer = zoneRef.current;
+    if (!layer) return;
+    let cancelled = false;
+
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (cancelled || !zoneRef.current) return;
+      layer.clearLayers();
+      if (!showZones) return;
+
+      // Las más graves al final: donde dos zonas se solapan, arriba tiene que quedar la
+      // peor, que es la que hay que leer.
+      for (const zone of [...zones].sort((a, b) => a.severity - b.severity)) {
+        // La que se está editando la dibuja el anillo en edición, más abajo. Pintarla dos
+        // veces deja el polígono viejo debajo del nuevo mientras se mueve un vértice.
+        if (zone.id === editingZoneId) continue;
+
+        const color = zoneColor(zone.severity);
+        const open = zone.id === focusZoneId;
+        const poly = L.polygon(zone.ring, {
+          color,
+          // La abierta se dibuja más gruesa: con tres zonas encima, el panel de al lado
+          // tiene que poder decir CUÁL de ellas está contando.
+          weight: open ? 4 : 2,
+          fillColor: color,
+          fillOpacity: zoneFillOpacity(zone.severity),
+          /**
+           * La mancha TAMBIÉN abre la zona, y esto se decidió al ver que no bastaba con
+           * el rótulo: el rótulo va en el centro del anillo, que es justo donde se
+           * amontonan los pines, y ahí un pin lo tapa. Eso no es un problema del robot
+           * que lo encontró —«el marcador intercepta el toque»—, es un dedo que apunta al
+           * nombre de la zona y abre un refugio.
+           *
+           * Los pines siguen ganando cuando hay uno debajo del dedo, porque están en otro
+           * panel y encima: la mancha sólo recoge los toques que hoy no hacían nada.
+           *
+           * Mientras se dibuja NO: ahí cada toque en el mapa es un vértice, y una zona ya
+           * publicada que cubre media pantalla se los comería todos.
+           */
+          interactive: draftRing === null,
+          // La clase es lo que permite aclarar el relleno al acercarse, sin volver a
+          // dibujar nada: ver `.map-near .zonepoly` en `globals.css`.
+          className: "zonepoly",
+        });
+        poly.on("click", () => zoneSelectRef.current(zone));
+        poly.addTo(layer);
+
+        // El nombre y la gravedad EN TEXTO, sobre la zona. El color solo no informa: quien
+        // no distingue el ámbar del rojo tiene que poder leer cuál es cuál, y eso vale
+        // igual para quien mira el mapa a pleno sol.
+        //
+        // Se construye con el DOM y no con una plantilla de HTML: el rótulo lo escribe una
+        // persona del equipo y así no hay ninguna cadena suya convirtiéndose en marcado.
+        const label = document.createElement("span");
+        label.className = `zonelbl zonelbl-s${zone.severity}${open ? " is-on" : ""}`;
+        label.textContent = zone.label;
+        const sev = document.createElement("i");
+        sev.textContent = t(`area.sev.${zone.severity}` as DictKey);
+        label.append(sev);
+        // El galón dice que esto se abre. Nunca un «→» escrito: una flecha de la
+        // tipografía cambia de forma y de altura con la fuente que acabe usando el
+        // sistema, y no se alinea con nada.
+        label.insertAdjacentHTML(
+          "beforeend",
+          `<svg class="zonelbl-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+        );
+
+        // El rótulo SÍ se toca, y el polígono no. Es la diferencia entre un asa y una
+        // trampa: una zona ocupa media pantalla, así que hacerla tocable entera
+        // convertiría cualquier toque en el mapa —incluso el que iba a un refugio— en
+        // «abrir la zona». El rótulo es un blanco pequeño, visible y a propósito.
+        const marker = L.marker(ringCenter(zone.ring), {
+          interactive: true,
+          keyboard: true,
+          // Encima de los pines NO: un rótulo no puede tapar un punto de ayuda.
+          zIndexOffset: -200,
+          icon: L.divIcon({ className: "zonelbl-wrap", html: label, iconSize: [0, 0] }),
+        });
+        marker.on("click", () => zoneSelectRef.current(zone));
+        marker.addTo(layer);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, zones, showZones, editingZoneId, focusZoneId, draftRing === null, t]);
+
+  // ── el anillo que se está dibujando ─────────────────────────────────────
+  //
+  // Un vértice es un marcador arrastrable con un área de toque de 44px (la pelota que se
+  // ve es más chica: ver `.vtx` en `globals.css`). Mientras se arrastra, el polígono sigue
+  // al dedo sin pasar por React — un `setState` por cada píxel de arrastre sería un
+  // repintado del mapa entero a 60 por segundo—; al soltar, se confirma hacia arriba.
+  useEffect(() => {
+    if (!ready) return;
+    const layer = drawRef.current;
+    if (!layer) return;
+    let cancelled = false;
+
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (cancelled || !drawRef.current) return;
+      layer.clearLayers();
+      const ring = draftRing;
+      if (!ring || ring.length === 0) return;
+
+      const color = zoneColor(3);
+      // Con dos puntos todavía no hay área: se dibuja la línea para que se vea por dónde
+      // va, y el polígono aparece solo al tercer toque.
+      const shape =
+        ring.length >= 3
+          ? L.polygon(ring, {
+              color,
+              weight: 2,
+              dashArray: "6 4",
+              fillColor: color,
+              fillOpacity: 0.12,
+              interactive: false,
+            })
+          : L.polyline(ring, { color, weight: 2, dashArray: "6 4", interactive: false });
+      shape.addTo(layer);
+
+      ring.forEach((point, index) => {
+        const vertex = L.marker(point, {
+          draggable: true,
+          autoPan: true,
+          keyboard: false,
+          zIndexOffset: 1200,
+          icon: L.divIcon({
+            className: "mkwrap",
+            html: `<span class="vtx"></span>`,
+            iconSize: [0, 0],
+          }),
+        });
+
+        vertex.on("drag", (e) => {
+          const at = (e.target as Marker).getLatLng();
+          const live = (ringRef.current ?? ring).map((p, j): [number, number] =>
+            j === index ? [at.lat, at.lng] : p,
+          );
+          if (live.length >= 3) (shape as import("leaflet").Polygon).setLatLngs(live);
+          else (shape as import("leaflet").Polyline).setLatLngs(live);
+        });
+
+        vertex.on("dragend", (e) => {
+          const at = (e.target as Marker).getLatLng();
+          const current = ringRef.current;
+          if (!current) return;
+          ringChangeRef.current(
+            current.map((p, j): [number, number] => (j === index ? [at.lat, at.lng] : p)),
+          );
+        });
+
+        vertex.addTo(layer);
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, draftRing]);
+
+  // ── tocar el mapa añade un vértice ──────────────────────────────────────
+  //
+  // Sólo mientras hay un anillo abierto. En un mapa donde tocar sirve para abrir una
+  // ficha, un clic que además dibuja sería una trampa para cualquiera que esté mirando.
+  useEffect(() => {
+    if (!ready) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const drawing = draftRing !== null;
+    // La cruz dice, sin una sola palabra, que este mapa ahora mismo escribe.
+    map.getContainer().classList.toggle("map-drawing", drawing);
+    if (!drawing) return;
+
+    const onClick = (e: LeafletMouseEvent) => {
+      const current = ringRef.current;
+      if (!current) return;
+      ringChangeRef.current([...current, [e.latlng.lat, e.latlng.lng]]);
+    };
+    map.on("click", onClick);
+    return () => {
+      map.off("click", onClick);
+    };
+  }, [ready, draftRing !== null]);
 
   // ── capas propias de la emergencia ──────────────────────────────────────
   //
@@ -554,7 +815,11 @@ export default function MapCanvas({
     if (!map) return;
     const onZoom = () => {
       if (map.getZoom() >= LABEL_ZOOM !== labelsRef.current) void draw();
+      // De lejos el relleno es lo que hace ver la zona de un vistazo; de cerca ya estás
+      // dentro de ella y lo único que hace es teñir la calle que viniste a leer.
+      map.getContainer().classList.toggle("map-near", map.getZoom() >= ZONE_NEAR_ZOOM);
     };
+    onZoom();
     map.on("zoomend", onZoom);
     return () => {
       map.off("zoomend", onZoom);
@@ -619,6 +884,30 @@ export default function MapCanvas({
       cancelled = true;
     };
   }, [ready, draftPin]);
+
+  // ── el encuadre sigue a la zona abierta ─────────────────────────────────
+  //
+  // `flyToBounds` y no `flyTo` al centro: lo que hay que ver es la zona ENTERA, y su
+  // tamaño lo decide quien la dibujó —puede ser un barrio o media costa—, así que un zoom
+  // fijo se quedaría corto o largo. El relleno deja sitio para el panel que se abre al
+  // lado y para el rótulo, que va en el centro.
+  useEffect(() => {
+    if (!ready || !focusZoneId) return;
+    const map = mapRef.current;
+    const zone = zones.find((z) => z.id === focusZoneId);
+    if (!map || !zone) return;
+    let cancelled = false;
+
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (cancelled || !mapRef.current) return;
+      map.flyToBounds(L.latLngBounds(zone.ring), { padding: [48, 48], duration: 0.7 });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, focusZoneId, zones]);
 
   // ── viewport follows the region filter ──────────────────────────────────
   useEffect(() => {

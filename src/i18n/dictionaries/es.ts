@@ -964,6 +964,16 @@ const es = {
   "invite.needsAccount":
     "Hace falta una cuenta para aceptarla. Crea una o entra con la que ya tienes: la invitación te espera.",
   "invite.noToken": "Falta el código de la invitación. Abre el enlace completo que te enviaron.",
+  "invite.subtitlePlace": "Te invitaron a gestionar {place}.",
+  "invite.createLead":
+    "Crea tu cuenta y entras directo a tu iniciativa. No hace falta confirmar el correo: la invitación ya llegó a él.",
+  "invite.emailFixed": "La invitación es para esta dirección. Con ella entrarás después.",
+  "invite.createSubmit": "Crear cuenta y aceptar",
+  "invite.exists":
+    "Ya hay una cuenta con este correo. Entra con ella y la invitación te espera.",
+  "invite.used": "Esta invitación ya se usó. Si no fuiste tú, pide al equipo una nueva.",
+  "invite.expired": "Esta invitación caducó. Pide al equipo que te mande otra.",
+  "invite.not_found": "No encontramos esta invitación. Abre el enlace completo que te enviaron.",
 
   // Lo que ve el equipo al invitar, en la ficha de un punto.
   "admin.managers": "Quién lo gestiona",
@@ -1010,10 +1020,51 @@ const es = {
   "layers.cta": "Capas",
   "layers.epicenters": "Epicentros",
   "layers.epicentersHint": "Dónde se originó cada sismo",
-  "layers.intensity": "Zona afectada",
+  "layers.intensity": "Intensidad del sismo",
   "layers.intensityHint": "Hasta dónde llegó el movimiento del terreno",
   "layers.none": "Sin sismos registrados en los últimos {n} días.",
   "layers.stale": "Datos sísmicos de una carga anterior.",
+  "layers.updatedNow": "Actualizado ahora",
+  "layers.updatedMin": "Actualizado hace {n} min",
+  "layers.updatedHours": "Actualizado hace {n} h",
+
+  "layers.zones": "Zonas afectadas",
+  "layers.zonesHint": "Las marca el equipo que atiende la emergencia",
+
+  // ââ Zonas afectadas âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  "area.sev.1": "Aviso",
+  "area.sev.2": "Afectada",
+  "area.sev.3": "Grave",
+  "area.youAreIn": "Estás dentro de {name}",
+  "area.insideN": "{n} puntos dentro",
+  "area.insideOne": "1 punto dentro",
+  "area.insideNeeds": "{n} piden ayuda",
+  "area.intro":
+    "Marcá en el mapa hasta dónde llegó. Cada zona lleva su nombre y su gravedad, y quien abra el mapa verá si está dentro.",
+  "area.empty": "Todavía no hay ninguna zona marcada.",
+  "area.new": "Nueva zona",
+  "area.newShort": "Zona nueva",
+  "area.name": "Nombre de la zona",
+  "area.nameHint": "Cómo la llama la gente de ahí: «Norte de Zulia», «Ribera del Guaire».",
+  "area.namePlaceholder": "Norte de Zulia",
+  "area.severity": "Gravedad",
+  "area.note": "Qué pasa ahí",
+  "area.noteHint": "Una línea. Aparece junto a la zona en el panel del equipo.",
+  "area.draw": "Dibujar en el mapa",
+  "area.redraw": "Corregir el contorno",
+  "area.drawing": "Dibujando la zona",
+  "area.tapToDraw": "Tocá el mapa para marcar el contorno",
+  "area.points": "{n} puntos",
+  "area.pointOne": "1 punto",
+  "area.needPoints": "Hacen falta al menos tres puntos para cerrar una zona.",
+  "area.undo": "Deshacer",
+  "area.done": "Listo",
+  "area.deleteConfirm": "¿Borrar la zona «{name}»? Deja de verse en el mapa.",
+  "area.saveError": "No se pudo guardar la zona.",
+  "area.noRow":
+    "Este despliegue todavía sirve la configuración compilada, así que no hay dónde guardar una zona. Creá su emergencia en el registro y volvé.",
+  "area.readOnly": "Marcar zonas requiere el rol de administrador.",
+  "admin.tab.area": "Zonas",
   "layers.disclaimer":
     "Intensidad estimada por USGS a partir del modelo del sismo. Se corrige en las horas siguientes y no reemplaza el reporte oficial de daños.",
 

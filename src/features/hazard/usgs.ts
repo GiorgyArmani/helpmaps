@@ -73,6 +73,7 @@ interface FeatureProps {
   mag: number | null;
   place: string | null;
   time: number | null;
+  updated: number | null;
   url: string | null;
   detail: string | null;
   felt: number | null;
@@ -123,6 +124,7 @@ function toQuake(f: CatalogueFeature): Quake | null {
     depthKm: num(coords[2]),
     place: typeof p.place === "string" ? p.place : "",
     time,
+    updated: num(p.updated),
     alert: toQuakeAlert(p.alert),
     maxMmi: num(p.mmi),
     reportedMmi: num(p.cdi),
@@ -144,11 +146,21 @@ function toQuake(f: CatalogueFeature): Quake | null {
 // The catalogue
 // ---------------------------------------------------------------------------
 
-/** Events in the configured window and box, strongest first, capped at `maxEvents`. */
+/**
+ * Events in the configured window and box, strongest first, capped at `maxEvents`.
+ *
+ * `since` (epoch ms) turns this into a PARTIAL refresh: USGS returns only the events it
+ * has created or revised after that instant, which after the first load is almost always
+ * an empty list. That is the difference between a few hundred bytes and the whole
+ * catalogue every quarter of an hour, and the app is used on the connection where that
+ * difference is felt. `useQuakes` merges the result and still resyncs in full every hour
+ * — see `mergeQuakes` for what a partial refresh structurally cannot see.
+ */
 export async function fetchQuakes(
   seismic: SeismicConfig,
   site: SiteConfig,
   signal?: AbortSignal,
+  since?: number,
 ): Promise<Quake[]> {
   const [[south, west], [north, east]] = bounds(seismic, site);
   const start = new Date(Date.now() - seismic.windowDays * 86_400_000);
@@ -168,6 +180,10 @@ export async function fetchQuakes(
     // choose from rather than just echoing the server's ordering.
     limit: String(Math.min(500, seismic.maxEvents * 3)),
   });
+
+  // Full timestamp here, unlike `starttime`: this one is meant to move on every poll, and
+  // rounding it to the day would ask for the whole day's revisions over and over.
+  if (since !== undefined) qs.set("updatedafter", new Date(since).toISOString());
 
   const res = await fetch(`${seismic.api}?${qs}`, { signal });
   if (!res.ok) throw new Error(`USGS ${res.status}`);

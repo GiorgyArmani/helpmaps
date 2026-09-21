@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import RegisterForm from "@/features/account/RegisterForm";
 import { useI18n } from "@/i18n/context";
 import { useSite } from "@/features/app/SiteProvider";
 import "../inicio/entry.css";
 import "../auth.css";
 import { Icon } from "@/ui/icons";
+import { safeNext } from "@/lib/safeNext";
 
 /**
  * Crear una cuenta, como página propia.
@@ -29,9 +31,20 @@ import { Icon } from "@/ui/icons";
  * de estar escondida al final de la página.
  */
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterBody />
+    </Suspense>
+  );
+}
+
+function RegisterBody() {
   const site = useSite();
   const { t } = useI18n();
   const router = useRouter();
+  // Quien llega desde una invitación trae su vuelta en el `next`; perderlo aquí era
+  // perder la invitación.
+  const next = safeNext(useSearchParams().get("next"));
 
   return (
     <main className="entry auth">
@@ -51,7 +64,12 @@ export default function RegisterPage() {
         </header>
 
         <div className="auth-card">
-          <RegisterForm onSignIn={() => router.push("/login")} />
+          <RegisterForm
+            next={next}
+            onSignIn={() =>
+              router.push(next ? `/login?next=${encodeURIComponent(next)}` : "/login")
+            }
+          />
         </div>
 
         <nav className="auth-legal">

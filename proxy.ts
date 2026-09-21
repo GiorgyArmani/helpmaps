@@ -24,13 +24,22 @@ import { COUNTRY, FEATURES, IS_HUB } from "@/config";
 const SEEN_COOKIE = `helpmaps_entry_${COUNTRY.slug}`;
 const SIX_MONTHS = 60 * 60 * 24 * 180;
 
+/** Query params that make "/" a deep link rather than a first visit. */
+const DEEP_LINKS = ["a", "mine", "c", "panel"];
+
 export function proxy(req: NextRequest) {
   // The hub has its own landing, and a clone may switch the entry page off entirely.
   if (IS_HUB || !FEATURES.entryPage) return NextResponse.next();
 
-  // Links that originate ON /inicio ("I want to help", "register my initiative") point
-  // back at "/" carrying `a=`. Without this they would bounce straight to /inicio again.
-  if (req.nextUrl.searchParams.has("a")) return NextResponse.next();
+  // A deep link already knows where it is going, so the orientation question has nothing
+  // to add. `a=` comes from /inicio itself ("I want to help", "register my initiative");
+  // without this it would bounce straight back. `mine=` is where an accepted center
+  // invitation lands — usually on a phone that has never opened the site, which is
+  // exactly who this gate catches — and sending a brand-new manager to the generic
+  // landing instead of their initiative's onboarding is how the invitation got lost.
+  // `c=` opens a point and `panel=` the staff panel.
+  const params = req.nextUrl.searchParams;
+  if (DEEP_LINKS.some((key) => params.has(key))) return NextResponse.next();
 
   // Already oriented → straight to the map.
   if (req.cookies.has(SEEN_COOKIE)) return NextResponse.next();

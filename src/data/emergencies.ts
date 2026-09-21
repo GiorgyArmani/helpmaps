@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EmergencyRow } from "@/config/fromRow";
+import type { AffectedZone } from "@/domain/area";
 
 // Reads and writes the registry. The gate is RLS: `emergencies_staff_read` lets any staff
 // member see the list, `emergencies_super_write` lets only a superadmin change it, and
@@ -8,7 +9,7 @@ import type { EmergencyRow } from "@/config/fromRow";
 
 const COLUMNS =
   "id,slug,host,country_code,country_name,name,hazard_type,status," +
-  "region_noun,geo,regions,legal,brand,features,language,hazard,layers,news,maintenance,notice";
+  "region_noun,geo,regions,legal,brand,features,language,hazard,layers,area,news,maintenance,notice";
 
 /** Every emergency in this database, drafts included. One row on a country deployment. */
 export async function fetchEmergencies(sb: SupabaseClient): Promise<EmergencyRow[]> {
@@ -49,6 +50,7 @@ export async function saveEmergency(sb: SupabaseClient, draft: EmergencyDraft): 
     language: draft.language,
     hazard: draft.hazard,
     layers: draft.layers,
+    area: draft.area,
     news: draft.news,
     maintenance: draft.maintenance,
     notice: draft.notice?.trim() ? draft.notice.trim() : null,
@@ -58,6 +60,28 @@ export async function saveEmergency(sb: SupabaseClient, draft: EmergencyDraft): 
   // Conflict on `slug` rather than `id` so re-saving an emergency that was created
   // elsewhere updates it instead of failing on the unique index.
   const { error } = await sb.from("emergencies").upsert(row, { onConflict: "slug" });
+  if (error) throw error;
+}
+
+/**
+ * Guardar las zonas afectadas, y NADA MÁS de la fila.
+ *
+ * Un UPDATE de una sola columna, en vez de reenviar la fila entera como hace el
+ * formulario del registro, por dos razones que se notan el día malo:
+ *
+ *   · Quien dibuja suele ser el admin de ESA emergencia, no un superadmin de la red
+ *     (`emergencies_admin_notice` se lo permite). Mandando la fila completa, un guardado
+ *     de zona podía pisar el encuadre o el marco legal con lo que el formulario tuviera
+ *     cargado en ese momento.
+ *   · Dos personas corrigiendo la emergencia a la vez dejan de pisarse: la que mueve un
+ *     vértice escribe `area` y no toca el resto.
+ */
+export async function saveEmergencyArea(
+  sb: SupabaseClient,
+  id: string,
+  zones: AffectedZone[],
+): Promise<void> {
+  const { error } = await sb.from("emergencies").update({ area: zones }).eq("id", id);
   if (error) throw error;
 }
 

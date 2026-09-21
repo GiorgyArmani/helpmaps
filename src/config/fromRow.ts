@@ -11,6 +11,7 @@
 // a preset does.
 
 import { assembleSite } from "@/config/assemble";
+import { parseZones, type AffectedZone } from "@/domain/area";
 import { parseLayers, type EmergencyLayer } from "@/domain/layers";
 import { parseNewsConfig, type NewsConfig } from "@/domain/news";
 import { BASE_BRAND } from "~/config/brand";
@@ -51,6 +52,8 @@ export interface EmergencyRow {
   language: LanguageOverrides;
   hazard: Partial<HazardConfig>;
   layers: unknown[];
+  /** Zonas afectadas dibujadas por el equipo. Ver `db/14_area.sql`. */
+  area: unknown;
   news: unknown;
   maintenance: boolean;
   notice: string | null;
@@ -75,6 +78,12 @@ export interface EmergencyIdentity {
   notice: string | null;
   /** Extra overlays this emergency declares, already validated. */
   layers: EmergencyLayer[];
+  /**
+   * Dónde pegó esto, dibujado por quien la opera. Vacío es el caso normal — y en un
+   * terremoto lo normal es que sobre, porque la huella de USGS es mejor que cualquier
+   * polígono a mano.
+   */
+  zones: AffectedZone[];
   /** Press feeds and the relevance filter for this emergency's bulletin. */
   news: NewsConfig;
 }
@@ -131,6 +140,7 @@ export function emergencyFromRow(row: EmergencyRow): ResolvedEmergency {
     maintenance: row.maintenance,
     notice: row.notice,
     layers: parseLayers(row.layers),
+    zones: parseZones(row.area),
     news: parseNewsConfig(row.news),
     site: assembleSite({
       // A row is always a country deployment. The hub is the network's own front page and

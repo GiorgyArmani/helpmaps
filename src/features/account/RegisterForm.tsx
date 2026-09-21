@@ -27,7 +27,14 @@ import { cleanDisplayName, displayNameInvalid } from "@/domain/account";
  * probar direcciones y averiguar quién tiene cuenta en un mapa de emergencia. Esa lista
  * no es inofensiva.
  */
-export default function RegisterForm({ onSignIn }: { onSignIn?: () => void }) {
+export default function RegisterForm({
+  onSignIn,
+  next,
+}: {
+  onSignIn?: () => void;
+  /** A dónde volver tras confirmar el correo (p. ej. la invitación que la trajo aquí). */
+  next?: string | null;
+}) {
   const { t } = useI18n();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -58,6 +65,7 @@ export default function RegisterForm({ onSignIn }: { onSignIn?: () => void }) {
             displayName: cleanDisplayName(displayName),
             email: email.trim().toLowerCase(),
             password,
+            next: next ?? undefined,
           }),
         });
         const data: { error?: string } = await res.json().catch(() => ({}));
@@ -85,7 +93,7 @@ export default function RegisterForm({ onSignIn }: { onSignIn?: () => void }) {
         setBusy(false);
       }
     },
-    [canSubmit, displayName, email, password, t],
+    [canSubmit, displayName, email, password, next, t],
   );
 
   if (done) {

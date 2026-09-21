@@ -131,6 +131,15 @@ export interface BrandColors {
   info: string;
   /** Unknown / inactive. */
   neutral: string;
+  /**
+   * Aviso: algo que hay que mirar y todavía no es una emergencia.
+   *
+   * Existía de hecho antes que como token —`.st-warn` lo tenía escrito a mano— y ahora
+   * que la severidad de una zona afectada necesita el escalón intermedio entre `info` y
+   * `danger`, vale la pena que lo ponga la configuración y no el CSS: re-marcar un país
+   * sigue siendo una edición de `config/brand.ts`.
+   */
+  warn: string;
   /** Closed, destructive, maintenance. */
   danger: string;
 }

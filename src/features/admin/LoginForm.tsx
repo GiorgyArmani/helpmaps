@@ -16,7 +16,14 @@ import { useI18n } from "@/i18n/context";
  * There is no self-service sign-up: panel access publishes live onto a map people act on,
  * so an admin provisions it.
  */
-export default function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
+export default function LoginForm({
+  onSignedIn,
+  next,
+}: {
+  onSignedIn: () => void;
+  /** Se pasa al registro, para que crear la cuenta no pierda a dónde se volvía. */
+  next?: string | null;
+}) {
   const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -93,7 +100,10 @@ export default function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
           candado es una puerta cerrada sin timbre, que es exactamente lo que pasaba. */}
       <p className="small mut" style={{ margin: 0 }}>
         {t("login.noAccount")}{" "}
-        <Link className="linkish" href="/registro">
+        <Link
+          className="linkish"
+          href={next ? `/registro?next=${encodeURIComponent(next)}` : "/registro"}
+        >
           {t("login.createAccount")}
         </Link>
       </p>

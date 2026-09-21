@@ -13,6 +13,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  *
  * Today that list is:
  *   • creating and revoking staff accounts
+ *   • creating a person's account from a center invitation (`app/api/account/invite`),
+ *     and ONLY for the address the invitation itself names
  *   • `src/server/emergency.ts`, and ONLY on the `HELPMAPS_EMERGENCY` path — previewing a
  *     draft emergency, which RLS hides from the anon key by design. Bounded to the one
  *     slug that variable names, and no production deployment sets it.

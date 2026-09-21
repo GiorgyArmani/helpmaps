@@ -3,6 +3,7 @@ import { helpKinds, isLocationType, toCenterStatus } from "@/domain/types";
 import type { Region } from "@/config/types";
 import { MAPCFG } from "@/config";
 import { parseHours } from "@/domain/hours";
+import { pointInRing } from "@/domain/area";
 
 // Everything the app decides ABOUT a point lives here: no component re-implements
 // "is this stale", "is this asking for help", "does this match the search".
@@ -232,6 +233,14 @@ export interface CenterFilter {
   types: LocationType[];
   /** Only points that are asking for something. */
   onlyNeeds: boolean;
+  /**
+   * El anillo de una zona afectada, cuando alguien la abrió para ver qué hay dentro.
+   *
+   * Es un filtro geométrico y no otra `region` porque una zona no sigue fronteras: la
+   * mancha de una inundación agarra media Vargas y un pedazo de Miranda, y preguntar por
+   * el estado de cada punto contestaría otra cosa. Acá se pregunta por sus coordenadas.
+   */
+  zone: [number, number][] | null;
 }
 
 export const EMPTY_FILTER: CenterFilter = {
@@ -239,6 +248,7 @@ export const EMPTY_FILTER: CenterFilter = {
   region: null,
   types: [],
   onlyNeeds: false,
+  zone: null,
 };
 
 export function filterCenters(centers: Center[], f: CenterFilter): Center[] {
@@ -249,6 +259,10 @@ export function filterCenters(centers: Center[], f: CenterFilter): Center[] {
     if (f.region && (isDigital(c) ? !servesRegion(c, f.region) : c.region !== f.region))
       return false;
     if (f.onlyNeeds && !hasNeed(c)) return false;
+    // Dentro de la zona o fuera. Un punto sin coordenadas —una iniciativa digital— no
+    // está «dentro» de ninguna parte: no tiene sede, sirve regiones enteras. Se queda
+    // fuera de este filtro en vez de colarse por tener un cero en el sitio de la latitud.
+    if (f.zone && (!hasCoords(c) || !pointInRing(f.zone, c.lat, c.lng))) return false;
     return matchesQuery(c, f.query);
   });
 }

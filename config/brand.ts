@@ -69,6 +69,10 @@ const base: BrandConfig = {
     ok: "oklch(0.66 0.11 155)",
     info: "oklch(0.62 0.13 250)",
     neutral: "oklch(0.52 0.03 280)",
+    // El mismo ámbar que `.st-warn` llevaba escrito a mano en `globals.css`: subirlo acá
+    // no cambia un píxel de lo que ya existía, y le da a la severidad intermedia de una
+    // zona afectada un token en lugar de un hex suelto.
+    warn: "#b45309",
     danger: "oklch(0.6 0.16 26)",
   },
 

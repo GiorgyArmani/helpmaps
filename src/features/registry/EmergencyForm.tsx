@@ -36,6 +36,8 @@ export function blankEmergency(): EmergencyDraft {
     language: {},
     hazard: {},
     layers: [],
+    // Las zonas se dibujan en el mapa, no se escriben acá. Ver `db/14_area.sql`.
+    area: [],
     news: {},
     maintenance: false,
     notice: null,
