@@ -509,6 +509,9 @@ const en: Partial<Dict> = {
   "volunteer.submit": "Send request",
   "volunteer.done": "Request sent",
   "volunteer.doneBody": "We'll write to the email you left once the team reviews it.",
+  "volunteer.doneBodyAccount":
+    "We'll write to {email} once the team reviews it. You can also follow it in My account.",
+  "volunteer.asAccount": "We'll reply to {email}, your account email.",
 
   "privacy.notice":
     "What you send is reviewed by the team. Your contact is never published and is only used to confirm the information.",

@@ -571,6 +571,9 @@ const es = {
   "volunteer.done": "Solicitud enviada",
   "volunteer.doneBody":
     "Te escribimos al correo que dejaste cuando el equipo la revise.",
+  "volunteer.doneBodyAccount":
+    "Te escribimos a {email} cuando el equipo la revise. También la ves en Mi cuenta.",
+  "volunteer.asAccount": "Te respondemos a {email}, el correo de tu cuenta.",
 
   // ── Privacidad en formularios ───────────────────────────────────────────
   "privacy.notice":

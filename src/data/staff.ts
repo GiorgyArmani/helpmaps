@@ -131,6 +131,9 @@ export interface VolunteerRequestDraft {
   profile: string | null;
   motivation: string | null;
   region: string | null;
+  /** La cuenta que se postula; null por el camino anónimo. Ver el índice
+   *  `volunteer_requests_one_pending_per_user` en `db/01_esquema.sql`. */
+  user_id?: string | null;
 }
 
 export async function createVolunteerRequest(
