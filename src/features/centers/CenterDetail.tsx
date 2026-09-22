@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { Center } from "@/domain/types";
 import { directionsUrl, hasCoords, isDigital, lastTouched } from "@/domain/center";
 import { typeStyle } from "@/config";
@@ -225,7 +226,7 @@ export default function CenterDetail({
           {campaigns.length > 0 ? <CampaignList campaigns={campaigns} /> : null}
           {/* Debajo de las campañas: quien acaba de leer una meta concreta es justo quien
               quiere saber por dónde aportar. */}
-          {hayAporte ? <DonateBox donate={donate} locationId={center.id} /> : null}
+          {hayAporte ? <DonateBox donate={donate} /> : null}
         </>
       ),
     });
@@ -298,6 +299,13 @@ export default function CenterDetail({
             {t("center.directions")}
           </button>
         ) : null}
+
+        {/* Su página dentro de la plataforma: perfil, campañas y agenda a pantalla entera,
+            con una dirección que se puede compartir. Misma pestaña: no sale de la app. */}
+        <Link className="btng" href={`/c/${center.id}`}>
+          <Icon.eye />
+          {t("center.profilePage")}
+        </Link>
 
         {info?.website ? (
           <a

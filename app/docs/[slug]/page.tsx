@@ -27,6 +27,7 @@ const NEED_HELP = { es: "¿Necesitas algo o quieres colaborar? ", en: "Need some
 const BACK_DOCS = { es: "Documentación", en: "Documentation", pt: "Documentação" };
 const GO_MAP = { es: "Ir al mapa", en: "Go to the map", pt: "Ir para o mapa" };
 const DOCS_LABEL = { es: "Documentación", en: "Documentation", pt: "Documentação" };
+const ON_PAGE = { es: "En esta página", en: "On this page", pt: "Nesta página" };
 
 export function generateStaticParams() {
   return DOCS.map((d) => ({ slug: d.slug }));
@@ -62,8 +63,23 @@ export default async function DocPage({ params, searchParams }: Props) {
           <h1 className="doc-h1">{tr(doc.title, lang)}</h1>
           <p className="doc-lead">{tr(doc.intro, lang)}</p>
 
+          {/* Sólo cuando hay por dónde saltar: con dos apartados el índice ocupa más que
+              lo que ahorra. */}
+          {doc.sections.length >= 3 ? (
+            <nav className="doc-toc" aria-labelledby="doc-toc-t">
+              <p id="doc-toc-t" className="doc-toc-t">{ON_PAGE[lang]}</p>
+              <ol>
+                {doc.sections.map((sec, i) => (
+                  <li key={i}>
+                    <a href={`#s-${i + 1}`}>{tr(sec.heading, lang)}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          ) : null}
+
         {doc.sections.map((sec, i) => (
-          <section key={i} className="doc-section">
+          <section key={i} id={`s-${i + 1}`} className="doc-section">
             <h2 className="doc-h2">{tr(sec.heading, lang)}</h2>
             {sec.blocks.map((b, n) => (
               <div key={n} className="doc-block">

@@ -35,56 +35,65 @@ export async function generateMetadata({ searchParams }: SearchParams): Promise<
   };
 }
 
-// Sections we plan to publish. `href` flips an item from "coming soon" to a real link.
-// `feature` visually highlights a card (used for the partnerships/funding call-out).
 // The documentation index. `href` is what turns a card into a real link; `feature`
 // highlights one card (used for the partnerships/funding call-out).
-const SECTIONS: { title: Lstr; desc: Lstr; href?: string; feature?: boolean }[] = [
+type Group = "use" | "join" | "project" | "legal";
+
+const SECTIONS: { title: Lstr; desc: Lstr; href?: string; group: Group; feature?: boolean }[] = [
   {
     title: {"es":"Guía de uso","en":"Usage guide","pt":"Guia de uso"},
     desc: {"es":"Cómo encontrar ayuda y cómo ofrecerla: el mapa y sus filtros, la ficha de un punto, compartir, colaborar y usar la app sin conexión.","en":"How to find help and how to offer it: the map and its filters, a point card, sharing, contributing and using the app offline.","pt":"Como encontrar ajuda e como oferecê-la: o mapa e seus filtros, a ficha de um ponto, compartilhar, colaborar e usar o app sem conexão."},
     href: "/docs/guia",
+    group: "use",
   },
   {
     title: {"es":"Cómo cuidamos los datos","en":"How we protect data","pt":"Como cuidamos dos dados"},
     desc: {"es":"Los lugares se publican para que circulen; las personas se protegen. Qué se publica de alguien afectado, qué no se publica nunca y por qué.","en":"Places are published so they travel; people are protected. What is published about an affected person, what never is, and why.","pt":"Os lugares são publicados para circular; as pessoas são protegidas. O que se publica de alguém afetado, o que nunca se publica e por quê."},
     href: "/docs/datos",
+    group: "use",
   },
   {
     title: {"es":"Manual del equipo","en":"Team manual","pt":"Manual da equipe"},
     desc: {"es":"Para quien tiene acceso al panel: publicar puntos, mantener necesidades y estado al día, revisar sugerencias y las reglas que no se rompen.","en":"For anyone with panel access: publishing points, keeping needs and status current, reviewing suggestions, and the rules that do not bend.","pt":"Para quem tem acesso ao painel: publicar pontos, manter necessidades e status em dia, revisar sugestões e as regras que não se quebram."},
     href: "/docs/manual-voluntario",
+    group: "use",
   },
   {
     title: {"es":"Colabora, financia y despliega","en":"Collaborate, fund & deploy","pt":"Colabore, financie e implante"},
     desc: {"es":"Proyecto abierto y sin fines de lucro. Financia, aporta en especie, despliégalo en tu país o súmate como aliado.","en":"An open, non-profit project. Fund it, give in-kind support, deploy it in your country or join as an ally.","pt":"Projeto aberto e sem fins lucrativos. Financie, contribua em espécie, implante no seu país ou junte-se como aliado."},
     href: "/docs/colabora",
+    group: "join",
     feature: true,
   },
   {
     title: {"es":"Roadmap","en":"Roadmap","pt":"Roteiro"},
     desc: {"es":"Qué ya funciona y qué viene después, por fases.","en":"What already works and what comes next, by phase.","pt":"O que já funciona e o que vem a seguir, por fases."},
     href: "/docs/roadmap",
+    group: "project",
   },
   {
     title: {"es":"Privacidad","en":"Privacy","pt":"Privacidade"},
     desc: {"es":"Política formal de este despliegue: responsable, base legal, plazos y cómo ejercer tus derechos.","en":"This deployment's formal policy: controller, lawful basis, retention and how to exercise your rights.","pt":"Política formal desta implantação: responsável, base legal, prazos e como exercer seus direitos."},
     href: "/docs/privacidad",
+    group: "legal",
   },
   {
     title: {"es":"Términos de uso","en":"Terms of use","pt":"Termos de uso"},
     desc: {"es":"Para qué sirve, qué no garantiza y qué usos no están permitidos.","en":"What it is for, what it does not guarantee and which uses are not allowed.","pt":"Para que serve, o que não garante e quais usos não são permitidos."},
     href: "/docs/terminos",
+    group: "legal",
   },
   {
     title: {"es":"API pública","en":"Public API","pt":"API pública"},
     desc: {"es":"Los puntos publicados en JSON, sin llave, para que otras aplicaciones humanitarias los consuman.","en":"Published points as JSON, with no key, so other humanitarian applications can consume them.","pt":"Os pontos publicados em JSON, sem chave, para que outras aplicações humanitárias os consumam."},
     href: "/docs/api",
+    group: "project",
   },
   {
     title: {"es":"Para prensa","en":"For press","pt":"Para imprensa"},
     desc: {"es":"Qué es, qué puede afirmarse de sus datos y qué no.","en":"What it is, what can be claimed about its data and what cannot.","pt":"O que é, o que pode ser afirmado sobre seus dados e o que não."},
     href: "/docs/prensa",
+    group: "project",
   },
 ];
 
@@ -114,6 +123,15 @@ const T = {
   } as Lstr,
   goToMap: { es: "Ir al mapa", en: "Go to the map", pt: "Ir para o mapa" } as Lstr,
 };
+
+// Nueve entradas sueltas del mismo peso no se escanean: agrupadas, quien busca «cómo se
+// usa» no tiene que leer los términos de uso para llegar. `join` no lleva título porque
+// es la llamada destacada de arriba, no una lista.
+const GROUPS: { id: Exclude<Group, "join">; title: Lstr }[] = [
+  { id: "use", title: { es: "Usar la app", en: "Using the app", pt: "Usar o app" } },
+  { id: "project", title: { es: "El proyecto", en: "The project", pt: "O projeto" } },
+  { id: "legal", title: { es: "Legal", en: "Legal", pt: "Legal" } },
+];
 
 // One icon per section (keyed by its /docs/<slug>), shown in a tinted square on each tile.
 const sv = (d: React.ReactNode) => (
@@ -209,12 +227,11 @@ export default async function DocsPage({ searchParams }: SearchParams) {
   const withLang = (href: string) => `${href}${qs(lang)}`;
 
   const chevron = (
-    <span className="doc-tile-chev" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m9 6 6 6-6 6" />
-      </svg>
-    </span>
+    <svg className="doc-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m9 6 6 6-6 6" />
+    </svg>
   );
+  const feature = SECTIONS.find((s) => s.feature && s.href);
 
   return (
     <div className="doc-wrap">
@@ -225,30 +242,50 @@ export default async function DocsPage({ searchParams }: SearchParams) {
           <h1 className="doc-h1">{t(T.h1)}</h1>
           <p className="doc-lead">{t(T.lead)}</p>
 
-        <div className="doc-grid">
-          {SECTIONS.map((s) =>
-            s.href ? (
-              <Link
-                key={s.title.es}
-                href={withLang(s.href)}
-                className={"doc-tile" + (s.feature ? " doc-tile-feature" : "")}
-              >
-                {chevron}
-                <span className="doc-tile-ic">{tileIcon(s.href)}</span>
-                {s.feature && <span className="doc-feature-tag">{t(T.forPartners)}</span>}
-                <span className="doc-tile-title">{t(s.title)}</span>
-                <p className="doc-tile-desc">{t(s.desc)}</p>
-              </Link>
-            ) : (
-              <div key={s.title.es} className="doc-tile doc-tile-soon">
-                <span className="doc-tile-ic">{tileIcon(s.href)}</span>
-                <span className="doc-item-soon">{t(T.soon)}</span>
-                <span className="doc-tile-title">{t(s.title)}</span>
-                <p className="doc-tile-desc">{t(s.desc)}</p>
-              </div>
-            ),
-          )}
-        </div>
+          {feature?.href ? (
+            <Link href={withLang(feature.href)} className="doc-feature">
+              <span className="doc-feature-ic" aria-hidden="true">{tileIcon(feature.href)}</span>
+              <span className="doc-feature-txt">
+                <span className="doc-feature-tag">{t(T.forPartners)}</span>
+                <span className="doc-feature-t">{t(feature.title)}</span>
+                <span className="doc-feature-d">{t(feature.desc)}</span>
+              </span>
+              {chevron}
+            </Link>
+          ) : null}
+
+          {GROUPS.map((g) => {
+            const items = SECTIONS.filter((s) => s.group === g.id);
+            if (items.length === 0) return null;
+            return (
+              <section key={g.id} className="doc-group" aria-labelledby={`g-${g.id}`}>
+                <h2 id={`g-${g.id}`} className="doc-group-t">{t(g.title)}</h2>
+                <div className="doc-list">
+                  {items.map((s) =>
+                    s.href ? (
+                      <Link key={s.title.es} href={withLang(s.href)} className="doc-row">
+                        <span className="doc-row-ic">{tileIcon(s.href)}</span>
+                        <span className="doc-row-txt">
+                          <span className="doc-row-t">{t(s.title)}</span>
+                          <span className="doc-row-d">{t(s.desc)}</span>
+                        </span>
+                        {chevron}
+                      </Link>
+                    ) : (
+                      <div key={s.title.es} className="doc-row">
+                        <span className="doc-row-ic">{tileIcon(s.href)}</span>
+                        <span className="doc-row-txt">
+                          <span className="doc-row-t">{t(s.title)}</span>
+                          <span className="doc-row-d">{t(s.desc)}</span>
+                        </span>
+                        <span className="doc-soon">{t(T.soon)}</span>
+                      </div>
+                    ),
+                  )}
+                </div>
+              </section>
+            );
+          })}
 
         <p className="doc-note">
           {t(T.noteAsk)}

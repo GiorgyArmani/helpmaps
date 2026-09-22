@@ -7045,11 +7045,84 @@ fieldset.fieldset {
   color: var(--ink);
 }
 
-/* «Ya aporté», en la ficha pública. */
-.idon-claim {
+/* Donar: UN botón, con el corazón de Donar en su teja. Es la acción principal de la
+   sección y tiene que leerse así: color de la marca, el icono relleno y una línea que
+   dice qué va a pasar antes de tocar. */
+.idon-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
+  min-height: 60px;
   margin-top: 10px;
+  padding: 10px 16px 10px 10px;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--e-2);
+  font-family: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    transform var(--t-tap) var(--ease),
+    box-shadow var(--t-tap) var(--ease);
 }
+
+.idon-cta:active {
+  transform: scale(0.98);
+  box-shadow: var(--e-1);
+}
+
+.idon-cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.idon-cta:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.idon-cta-ic {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.idon-cta-ic svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.idon-cta-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.idon-cta-txt b {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.idon-cta-txt small {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  opacity: 0.85;
+}
+
 
 .idon-claimed {
   display: flex;

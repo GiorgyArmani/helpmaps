@@ -110,6 +110,7 @@ const pt: Partial<Dict> = {
   "center.needsTitle": "Precisa agora",
   "center.receivesTitle": "Recebe",
   "center.helpTitle": "Como ajudar",
+  "center.profilePage": "Ver página",
   "center.scheduleTitle": "Horário",
   "center.contactTitle": "Contato",
   "center.directions": "Como chegar",
@@ -139,6 +140,7 @@ const pt: Partial<Dict> = {
   "donate.data": "Dados para doar",
   "donate.follow": "Ver a página",
   "donate.go": "Doar",
+  "donate.goHint": "Abre a página de pagamento da iniciativa",
   "donate.joinTitle": "A sua organização recebe doações?",
   "donate.joinBody":
     "Se você pode mostrar no que se transforma o que recebe, escreva para nós e entramos com você nesta lista.",

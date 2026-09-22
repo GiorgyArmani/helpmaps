@@ -21,15 +21,16 @@ const pickLang = (v?: string): Lang => (v === "en" ? "en" : v === "pt" ? "pt" : 
 // `BRAND.platform`: the roadmap is the PROJECT's, not this one country's. It carried the
 // original deployment's name ("HelpMap VE") written straight into the copy.
 const DESC = {
-  es: `Roadmap de producto de ${BRAND.platform}: lo que ya funciona y lo que viene, por fases. Listos para lanzar.`,
-  en: `Product roadmap for ${BRAND.platform}: what already works and what's coming, by phase. Ready to launch.`,
-  pt: `Roadmap de produto do ${BRAND.platform}: o que já funciona e o que vem a seguir, por fase. Prontos para lançar.`,
+  es: `Roadmap de ${BRAND.platform}: lo que ya funciona y el plan de los próximos 24 meses, por trimestres.`,
+  en: `${BRAND.platform} roadmap: what already works and the plan for the next 24 months, by quarter.`,
+  pt: `Roadmap do ${BRAND.platform}: o que já funciona e o plano dos próximos 24 meses, por trimestre.`,
 };
 const BACK_APP = { es: "Volver a la app", en: "Back to the app", pt: "Voltar ao app" };
 const FEEDBACK = { es: "¿Comentarios o quieres colaborar? ", en: "Feedback or want to collaborate? ", pt: "Comentários ou quer colaborar? " };
 // Sin flecha en el texto: la pone `<Icon.back />` al lado.
 const BACK_DOCS = { es: "Documentación", en: "Documentation", pt: "Documentação" };
 const GO_MAP = { es: "Ir al mapa", en: "Go to the map", pt: "Ir para o mapa" };
+const GOAL = { es: "Meta", en: "Goal", pt: "Meta" };
 const DOCS_LABEL = { es: "Documentación", en: "Documentation", pt: "Documentação" };
 
 export async function generateMetadata({ searchParams }: SearchParams): Promise<Metadata> {
@@ -86,6 +87,7 @@ export default async function RoadmapPage({ searchParams }: SearchParams) {
                     {tr(meta.label, lang)}
                   </span>
                 </div>
+                {p.when ? <p className="doc-phase-when">{tr(p.when, lang)}</p> : null}
                 {p.note && <p className="doc-phase-note">{tr(p.note, lang)}</p>}
                 <ul className="doc-phase-items">
                   {p.items.map((it, n) => (
@@ -94,6 +96,12 @@ export default async function RoadmapPage({ searchParams }: SearchParams) {
                     </li>
                   ))}
                 </ul>
+                {/* El «producto final» del cronograma del plan: con qué se da por hecha. */}
+                {p.goal ? (
+                  <p className="doc-phase-goal">
+                    <b>{GOAL[lang]}:</b> {tr(p.goal, lang)}
+                  </p>
+                ) : null}
               </div>
             );
           })}

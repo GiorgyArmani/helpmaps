@@ -37,36 +37,35 @@ export default function OrgSettings({
 
       <p className="pedit-bar-sub">{center.name}</p>
 
-      {/* Primero lo que tiene a alguien esperando. */}
-      <section className="ecard">
-        <div className="ecard-head">
-          <h3 className="ecard-title">{t("org.claimsTitle")}</h3>
-          {claims.length > 0 ? <span className="pedit-count">{claims.length}</span> : null}
-        </div>
-        {claims.length === 0 ? (
-          <p className="pedit-none">{t("org.claimsNone")}</p>
-        ) : (
-          <>
-            <p className="fhint">{t("claims.hint")}</p>
-            {claims.map((c) => (
-              <article key={c.id} className="claim">
-                <span className="claim-who">
-                  <b>{c.donor_name ?? t("account.noName")}</b>
-                  {c.note ? <span className="claim-note">{c.note}</span> : null}
-                </span>
-                <span className="claim-acts">
-                  <button type="button" className="claim-yes" onClick={() => onResolve(c.id, "confirmed")}>
-                    {t("claims.confirm")}
-                  </button>
-                  <button type="button" className="claim-no" onClick={() => onResolve(c.id, "rejected")}>
-                    {t("claims.reject")}
-                  </button>
-                </span>
-              </article>
-            ))}
-          </>
-        )}
-      </section>
+      {/* Primero lo que tiene a alguien esperando.
+          Sólo si hay algo: «Ya aporté» está apagado en la ficha (ver `DonateBox`), así que
+          no llegan aportes nuevos y una sección siempre vacía se leería como una tarea
+          pendiente. Los que quedaron declarados de antes siguen apareciendo aquí. */}
+      {claims.length > 0 ? (
+        <section className="ecard">
+          <div className="ecard-head">
+            <h3 className="ecard-title">{t("org.claimsTitle")}</h3>
+            <span className="pedit-count">{claims.length}</span>
+          </div>
+          <p className="fhint">{t("claims.hint")}</p>
+          {claims.map((c) => (
+            <article key={c.id} className="claim">
+              <span className="claim-who">
+                <b>{c.donor_name ?? t("account.noName")}</b>
+                {c.note ? <span className="claim-note">{c.note}</span> : null}
+              </span>
+              <span className="claim-acts">
+                <button type="button" className="claim-yes" onClick={() => onResolve(c.id, "confirmed")}>
+                  {t("claims.confirm")}
+                </button>
+                <button type="button" className="claim-no" onClick={() => onResolve(c.id, "rejected")}>
+                  {t("claims.reject")}
+                </button>
+              </span>
+            </article>
+          ))}
+        </section>
+      ) : null}
 
       {/* El QR de reconocimiento. Todavía sin código detrás, y por eso sin QR: enseñar uno
           que no suma nada sería prometerle a un voluntario algo que no va a pasar. */}

@@ -1,31 +1,37 @@
-/* Documentation pages — shared, polished-minimalist styling (light theme).
-   Applied to all /docs routes via app/docs/layout.tsx. Kept intentionally close to
-   the app's clean look; adds real hover/focus/responsive that inline styles can't. */
+/* ─────────────────  La documentación  ─────────────────────────────────────
+ *
+ * Se aplica a todas las rutas /docs desde `app/docs/layout.tsx`.
+ *
+ * Antes esta hoja era otro sitio: redefinía `--ink`, `--line` y `--accent` con su propio
+ * azul (#2563eb), pedía la letra del sistema en vez de la de la marca e inventaba sus
+ * sombras. Un clon que cambiaba de color en `config/brand.ts` veía la app repintada y la
+ * documentación igual que antes. Ahora TODO sale de los tokens de `:root` —color, letra,
+ * radios, `--e-1/2/3`, `--t-tap/--t-ui`—, y lo único propio son dos mezclas de esos
+ * mismos tokens.
+ *
+ * La otra corrección es de estructura: el índice era una tarjeta blanca con nueve tarjetas
+ * blancas dentro, y nueve rectángulos del mismo peso se leen como una hoja de cálculo. El
+ * texto va ahora directo sobre la página y las secciones se agrupan en listas.
+ */
 
 .doc-wrap {
-  --ink: #16191f;
-  --ink-2: #4b5159;
-  --mut: #7b818c;
-  --line: #e9eaee;
-  --card: #ffffff;
-  --bg: #f5f6f8;
-  --accent: #2563eb;
-  --accent-soft: #eef4ff;
-  --accent-line: #cfe0ff;
+  /* Texto de lectura: más oscuro que `--mut` (que sobre blanco se queda en 3,7:1 y no
+     alcanza para párrafos largos), más claro que el titular. */
+  --ink-2: color-mix(in srgb, var(--ink) 80%, #fff);
+  --brand-soft: color-mix(in srgb, var(--brand) 8%, #fff);
+  --brand-line: color-mix(in srgb, var(--brand) 22%, #fff);
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  background:
-    radial-gradient(1200px 380px at 50% -80px, #eef2fb 0%, rgba(238, 242, 251, 0) 70%),
-    var(--bg);
+  background: #fff;
   padding: 0 0 56px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---- Full-width sticky top bar: back (left) · brand (center) · languages (right) ---- */
+/* ─────────────  Barra superior: volver · marca · idiomas  ───────────── */
+
 .doc-topbar {
   position: sticky;
   top: 0;
@@ -34,114 +40,306 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 12px;
-  padding: 11px 22px;
-  background: rgba(246, 247, 250, 0.82);
+  padding: 8px var(--gut);
+  background: color-mix(in srgb, #fff 86%, transparent);
   backdrop-filter: saturate(1.6) blur(12px);
   -webkit-backdrop-filter: saturate(1.6) blur(12px);
   border-bottom: 1px solid var(--line);
 }
+
 .doc-topbar .doc-back { justify-self: start; }
-.doc-brand { justify-self: center; display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); }
-/* The mark is the box, so the logo and the no-logo fallback are the same size and shape. */
-.doc-brand-mark { width: 26px; height: 26px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; overflow: hidden; background: var(--accent); color: #fff; font-size: 0.6875rem; font-weight: 800; box-shadow: 0 0 0 1px rgba(16, 20, 28, 0.08); }
-/* Con logo la teja sobra: esta barra ya es clara y el arte de marca es transparente, así
-   que el fondo `--accent` sólo metía un recuadro negro alrededor. Se quita SÓLO en ese
-   caso porque el respaldo sin logo aquí es texto blanco (`BRAND.emoji || COUNTRY.code`),
-   y ese sí necesita el fondo oscuro para leerse. */
-.doc-brand-mark:has(img) { background: none; box-shadow: none; }
+.doc-topbar .doc-langs { justify-self: end; }
+
+.doc-brand {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+/* La marca es la caja: logo y respaldo sin logo miden lo mismo. */
+.doc-brand-mark {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 800;
+}
+
+/* Con logo la teja sobra: el arte de marca es transparente y el fondo `--accent` sólo
+   metía un recuadro oscuro alrededor. Sin logo el respaldo es texto blanco y sí lo
+   necesita. */
+.doc-brand-mark:has(img) { background: none; }
 .doc-brand-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .doc-brand-name { font-size: 0.875rem; font-weight: 800; letter-spacing: -0.2px; }
 .doc-brand-sub { color: var(--mut); font-weight: 600; }
-.doc-topbar .doc-langs { justify-self: end; }
 
-/* Content column below the bar (keeps the card centered + comfortably wide). */
-.doc-content { flex: 1; width: 100%; display: flex; justify-content: center; padding: 26px 18px 0; }
-.doc-card {
-  width: 100%;
-  max-width: 680px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: 0 1px 2px rgba(16, 20, 28, 0.04), 0 14px 40px rgba(16, 20, 28, 0.08);
-}
-
-/* Minimal pill button (back-to-app). Subtle surface, rounded, icon + label. */
 .doc-back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 44px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--ink-2);
+  color: var(--ink);
   text-decoration: none;
-  background: rgba(16, 20, 28, 0.05);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 7px 14px 7px 11px;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  background: var(--soft);
+  transition: background var(--t-tap) var(--ease);
 }
-.doc-back svg { width: 15px; height: 15px; }
-.doc-back:hover { background: #fff; color: var(--ink); border-color: var(--line); }
+
+.doc-back svg { width: 18px; height: 18px; }
+.doc-back:hover { background: var(--soft2); }
+
+/* El mismo control segmentado que las pestañas del panel: pista hundida y pastilla
+   blanca elevada para lo activo. Antes era una pastilla negra rellena de 26px de alto. */
 .doc-langs {
   display: flex;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--soft2);
   flex: 0 0 auto;
 }
+
 .doc-lg {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  font-size: 0.6875rem;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  min-width: 44px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: var(--mut);
+  color: var(--mut-track);
   text-decoration: none;
-  background: #fff;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
 }
-.doc-lg:hover { background: #f2f3f6; color: var(--ink); }
-.doc-lg-on, .doc-lg-on:hover { color: #fff; background: #15181d; }
+
+.doc-lg:hover { color: var(--ink); }
+.doc-lg-on,
+.doc-lg-on:hover {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-1);
+}
+
 .doc-flag {
   display: inline-flex;
-  width: 15px;
-  height: 10.5px;
+  width: 16px;
+  height: 11px;
   border-radius: 2px;
   overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(16, 20, 28, 0.15);
+  box-shadow: 0 0 0 1px var(--line);
   flex: 0 0 auto;
 }
 
-/* ---- Header ---- */
-.doc-kicker {
-  font-size: 0.625rem;
-  letter-spacing: 1px;
-  color: var(--mut);
-  font-weight: 700;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-}
-.doc-h1 {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.6px;
-  line-height: 1.12;
-  margin: 0 0 10px;
-}
-.doc-lead {
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  color: var(--ink-2);
-  margin: 0 0 22px;
+/* ─────────────  Columna de contenido  ───────────── */
+
+.doc-content {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--gut);
 }
 
-/* ---- Index: section tiles (icon + chevron, whole tile is the button) ---- */
-.doc-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-@media (min-width: 560px) {
-  .doc-grid { grid-template-columns: 1fr 1fr; }
+/* Ya no es una tarjeta: la página entera es la superficie. Quedan el ancho de lectura
+   y el aire. El nombre se conserva porque lo usan todas las páginas de /docs. */
+.doc-card {
+  width: 100%;
+  max-width: 720px;
+  padding: 36px 0 0;
 }
+
+/* ─────────────  Cabecera  ───────────── */
+
+.doc-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--mut);
+}
+
+.doc-kicker::before {
+  content: "";
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--brand);
+}
+
+.doc-h1 {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.35rem + 1.8vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.8px;
+  text-wrap: balance;
+}
+
+.doc-lead {
+  max-width: 60ch;
+  margin: 0 0 32px;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* ─────────────  Índice  ───────────── */
+
+/* La llamada a aliados y financistas: la única pieza oscura de la página, porque es la
+   que esta documentación existe para provocar. */
+.doc-feature {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  margin-bottom: 32px;
+  border-radius: var(--r-lg);
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: var(--e-2);
+  transition:
+    transform var(--t-tap) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
+}
+
+.doc-feature:hover { box-shadow: var(--e-3); }
+.doc-feature:active { transform: scale(0.99); }
+.doc-feature:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
+.doc-feature-ic {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--accent);
+}
+
+.doc-feature-ic svg { width: 24px; height: 24px; fill: currentColor; }
+.doc-feature-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+
+.doc-feature-tag {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.doc-feature-t { font-size: 1.0625rem; font-weight: 800; letter-spacing: -0.2px; }
+.doc-feature-d { font-size: 0.8125rem; line-height: 1.45; opacity: 0.85; }
+.doc-feature .doc-row-chev { color: #fff; opacity: 0.7; }
+
+.doc-group { margin-bottom: 28px; }
+
+.doc-group-t {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--mut);
+}
+
+/* Una lista, no una rejilla de tarjetas: una superficie y separadores finos. Las filas
+   se leen de arriba abajo con el pulgar, y la página mide la mitad que antes. */
+.doc-list {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--e-1);
+  overflow: hidden;
+}
+
+.doc-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 14px 14px 14px 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--t-tap) var(--ease);
+}
+
+.doc-row + .doc-row { border-top: 1px solid var(--line); }
+.doc-row:hover { background: var(--soft); }
+.doc-row:active { background: var(--soft2); }
+
+.doc-row:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.doc-row-ic {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.doc-row-ic svg { width: 20px; height: 20px; }
+.doc-row-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.doc-row-t { font-size: 0.9375rem; font-weight: 700; letter-spacing: -0.1px; }
+.doc-row-d { font-size: 0.8125rem; line-height: 1.45; color: var(--ink-2); }
+
+.doc-row-chev {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  color: var(--mut);
+  transition: transform var(--t-tap) var(--ease);
+}
+
+.doc-row:hover .doc-row-chev { transform: translateX(2px); }
+
+.doc-soon {
+  align-self: flex-start;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--mut-track);
+  background: var(--soft);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+/* ─────────────  Tejas sueltas (el enlace al repositorio en /docs/desplegar)  ───────────── */
+
 .doc-tile {
   position: relative;
   display: flex;
@@ -150,28 +348,31 @@
   gap: 8px;
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   background: #fff;
+  box-shadow: var(--e-1);
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: box-shadow var(--t-ui) var(--ease);
 }
-a.doc-tile:hover { border-color: #d4d7de; box-shadow: 0 10px 26px rgba(16, 20, 28, 0.09); transform: translateY(-2px); }
-a.doc-tile:active { transform: translateY(0); box-shadow: 0 4px 12px rgba(16, 20, 28, 0.07); }
-a.doc-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+a.doc-tile:hover { box-shadow: var(--e-2); }
+a.doc-tile:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
 .doc-tile-ic {
   width: 42px;
   height: 42px;
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: var(--accent-soft);
-  color: var(--accent);
-  border: 1px solid var(--accent-line);
+  background: var(--brand-soft);
+  color: var(--brand);
 }
+
 .doc-tile-ic svg { width: 21px; height: 21px; }
 .doc-tile-title { font-size: 1rem; font-weight: 700; letter-spacing: -0.2px; margin-top: 2px; }
-.doc-tile-desc { font-size: 0.8438rem; line-height: 1.5; color: var(--mut); margin: 0; }
+.doc-tile-desc { font-size: 0.875rem; line-height: 1.5; color: var(--ink-2); margin: 0; }
+
 .doc-tile-chev {
   position: absolute;
   top: 14px;
@@ -182,155 +383,260 @@ a.doc-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
   display: grid;
   place-items: center;
   color: var(--mut);
-  background: rgba(16, 20, 28, 0.05);
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  background: var(--soft);
 }
+
 .doc-tile-chev svg { width: 16px; height: 16px; }
-a.doc-tile:hover .doc-tile-chev { background: var(--accent); color: #fff; transform: translateX(2px); }
-.doc-tile-feature .doc-tile-chev { background: rgba(37, 99, 235, 0.12); color: var(--accent); }
-a.doc-tile-feature:hover .doc-tile-chev { background: var(--accent); color: #fff; }
-.doc-tile-feature {
-  background: linear-gradient(180deg, var(--accent-soft), #fff 78%);
-  border-color: var(--accent-line);
-}
-.doc-tile-feature .doc-tile-ic { background: var(--accent); color: #fff; border-color: transparent; }
-/* El enlace al repositorio en /docs/desplegar: la misma teja del índice, pero suelta
-   dentro de una página de texto, así que necesita su propio aire debajo. */
-.doc-repo-tile { margin-bottom: 26px; }
+.doc-tile-feature { background: var(--brand-soft); border-color: var(--brand-line); }
+.doc-tile-feature .doc-tile-ic { background: var(--brand); color: #fff; }
+.doc-repo-tile { margin-bottom: 28px; }
 
-.doc-tile-soon { opacity: 0.9; }
-.doc-item-soon {
-  align-self: flex-start;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--mut);
-  background: #f1f2f4;
-  border-radius: 999px;
-  padding: 3px 9px;
-  white-space: nowrap;
-}
-.doc-feature-tag {
-  align-self: flex-start;
-  display: inline-block;
-  font-size: 0.625rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--accent);
-  background: #fff;
-  border: 1px solid var(--accent-line);
-  border-radius: 999px;
-  padding: 3px 9px;
-  margin: 0;
+/* ─────────────  Páginas de texto  ───────────── */
+
+/* «En esta página»: en un teléfono, una guía de ocho apartados son veinte pantallas, y
+   sin índice la única forma de llegar al sexto es bajar por los cinco anteriores. */
+.doc-toc {
+  margin: 0 0 36px;
+  padding: 16px 18px;
+  border-radius: var(--r-lg);
+  background: var(--soft);
 }
 
-/* ---- Long-form doc sections ---- */
-.doc-section { margin-bottom: 24px; }
-.doc-h2 {
-  font-size: 1.0625rem;
+.doc-toc-t {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: -0.3px;
-  margin: 0 0 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--line);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--mut-track);
 }
-.doc-block { margin-bottom: 10px; }
-.doc-block-label { font-size: 0.875rem; font-weight: 700; color: var(--ink); }
-.doc-block-text { font-size: 0.875rem; line-height: 1.62; color: var(--ink-2); }
-.doc-bullets { margin: 4px 0 0; padding-left: 20px; }
-.doc-bullet { font-size: 0.875rem; line-height: 1.55; color: var(--ink-2); margin-bottom: 7px; }
-.doc-bullet::marker { color: var(--accent); }
 
-/* ---- Roadmap ---- */
+.doc-toc ol { margin: 0; padding: 0; list-style: none; counter-reset: toc; }
+.doc-toc li { counter-increment: toc; }
+
+.doc-toc a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.doc-toc a::before {
+  content: counter(toc, decimal-leading-zero);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand);
+}
+
+.doc-toc a:hover { color: var(--brand); }
+
+.doc-section {
+  margin-bottom: 40px;
+  scroll-margin-top: 76px;
+}
+
+.doc-h2 {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.4px;
+  text-wrap: balance;
+}
+
+/* 16px de cuerpo y 1,65 de interlineado: es texto para leer entero, en un teléfono. */
+.doc-block { margin-bottom: 14px; font-size: 1rem; line-height: 1.65; }
+.doc-block-label { font-weight: 700; color: var(--ink); }
+.doc-block-text { color: var(--ink-2); }
+.doc-bullets { margin: 8px 0 0; padding-left: 22px; }
+.doc-bullet { font-size: 1rem; line-height: 1.6; color: var(--ink-2); margin-bottom: 8px; padding-left: 4px; }
+.doc-bullet::marker { color: var(--brand); }
+
+/* ─────────────  Roadmap  ───────────── */
+
 .doc-now {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-size: 0.8438rem;
-  font-weight: 700;
-  color: var(--ink);
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-line);
-  border-radius: 13px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 14px 16px;
   margin-bottom: 20px;
+  border-radius: var(--r-md);
+  background: var(--brand-soft);
+  font-size: 0.9375rem;
+  font-weight: 700;
   line-height: 1.4;
+  color: var(--ink);
 }
+
 .doc-now-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+
 .doc-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  padding: 12px 14px;
-  background: #f7f8fa;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  margin-bottom: 24px;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  margin-bottom: 28px;
+  border-radius: var(--r-md);
+  background: var(--soft);
 }
-.doc-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.7188rem; font-weight: 600; color: var(--ink-2); }
+
+.doc-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mut-track);
+}
+
 .doc-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
 .doc-timeline { display: flex; flex-direction: column; gap: 14px; }
-.doc-phase { border: 1px solid var(--line); border-radius: 16px; padding: 17px 17px 8px; transition: box-shadow 0.15s ease; }
-.doc-phase:hover { box-shadow: 0 4px 16px rgba(16, 20, 28, 0.06); }
-.doc-phase-now { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-.doc-phase-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 6px; }
+
+.doc-phase {
+  padding: 18px 18px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--e-1);
+}
+
+.doc-phase-now {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft), var(--e-2);
+}
+
+.doc-phase-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 .doc-phase-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
-.doc-phase-title { font-size: 1rem; font-weight: 700; margin: 0; letter-spacing: -0.3px; }
-.doc-phase-tag { font-size: 0.6875rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1px solid; margin-left: auto; }
-.doc-phase-note { font-size: 0.7813rem; font-weight: 700; color: var(--accent); margin: 0 0 6px; }
+.doc-phase-title { margin: 0; font-size: 1.0625rem; font-weight: 800; letter-spacing: -0.3px; }
+
+.doc-phase-tag {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Cuándo, en trimestres del plan. Va antes de la nota: es lo primero que busca quien
+   lee un cronograma. */
+.doc-phase-when {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--mut-track);
+}
+
+.doc-phase-note { margin: 0 0 6px; font-size: 0.875rem; font-weight: 600; line-height: 1.5; color: var(--ink); }
+
+/* El «producto final» del bloque: la vara con la que se mide si la fase se cumplió. */
+.doc-phase-goal {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--brand-soft);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.doc-phase-goal b { color: var(--brand); }
 .doc-phase-items { margin: 4px 0 10px; padding-left: 20px; }
-.doc-phase-li { font-size: 0.8438rem; line-height: 1.55; color: var(--ink-2); margin-bottom: 7px; }
+.doc-phase-li { margin-bottom: 8px; font-size: 0.9375rem; line-height: 1.55; color: var(--ink-2); }
 .doc-phase-li::marker { color: var(--mut); }
 
-/* ---- Footer note + actions ---- */
-.doc-note { font-size: 0.8438rem; line-height: 1.55; color: var(--ink-2); margin: 22px 0 0; }
-.doc-mail { color: var(--ink); font-weight: 700; text-decoration: none; border-bottom: 1px solid var(--accent-line); }
-.doc-mail:hover { color: var(--accent); border-color: var(--accent); }
+/* ─────────────  Pie: nota, enlaces y acciones  ───────────── */
 
-/* Outbound link chips inside a doc block (repo, ownership profiles). */
+.doc-note {
+  margin: 32px 0 0;
+  padding: 16px 18px;
+  border-radius: var(--r-md);
+  background: var(--soft);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.doc-mail {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--brand-line);
+  text-underline-offset: 3px;
+}
+
+.doc-mail:hover { color: var(--brand); text-decoration-color: currentColor; }
+
 .doc-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
 .doc-link {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 9px 14px;
+  min-height: 44px;
+  padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-.doc-link:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
-.doc-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.doc-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
-.doc-primary, .doc-secondary {
-  flex: 1;
-  min-width: 140px;
-  text-align: center;
-  text-decoration: none;
-  padding: 13px 18px;
-  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand);
   font-size: 0.875rem;
   font-weight: 700;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  text-decoration: none;
+  transition:
+    background var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease);
 }
-.doc-primary { background: #15181d; color: #fff; }
-.doc-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(16, 20, 28, 0.22); }
-.doc-secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; gap: 7px; }
+
+.doc-link:hover { background: var(--brand); color: #fff; }
+.doc-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.doc-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+
+.doc-primary,
+.doc-secondary {
+  flex: 1;
+  min-width: 140px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 18px;
+  border-radius: var(--r-md);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    transform var(--t-tap) var(--ease),
+    box-shadow var(--t-ui) var(--ease),
+    background var(--t-tap) var(--ease);
+}
+
+.doc-primary { background: var(--accent); color: #fff; box-shadow: var(--e-1); }
+.doc-primary:hover { box-shadow: var(--e-2); }
+.doc-primary:active,
+.doc-secondary:active { transform: scale(0.98); }
+.doc-secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+
 /* El icono en vez de la flecha «←» que llevaba el texto. Ver la nota de `BACK_DOCS`. */
-.doc-secondary svg { width: 16px; height: 16px; flex: 0 0 auto; }
-.doc-secondary:hover { border-color: #d4d7de; background: #fafbfc; }
+.doc-secondary svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.doc-secondary:hover { background: var(--soft); }
 .doc-single { margin-top: 20px; }
-.doc-single .doc-primary { display: block; }
 
 @media (max-width: 560px) {
-  .doc-topbar { grid-template-columns: 1fr auto; padding: 10px 14px; }
-  .doc-brand { display: none; } /* keep back (left) + languages (right) uncrowded on phones */
-  .doc-content { padding: 16px 12px 0; }
-  .doc-card { padding: 20px; border-radius: 16px; }
-  .doc-h1 { font-size: 1.5rem; }
-  .doc-actions { flex-direction: column; }
+  .doc-topbar { grid-template-columns: 1fr auto; }
+  .doc-brand { display: none; } /* volver (izq.) e idiomas (der.) sin apretarse en el teléfono */
+  .doc-card { padding-top: 24px; }
+  .doc-lead { font-size: 1rem; margin-bottom: 24px; }
+  .doc-actions { flex-direction: column-reverse; }
 }

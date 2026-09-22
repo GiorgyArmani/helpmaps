@@ -194,7 +194,7 @@ export default function ProfileEditor({
           {editable && campaigns.length === 0 && composer !== "campaign" ? (
             <p className="pedit-none">{t("pedit.noCampaigns")}</p>
           ) : null}
-          {!editable && hayAporte ? <DonateBox donate={donate} locationId={center.id} /> : null}
+          {!editable && hayAporte ? <DonateBox donate={donate} /> : null}
         </div>
       ),
     });

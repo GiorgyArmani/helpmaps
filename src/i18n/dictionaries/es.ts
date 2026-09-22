@@ -110,6 +110,7 @@ const es = {
   "center.updatedLabel": "Última actualización",
   "center.confirmedLabel": "Confirmado por última vez",
   "center.socialLink": "Redes sociales",
+  "center.profilePage": "Ver página",
   "center.website": "Sitio web",
   "center.instagram": "Instagram",
   "center.confirmed": "Confirmado {ago}",
@@ -254,7 +255,6 @@ const es = {
 
   // ── Aportar directo a una iniciativa ────────────────────────────────────
   "donate.direct": "Cómo aportar",
-  "donate.button": "Ir a donar",
   "donate.claim": "Ya aporté",
   // Se dice ANTES de pulsar: quien lo toca va a pedirle una confirmación a alguien.
   "donate.claimHint":
@@ -626,12 +626,13 @@ const es = {
   "donate.data": "Datos para donar",
   "donate.follow": "Ver su red",
   "donate.go": "Donar",
+  "donate.goHint": "Te lleva a la página de pago de la iniciativa",
   "donate.joinTitle": "¿Tu organización recibe donaciones?",
   "donate.joinBody":
     "Si puedes mostrar en qué se convierte lo que recibes, escríbenos y te sumamos a esta lista.",
   "donate.joinCta": "Escríbenos",
   "donate.note":
-    "No recibimos ni administramos dinero. Esta lista solo dice quién lo hace y cómo comprobarlo.",
+    "No recibimos ni administramos dinero. Esta lista solo dice donde donar y cómo comprobarlo.",
 
   // ── Escríbenos ──────────────────────────────────────────────────────────
   "contact.title": "Escríbenos",

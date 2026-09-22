@@ -251,7 +251,7 @@ export default async function CenterPage({ params, searchParams }: Params) {
       content: (
         <>
           {campaigns.length > 0 ? <CampaignList campaigns={campaigns} /> : null}
-          {hayAporte ? <DonateBox donate={donate} locationId={center.id} /> : null}
+          {hayAporte ? <DonateBox donate={donate} /> : null}
         </>
       ),
     });

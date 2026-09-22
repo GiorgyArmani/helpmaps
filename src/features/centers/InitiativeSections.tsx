@@ -4,7 +4,6 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Activity, Campaign, InitiativePost } from "@/domain/types";
 import type { InitiativeProfile } from "@/data/initiatives";
 import { Icon } from "@/ui/icons";
-import { declareDonation } from "@/data/initiatives";
 import { getSupabase } from "@/lib/supabase/client";
 import { useAccount } from "@/features/account/useAccount";
 import { useI18n, useTimeAgo } from "@/i18n/context";
@@ -38,14 +37,7 @@ const noSubscribe = () => () => {};
  * página servida sin JavaScript— y porque borrarlo obligaría a reescribir el orden en el
  * que van, que está pensado: la campaña primero y el «cómo aportar» justo debajo.
  */
-export default function InitiativeSections({
-  profile,
-  locationId,
-}: {
-  profile: InitiativeProfile;
-  /** Hace falta para declarar un aporte: la ficha sabe de qué punto habla, esto no. */
-  locationId: string;
-}) {
+export default function InitiativeSections({ profile }: { profile: InitiativeProfile }) {
   const { campaigns, activities, posts, donate } = profile;
   const hayDonacion = Boolean(donate.info || donate.url);
   if (campaigns.length === 0 && activities.length === 0 && posts.length === 0 && !hayDonacion) {
@@ -57,7 +49,7 @@ export default function InitiativeSections({
       {campaigns.length > 0 ? <CampaignList campaigns={campaigns} titled /> : null}
       {/* Debajo de las campañas: quien acaba de leer una meta concreta es justo quien
           quiere saber por dónde aportar. */}
-      {hayDonacion ? <DonateBox donate={donate} locationId={locationId} /> : null}
+      {hayDonacion ? <DonateBox donate={donate} /> : null}
       {activities.length > 0 ? <ActivityList activities={activities} titled /> : null}
       {posts.length > 0 ? <PostList posts={posts} campaigns={campaigns} titled /> : null}
     </>
@@ -71,39 +63,9 @@ export default function InitiativeSections({
  * datos son de la iniciativa, el dinero va directo a ella, y aquí sólo se muestran para
  * que se puedan pegar en el banco. La línea que lo dice va debajo y no es opcional.
  */
-export function DonateBox({
-  donate,
-  locationId,
-}: {
-  donate: InitiativeProfile["donate"];
-  locationId: string;
-}) {
+export function DonateBox({ donate }: { donate: InitiativeProfile["donate"] }) {
   const { t } = useI18n();
-  const account = useAccount(true);
   const [copiado, setCopiado] = useState(false);
-  const [claim, setClaim] = useState<"idle" | "sending" | "done" | "already" | "error">("idle");
-
-  /**
-   * «Ya aporté».
-   *
-   * No suma nada por sí solo, y ésa es la pieza que hace que valga: queda PENDIENTE hasta
-   * que la iniciativa confirme que le llegó. Aportar da más experiencia que ninguna otra
-   * cosa, así que darla por declarada sería quince puntos por pulsar un botón.
-   *
-   * El texto lo dice antes de pulsar, no después: quien lo toca tiene que saber que va a
-   * pedirle una confirmación a alguien.
-   */
-  async function declarar() {
-    const sb = getSupabase();
-    if (!sb || !account.userId || claim === "sending") return;
-    setClaim("sending");
-    try {
-      const r = await declareDonation(sb, { locationId, userId: account.userId });
-      setClaim(r.duplicate ? "already" : "done");
-    } catch {
-      setClaim("error");
-    }
-  }
 
   async function copiar() {
     if (!donate.info) return;
@@ -129,40 +91,29 @@ export function DonateBox({
           </button>
         </div>
       ) : null}
+      {/* UN botón y fuerte: es la acción de toda la sección.
+          «Ya aporté» ESTÁ APAGADO, no borrado. Declarar un aporte deja una fila pendiente
+          que la iniciativa tiene que confirmar a mano (`db/07_aportes.sql`), y en esta
+          primera versión eso era una cola de trabajo para organizaciones que todavía no
+          están mirando el panel. Darlo por bueno sin confirmar tampoco vale: serían quince
+          puntos de experiencia por pulsar un botón. Así que por ahora donar no suma nivel;
+          la tabla, las políticas y la recompensa siguen en la base para cuando vuelva. */}
       {donate.url ? (
-        <a className="btnp" href={donate.url} target="_blank" rel="noopener noreferrer">
-          {t("donate.button")}
+        <a className="idon-cta" href={donate.url} target="_blank" rel="noopener noreferrer">
+          <span className="idon-cta-ic" aria-hidden="true">
+            <Icon.heart />
+          </span>
+          <span className="idon-cta-txt">
+            <b>{t("donate.go")}</b>
+            <small>{t("donate.goHint")}</small>
+          </span>
         </a>
       ) : null}
+
       <p className="idon-note">
         <Icon.alert />
         {t("donate.directNote", { platform: BRAND.platform })}
       </p>
-
-      {/* Sólo con cuenta: sin ella no hay a quién reconocerle nada, y el botón sería una
-          promesa que no se puede cumplir. */}
-      {account.userId ? (
-        claim === "done" || claim === "already" ? (
-          <p className="idon-claimed">
-            <Icon.check />
-            {t("donate.claimed")}
-          </p>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="btng idon-claim"
-              onClick={() => void declarar()}
-              disabled={claim === "sending"}
-            >
-              <Icon.heart />
-              {claim === "sending" ? t("common.saving") : t("donate.claim")}
-            </button>
-            <p className="idon-note">{t("donate.claimHint")}</p>
-            {claim === "error" ? <p className="lerr">{t("error.generic")}</p> : null}
-          </>
-        )
-      ) : null}
     </section>
   );
 }

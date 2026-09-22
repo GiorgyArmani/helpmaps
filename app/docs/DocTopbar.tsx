@@ -10,6 +10,7 @@ import Link from "next/link";
 import type { Lang } from "@/i18n/types";
 import { BRAND, COUNTRY, LANGUAGE } from "@/config";
 import { FLAG_ICON, LANG_NAME } from "@/ui/flags";
+import { Icon } from "@/ui/icons";
 
 const qs = (l: Lang) => (l === LANGUAGE.default ? "" : `?lang=${l}`);
 
@@ -27,9 +28,7 @@ export function DocTopbar({
   return (
     <header className="doc-topbar">
       <Link href="/" className="doc-back">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
+        <Icon.back />
         {backLabel}
       </Link>
       <Link

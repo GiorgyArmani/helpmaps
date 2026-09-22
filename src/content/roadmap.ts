@@ -57,15 +57,34 @@ export interface Phase {
   id: string;
   title: LS;
   status: PhaseStatus;
+  /** Cuándo, en trimestres contados desde el inicio de la ejecución del plan. */
+  when?: LS;
   note?: LS;
   items: LS[];
+  /** El «producto final» del bloque en el cronograma del plan: con qué se da por cumplido. */
+  goal?: LS;
 }
 
 export const ROADMAP_TITLE: LS = { es: "Roadmap", en: "Roadmap", pt: "Roteiro" };
 
+// LA FUENTE es el Plan de Emprendimiento Social (Google Doc del equipo, septiembre de
+// 2026): el estado actual sale de su 2.1.1, los bloques de los programas P1 a P8 y las
+// fechas del cronograma 2.9. Esto es la cara pública de ese plan y va detrás de él: si
+// el plan cambia, se cambia aquí, no al revés.
+//
+// Lo que el plan todavía se contradice a sí mismo NO pasa a esta página: el monto
+// solicitado (225.000 en la portada, 100.000 en la financiera), el «reparto» entre
+// iniciativas (el plan también dice que la plataforma no procesa dinero de terceros) y el
+// mes de arranque de Learn&Help (6, 12 o 15 según la sección; aquí va el 6, que es el del
+// cronograma).
+//
+// Las metas en cifras son las del piloto en Venezuela y se dicen así, «en el piloto de
+// Venezuela», porque esta página la sirven todos los despliegues: en un clon tienen que
+// seguir leyéndose como lo que son y no como las metas de ese país.
+
 export const ROADMAP_INTRO: LS = {
-  es: "{platform} es una plataforma cívica abierta para emergencias: por un lado, quien necesita ayuda encuentra dónde conseguirla —sin cuenta y sin dar su nombre—; por otro, quien quiere ayudar ve exactamente qué hace falta, dónde, y a quién le llega lo que da. Nació de una respuesta ciudadana real y hoy se despliega país por país. Abajo, lo que ya funciona y hacia dónde vamos.",
-  en: "{platform} is an open civic platform for emergencies: on one side, someone who needs help finds where to get it — no account, no name given; on the other, someone who wants to help sees exactly what is needed, where, and who receives what they give. It came out of a real citizen response and today it is deployed country by country. Below, what already works and where we are going.",
+  es: "{platform} es un puente permanente en dos sentidos: conecta la necesidad con la ayuda, y el altruismo con las causas. Quien necesita ayuda ve en el mapa dónde conseguirla, sin cuenta y sin dar su nombre; quien quiere ayudar ve qué hace falta, dónde, y a quién le llega lo que da. Funciona todo el año, y cuando ocurre un desastre activa un modo emergencia sobre ese mismo mapa. La meta: servir para atender emergencias, y para aprender a enfrentarlas. Abajo, lo que ya funciona y el plan de los próximos 24 meses, por trimestres contados desde el inicio de su ejecución.",
+  en: "{platform} is a permanent bridge that runs both ways: it connects need with help, and goodwill with causes. Someone who needs help sees on the map where to get it, with no account and no name given; someone who wants to help sees what is needed, where, and who receives what they give. It works all year round, and when a disaster strikes it switches on an emergency mode on that same map. The goal: to help people respond to emergencies, and to learn how to face them. Below, what already works and the plan for the next 24 months, in quarters counted from the start of its execution.",
 };
 
 export const ROADMAP_NOW: LS = {
@@ -75,297 +94,284 @@ export const ROADMAP_NOW: LS = {
 
 export const ROADMAP_PHASES: Phase[] = [
   {
-    id: "p1",
+    id: "hoy",
     status: "done",
-    title: { es: "Fundación", en: "Foundation", pt: "Fundação" },
+    title: { es: "Lo que ya funciona", en: "What already works", pt: "O que já funciona" },
     note: {
-      es: "El núcleo: un mapa que se abre rápido en un teléfono cualquiera y con mala señal.",
-      en: "The core: a map that opens fast on any phone and a bad connection.",
+      es: "No es un proyecto en papel: la plataforma está construida, desplegada y en uso, pensada para un teléfono modesto con mala señal.",
+      en: "This is not a project on paper: the platform is built, deployed and in use, designed for a modest phone on a bad connection.",
     },
     items: [
       {
-        es: "Mapa con puntos de ayuda por tipo: refugios, puntos de acopio, comedores e iniciativas ciudadanas.",
-        en: "Map of help points by type: shelters, donation points, kitchens and civic initiatives.",
+        es: "Mapa de puntos de ayuda por tipo (refugios, acopio, comedores, iniciativas ciudadanas), con búsqueda sin acentos, filtro por {region} y una ficha con lo que recibe, lo que necesita hoy, cómo llegar y a quién llamar.",
+        en: "A map of help points by type (shelters, donation points, kitchens, civic initiatives), with accent-insensitive search, a filter by {region} and a card with what it receives, what it needs today, how to get there and who to call.",
       },
       {
-        es: "Búsqueda sin acentos, filtro por {region} y por tipo, y agrupación al alejar el zoom.",
-        en: "Accent-insensitive search, filters by {region} and by type, clustering as you zoom out.",
+        es: "Funciona con mala señal: el mapa abre con los últimos datos aunque no haya conexión, y lo avisa.",
+        en: "It works on a bad connection: the map opens with the last data even with no connection, and says so.",
       },
       {
-        es: "Ficha de cada punto con lo que recibe, lo que necesita ahora, cómo llegar y a quién llamar.",
-        en: "A card per point with what it receives, what it needs now, how to get there and who to call.",
+        es: "Circula por donde ya se mueve la gente: enlace propio por punto con vista previa en WhatsApp y Telegram, e imagen para redes con el estado y la fecha impresos dentro.",
+        en: "It travels where people already are: a link per point with a preview in WhatsApp and Telegram, and a social image with the status and date printed inside it.",
       },
       {
-        es: "Caché local: el mapa abre con los últimos datos aunque no haya conexión, y lo avisa.",
-        en: "Local cache: the map opens with the last data even with no connection, and says so.",
+        es: "«Cerca»: los puntos ordenados por distancia real. La ubicación se queda en el teléfono y no se manda a ningún servidor.",
+        en: "“Near”: points sorted by real distance. Your location stays on your phone and is never sent to a server.",
+      },
+      {
+        es: "Perfil propio para cada iniciativa: campañas con meta concreta, agenda de actividades, publicaciones, entregas hechas y sus propios gestores. Lo que publica aparece en el feed de novedades.",
+        en: "Each initiative has its own profile: campaigns with a concrete goal, an activity calendar, posts, deliveries made and its own managers. What it posts shows up in the news feed.",
+      },
+      {
+        es: "Reconocimiento del voluntariado: experiencia, cinco niveles y medallas, que otorga el servidor y sólo por acciones comprobadas.",
+        en: "Volunteer recognition: experience, five levels and badges, granted by the server and only for verified actions.",
+      },
+      {
+        es: "Capas de amenaza en vivo: epicentros y contornos de intensidad del servicio público del USGS, con aviso de que son estimaciones revisables.",
+        en: "Live hazard layers: epicentres and intensity contours from the USGS public service, flagged as estimates subject to revision.",
+      },
+      {
+        es: "Emergencias declarables, cada una con su tipo, su alcance, su equipo y su archivo. Varias pueden convivir.",
+        en: "Declarable emergencies, each with its type, scope, team and archive. Several can run at once.",
+      },
+      {
+        es: "Código abierto bajo licencia MIT y API pública con atribución. La misma base ya sirve a cinco países modelados.",
+        en: "Open source under the MIT licence and a public API with attribution. The same codebase already serves five modelled countries.",
       },
     ],
   },
   {
-    id: "p2",
-    status: "done",
-    title: { es: "Circulación", en: "Circulation", pt: "Circulação" },
-    note: {
-      es: "Un mapa que nadie comparte no ayuda a nadie: la información tiene que viajar por donde ya se mueve la gente.",
-      en: "A map nobody shares helps nobody: the information has to travel where people already are.",
-    },
-    items: [
-      {
-        es: "Enlace propio por punto con vista previa en WhatsApp y Telegram.",
-        en: "A link per point with a preview card in WhatsApp and Telegram.",
-      },
-      {
-        es: "Imagen para redes en tres formatos, con el estado del punto y la fecha dentro de la imagen.",
-        en: "A social image in three formats, with the point's status and date inside the image.",
-      },
-      {
-        es: "Lista de «dónde hace falta ayuda» para quien quiere colaborar y no sabe por dónde empezar.",
-        en: "A “where help is needed” list for anyone who wants to help and does not know where to start.",
-      },
-    ],
-  },
-  {
-    id: "p3",
-    status: "done",
-    title: { es: "Confianza", en: "Trust", pt: "Confiança" },
-    note: {
-      es: "Publicar rápido y publicar bien no son lo mismo. Esta fase es la que hace que el dato se pueda creer.",
-      en: "Publishing fast and publishing well are not the same thing. This phase is what makes the data believable.",
-    },
-    items: [
-      {
-        es: "Estado del punto (abierto, lleno, cerrado) y aviso cuando nadie lo confirma hace días.",
-        en: "Point status (open, full, closed) and a warning when nobody has confirmed it in days.",
-      },
-      {
-        es: "Equipo verificado que publica en vivo, con acceso revocable y bitácora de cada cambio.",
-        en: "A vetted team that publishes live, with revocable access and a log of every change.",
-      },
-      {
-        es: "Sugerencias del público en cola: cualquiera aporta, una persona confirma antes de publicar.",
-        en: "Public suggestions in a queue: anyone contributes, a person confirms before publishing.",
-      },
-      {
-        es: "Protección de datos por diseño: se publica el lugar y la necesidad, nunca el contacto de quien reporta.",
-        en: "Data protection by design: the place and the need are published, never the reporter's contact.",
-      },
-    ],
-  },
-  {
-    id: "p4",
+    id: "mapa-vivo",
     status: "current",
-    title: { es: "Despliegue por país", en: "Country deployments", pt: "Implantação por país" },
+    when: { es: "Todo el año · T1 a T8", en: "All year · Q1 to Q8", pt: "O ano todo · T1 a T8" },
+    title: { es: "Mapa vivo y cobertura territorial", en: "A living map, nationwide", pt: "Mapa vivo e cobertura territorial" },
     note: {
-      es: "El repositorio es la base; cada país es una clonación con su configuración, su base de datos y su equipo local.",
-      en: "The repository is the base; each country is a clone with its own configuration, database and local team.",
+      es: "El dato es el activo principal: tiene que ser cierto el día que alguien lo usa, y no sólo durante una emergencia.",
+      en: "The data is the main asset: it has to be true on the day someone uses it, not only during an emergency.",
     },
     items: [
       {
-        es: "Un archivo de configuración por país: regiones, encuadre del mapa, marca, idioma y funciones activas.",
-        en: "One configuration folder per country: regions, map viewport, brand, language and active features.",
+        es: "Verificación en terreno, primero en los {regions} priorizados y después en todo el país, con re-verificación periódica.",
+        en: "On-the-ground verification, first in the priority {regions} and then nationwide, with periodic re-checks.",
       },
       {
-        es: "Base de datos separada por país, para que la información de uno no se pueda leer desde otro.",
-        en: "A separate database per country, so one country's information cannot be read from another.",
+        es: "Una red de verificadores voluntarios formados por la organización, con relevo constante desde instituciones educativas y su servicio comunitario.",
+        en: "A network of volunteer verifiers trained by the organisation, with a steady flow of new people from schools and universities through community service.",
       },
       {
-        es: "API pública para que otras aplicaciones humanitarias consuman los puntos verificados.",
-        en: "A public API so other humanitarian applications can consume the verified points.",
+        es: "Los avisos de la ciudadanía se aplican en menos de 36 horas, y el dato viejo caduca solo y se señala.",
+        en: "Citizen reports are applied within 36 hours, and old data expires on its own and is flagged.",
+      },
+      {
+        es: "Portadas impresas con código QR, repartidas por las organizaciones aliadas, para llegar a quien no está conectado.",
+        en: "Printed posters with a QR code, handed out by partner organisations, to reach people who are not online.",
       },
     ],
+    goal: {
+      es: "900 puntos verificados y cobertura efectiva en los 24 estados al mes 12, en el piloto de Venezuela.",
+      en: "900 verified points and effective coverage in all 24 states by month 12, in the Venezuela pilot.",
+    },
   },
   {
-    id: "cerca",
-    status: "current",
-    title: { es: "Cerca de ti", en: "Near you", pt: "Perto de você" },
+    id: "constitucion",
+    status: "next",
+    when: { es: "T1", en: "Q1", pt: "T1" },
+    title: { es: "Constitución y puesta en marcha", en: "Incorporation and start-up", pt: "Constituição e arranque" },
     note: {
-      es: "Un mapa de todo el país responde a una pregunta que nadie hace. La pregunta real es «¿qué hay cerca de mí, ahora mismo?», y se contesta sin pedir cuenta ni nombre.",
-      en: "A map of the whole country answers a question nobody asks. The real question is “what is near me, right now?”, and it is answered without asking for an account or a name.",
+      es: "Lo que convierte el trabajo de dos fundadores en una organización que puede firmar convenios y rendir cuentas.",
+      en: "What turns the work of two founders into an organisation that can sign agreements and be held to account.",
     },
     items: [
       {
-        es: "Pestaña «Cerca»: los puntos ordenados por distancia real, con el radio a elegir.",
-        en: "A “Near” tab: points sorted by real distance, with the radius you choose.",
+        es: "Constitución como asociación civil sin fines de lucro: es la condición de todo lo demás.",
+        en: "Incorporation as a non-profit civil association: everything else depends on it.",
       },
       {
-        es: "Las iniciativas sin sede que cubren tu zona salen en la misma lista, marcadas como cobertura y no como sitio al que ir.",
-        en: "Initiatives with no seat that cover your area appear in the same list, marked as coverage and not as a place to travel to.",
+        es: "Equipo mínimo permanente: coordinación de campo y verificación, y coordinación de comunicación y comunidad.",
+        en: "A small permanent team: field and verification coordination, and communication and community coordination.",
       },
       {
-        es: "Tu ubicación se queda en tu teléfono: sirve para ordenar la lista y no se manda a ningún servidor ni se guarda.",
-        en: "Your location stays on your phone: it is used to sort the list and is never sent to a server or stored.",
+        es: "Protocolo de verificación publicado: cómo se comprueba un punto y una organización, y quién decide las altas y las bajas.",
+        en: "A published verification protocol: how a point and an organisation are checked, and who decides what goes in and out.",
       },
       {
-        // Sin artículo antes de `{region}`: el sustantivo lo pone cada país y no siempre
-        // tiene el mismo género — «la estado» y «la departamento» estaban saliendo así.
-        es: "Sin permiso de ubicación la lista no se rompe: se sigue pudiendo filtrar por {region} como siempre.",
-        en: "With no location permission the list does not break: filtering by {region} still works as it always did.",
+        es: "Línea base de todos los indicadores, medida sobre lo que la plataforma ya registra y no sobre encuestas.",
+        en: "A baseline for every indicator, measured on what the platform already records rather than on surveys.",
       },
     ],
+    goal: {
+      es: "Organización constituida, equipo contratado y protocolo publicado.",
+      en: "Organisation incorporated, team hired and protocol published.",
+    },
+  },
+  {
+    id: "emergencia",
+    status: "next",
+    when: { es: "T2 a T7", en: "Q2 to Q7", pt: "T2 a T7" },
+    title: { es: "Modo emergencia y respuesta inmediata", en: "Emergency mode and rapid response", pt: "Modo emergência e resposta imediata" },
+    note: {
+      es: "El modo permanente es la condición del modo emergencia: cuando pasa algo, el mapa, el equipo y la comunidad ya existen, y la tragedia se hace visible en horas y no en semanas.",
+      en: "The permanent mode is what makes the emergency mode possible: when something happens, the map, the team and the community already exist, and the disaster becomes visible in hours rather than weeks.",
+    },
+    items: [
+      {
+        es: "Protocolo para abrir, cubrir y archivar una emergencia.",
+        en: "A protocol to open, cover and archive an emergency.",
+      },
+      {
+        es: "Simulacros con Protección Civil, midiendo cuánto se tarda en abrir una emergencia.",
+        en: "Drills with Civil Protection, measuring how long it takes to open an emergency.",
+      },
+      {
+        es: "Convenios de activación previa con organismos de respuesta, firmados antes de que haga falta.",
+        en: "Pre-activation agreements with response agencies, signed before they are needed.",
+      },
+      {
+        es: "Varias emergencias a la vez, cada una con su propio equipo local y un acceso limitado a su evento.",
+        en: "Several emergencies at once, each with its own local team and access limited to its event.",
+      },
+    ],
+    goal: {
+      es: "Una emergencia declarada y publicada en menos de 12 horas, ensayada dos veces.",
+      en: "An emergency declared and published in under 12 hours, rehearsed twice.",
+    },
   },
   {
     id: "comunidad",
     status: "next",
-    title: { es: "Cuentas y comunidad", en: "Accounts and community", pt: "Contas e comunidade" },
+    when: { es: "T2 a T8", en: "Q2 to Q8", pt: "T2 a T8" },
+    title: { es: "Iniciativas, voluntariado y comunidad", en: "Initiatives, volunteers and community", pt: "Iniciativas, voluntariado e comunidade" },
     note: {
-      es: "La cuenta no es un peaje: consultar el mapa sigue siendo anónimo para siempre. La cuenta es para quien vuelve — para seguir a una iniciativa y enterarse de lo suyo sin tener que ir a buscarla.",
-      en: "An account is not a toll: reading the map stays anonymous forever. The account is for whoever comes back — to follow an initiative and hear from it without having to go looking.",
+      es: "Los dos puentes: que una iniciativa pequeña demuestre su trabajo y capte apoyo sin intermediarios, y que quien quiere ayudar encuentre dónde hace falta lo que sabe hacer.",
+      en: "Both bridges: a small initiative can show its work and win support with no middlemen, and someone who wants to help finds where what they can do is needed.",
     },
     items: [
       {
-        es: "Seguir una iniciativa y ver lo que publica en tu feed, junto a lo que hay cerca.",
-        en: "Follow an initiative and see what it posts in your feed, next to what is nearby.",
+        es: "Las iniciativas gestionan su propio perfil, con formación en campañas de recaudación, eventos y publicaciones. La meta es que el equipo de {platform} deje de ser necesario.",
+        en: "Initiatives manage their own profile, with training in fundraising campaigns, events and posts. The aim is for the {platform} team to stop being necessary.",
       },
       {
-        es: "Publican sólo las iniciativas verificadas: avances, entregas hechas y lo que hace falta hoy. Sin comentarios abiertos en esta etapa — lo que no se abre no hay que moderarlo.",
-        en: "Only vetted initiatives post: progress, deliveries made, what is needed today. No open comments at this stage — what is not opened does not need moderating.",
+        es: "Perfil de voluntario con disponibilidad y oficios. En cada punto y cada actividad la iniciativa dice si le faltan manos, oficios, donación en especie o difusión.",
+        en: "A volunteer profile with availability and skills. At each point and activity, the initiative says whether it needs hands, skills, in-kind donations or outreach.",
       },
       {
-        es: "Perfil de voluntario: en qué puede ayudar y cuándo, para que una iniciativa cercana pueda pedírselo.",
-        en: "A volunteer profile: what they can help with and when, so a nearby initiative can ask.",
+        es: "Seguir a una iniciativa y recibir lo que publica sin tener que ir a buscarlo. Consultar el mapa sigue siendo anónimo: la cuenta es para quien vuelve.",
+        en: "Follow an initiative and get what it posts without going looking for it. Reading the map stays anonymous: the account is for people who come back.",
       },
       {
-        es: "La regla de privacidad no se mueve: el correo nunca sale de donde vive, y lo que revela por dónde anda una persona no lo ve nadie más que ella.",
-        en: "The privacy rule does not move: an email never leaves where it lives, and what reveals where a person goes is seen by nobody but them.",
+        es: "Talleres de preparación ante desastres en las comunidades.",
+        en: "Disaster-preparedness workshops in communities.",
       },
     ],
+    goal: {
+      es: "120 iniciativas gestionando su perfil y 1.500 voluntarios registrados al mes 12, en el piloto de Venezuela.",
+      en: "120 initiatives managing their own profile and 1,500 registered volunteers by month 12, in the Venezuela pilot.",
+    },
   },
   {
-    id: "iniciativas",
+    id: "learn-help",
     status: "next",
-    title: {
-      es: "Lo que gana una iniciativa",
-      en: "What an initiative gets out of this",
-      pt: "O que uma iniciativa ganha",
-    },
+    when: { es: "T1 a T8 · lanzamiento en el mes 6", en: "Q1 to Q8 · launch in month 6", pt: "T1 a T8 · lançamento no mês 6" },
+    title: { es: "Learn&Help: aprender a enfrentar emergencias", en: "Learn&Help: learning to face emergencies", pt: "Learn&Help: aprender a enfrentar emergências" },
     note: {
-      es: "Un mapa al que las iniciativas no ganan nada por entrar se queda sin iniciativas. Su perfil deja de ser una ficha que otros llenan y pasa a ser su espacio: lo que están recaudando, lo que van a hacer y lo que ya entregaron.",
-      en: "A map initiatives gain nothing by joining ends up with no initiatives. Their profile stops being a record other people fill in and becomes their own space: what they are raising, what they are about to do, and what they already delivered.",
+      es: "Recorridos de aprendizaje con forma de juego sobre cómo prepararse, responder y organizarse ante un desastre, y sobre cómo usar {platform}. Cada nivel deja un certificado en el perfil y abre recompensas.",
+      en: "Game-like learning paths on how to prepare for, respond to and organise around a disaster, and on how to use {platform}. Each level leaves a certificate on your profile and unlocks rewards.",
     },
     items: [
       {
-        es: "Campañas con una meta concreta: para qué es, cuánto hace falta, cuánto lleva y hasta cuándo. Recaudar «para el comedor» no mueve a nadie; «120 colchonetas antes del viernes» sí.",
-        en: "Campaigns with a concrete goal: what it is for, how much is needed, how much is in, and until when. Raising “for the kitchen” moves nobody; “120 mattresses before Friday” does.",
+        es: "App nativa y primer recorrido, con el diseño instruccional hecho junto a universidades, bomberos y Protección Civil.",
+        en: "A native app and the first learning path, with instructional design done alongside universities, firefighters and Civil Protection.",
       },
       {
-        es: "Agenda de lo que van a hacer en su comunidad, para que la gente de al lado pueda ir, llevar algo o sumarse como voluntaria.",
-        en: "A calendar of what they will do in their community, so the people next door can show up, bring something, or join as volunteers.",
+        es: "Suscripción de US$ 5 al mes. El primer nivel es gratis, y todo es gratis durante una emergencia.",
+        en: "A US$ 5 monthly subscription. The first level is free, and all of it is free during an emergency.",
       },
       {
-        es: "Trazabilidad: cada entrega hecha queda publicada junto a la campaña que la pagó. Es lo que convierte «confía en nosotros» en algo que se puede mirar.",
-        en: "Traceability: every delivery made is published next to the campaign that paid for it. That is what turns “trust us” into something you can look at.",
+        es: "Plazas para empresas e instituciones educativas que quieran formar a su gente en preparación ante desastres.",
+        en: "Seats for companies and schools that want to train their people in disaster preparedness.",
       },
       {
-        es: "Visibilidad: aparecer en «Cerca» de su zona, en el feed de quien las sigue y con enlace propio para compartir por WhatsApp.",
-        en: "Visibility: showing up in “Near” for their area, in the feed of whoever follows them, and with their own link to share on WhatsApp.",
+        es: "Recorridos nuevos cada trimestre, validados con los aliados.",
+        en: "New learning paths every quarter, validated with partners.",
       },
     ],
   },
   {
-    id: "dar",
-    status: "next",
-    title: { es: "Dar, y que se note", en: "Giving, and being seen", pt: "Doar, e que apareça" },
-    note: {
-      es: "El piloto arranca por lo simple y lo comprobable: donas a la iniciativa que tú elijas, con los datos que ella misma publicó. {platform} todavía no se pone en medio del dinero.",
-      en: "The pilot starts with the simple, checkable thing: you donate to the initiative you choose, with the details it published itself. {platform} does not sit in the middle of the money yet.",
-    },
-    items: [
-      {
-        es: "Donar directo a una iniciativa desde su ficha, con sus propios datos de cobro y su enlace verificable.",
-        en: "Donate straight to an initiative from its card, with its own payment details and a checkable link.",
-      },
-      {
-        es: "Al lado, y aparte: la opción de aportar a {platform} para sostenerla. Aparte de verdad —otros datos de cobro, otra decisión— porque lo que se da a una iniciativa tiene que llegarle entero. Así es como se paga esto mientras el fondo común no exista.",
-        en: "Beside it, and separate: the option to chip in to {platform} to keep it running. Genuinely separate — different payment details, a different decision — because what is given to an initiative has to reach it whole. This is how this gets paid for while the common fund does not exist.",
-      },
-      {
-        es: "Medallas por lo que hiciste —donar, reportar un punto, salir a voluntariar— y una tabla de posiciones para quien quiera aparecer en ella.",
-        en: "Badges for what you did — donate, report a point, show up to volunteer — and a leaderboard for whoever wants to be on it.",
-      },
-      {
-        es: "Aparecer es opcional: se puede donar y voluntariar sin figurar en ninguna lista.",
-        en: "Appearing is optional: you can donate and volunteer without showing up in any list.",
-      },
-      {
-        es: "Las medallas se canjean por beneficios en comercios patrocinantes: el comercio pone el beneficio, {platform} pone la constancia de que esa persona ayudó.",
-        en: "Badges are redeemed for perks at sponsoring businesses: the business puts up the perk, {platform} puts up the proof that this person helped.",
-      },
-    ],
-  },
-  {
-    id: "p5",
-    status: "next",
-    title: { es: "Personas afectadas", en: "Affected people", pt: "Pessoas afetadas" },
-    note: {
-      es: "Localizar personas es el uso más delicado de la plataforma, y solo se activa donde exista una red que confirme cada dato.",
-      en: "Locating people is the platform's most delicate use, and it is only switched on where a network exists to confirm every record.",
-    },
-    items: [
-      {
-        es: "Listado de personas atendidas en un centro, para reunificación familiar.",
-        en: "A list of people attended at a centre, for family reunification.",
-      },
-      {
-        es: "Regla que no se negocia: solo lo mínimo para reconocer a alguien; nada de domicilio ni de datos clínicos.",
-        en: "A non-negotiable rule: only the minimum needed to recognise someone; no home address, no clinical data.",
-      },
-      {
-        es: "Protección reforzada de menores de edad en todas las capas.",
-        en: "Reinforced protection for minors at every layer.",
-      },
-      {
-        es: "Reporte privado de personas buscadas, visible solo para el equipo.",
-        en: "Private missing-person reports, visible to the team only.",
-      },
-    ],
-  },
-  {
-    id: "fondo",
+    id: "ayuda-mas",
     status: "later",
-    title: {
-      es: "Fondo común, y de qué vive {platform}",
-      en: "The common fund, and what keeps {platform} alive",
-      pt: "Fundo comum, e do que vive {platform}",
-    },
+    when: { es: "T5 a T8", en: "Q5 to Q8", pt: "T5 a T8" },
+    title: { es: "Ayuda+: recompensas con comercios aliados", en: "Ayuda+: rewards with partner businesses", pt: "Ayuda+: recompensas com comércios parceiros" },
     note: {
-      es: "Una plataforma que no dice de qué vive acaba viviendo de algo que no cuenta. Aquí está dicho: una sola aportación mensual que llega repartida a TODAS las iniciativas, y una comisión declarada que sostiene la plataforma. Implica mover dinero de terceros, así que no se lanza hasta que el reparto se pueda auditar desde fuera y el riel de cobro exista de verdad en el país del piloto.",
-      en: "A platform that does not say what keeps it alive ends up living off something it does not mention. Here it is stated: one monthly contribution that arrives split across EVERY initiative, and a declared fee that sustains the platform. It means handling other people's money, so it does not ship until the split can be audited from outside and a payment rail actually exists in the pilot country.",
+      es: "Los comercios cubren su cuota social con beneficios para quien ayudó, y {platform} pone la constancia de que esa persona ayudó de verdad.",
+      en: "Businesses meet their social commitment with perks for people who helped, and {platform} provides the proof that the person really did.",
     },
     items: [
       {
-        es: "Voluntario+: aportación mensual de la que un 5–10% sostiene {platform} y el resto entra al fondo.",
-        en: "Volunteer+: a monthly contribution of which 5–10% sustains {platform} and the rest goes into the fund.",
+        es: "Canje de beneficios por nivel en comercios patrocinantes.",
+        en: "Perks redeemed by level at sponsoring businesses.",
       },
       {
-        es: "Reparto equitativo entre las iniciativas activas: con una sola aportación ayudas a todas a la vez.",
-        en: "An equitable split across active initiatives: one contribution helps all of them at once.",
+        es: "Patrocinio de campañas, con la entrega publicada junto a la campaña que financió.",
+        en: "Campaign sponsorship, with the delivery published next to the campaign it paid for.",
       },
       {
-        es: "Transparencia absoluta y por defecto: cuánto entró, cuánto se quedó la plataforma, cuánto le tocó a cada iniciativa y en qué fecha. Público, sin que nadie lo pida.",
-        en: "Absolute transparency by default: how much came in, how much the platform kept, how much each initiative got and on what date. Public, without anyone having to ask.",
-      },
-      {
-        es: "El cobro: en Venezuela el débito recurrente no está resuelto, así que la vía es una alianza con una entidad financiera local que lo opere. Hasta que exista, Voluntario+ se queda apagado y vale lo de la fase anterior: donación directa.",
-        en: "The charge: recurring debit is not a solved problem in Venezuela, so the route is a partnership with a local financial institution that operates it. Until that exists, Volunteer+ stays off and the previous phase stands: direct donation.",
+        es: "Aparecer es opcional: se puede ayudar sin figurar en ninguna lista.",
+        en: "Appearing is optional: you can help without showing up on any list.",
       },
     ],
   },
   {
-    id: "p6",
-    status: "later",
-    title: { es: "Red entre despliegues", en: "Network between deployments", pt: "Rede entre implantações" },
+    id: "sostenibilidad",
+    status: "next",
+    when: { es: "T2 a T8", en: "Q2 to Q8", pt: "T2 a T8" },
+    title: {
+      es: "De qué vive {platform}, y cómo rinde cuentas",
+      en: "What keeps {platform} alive, and how it reports",
+      pt: "Do que vive {platform}, e como presta contas",
+    },
+    note: {
+      es: "Una plataforma que no dice de qué vive acaba viviendo de algo que no cuenta. {platform} no procesa dinero de terceros ni cobra comisión sobre ninguna donación: lo que se da a una iniciativa le llega entero y directo.",
+      en: "A platform that does not say what keeps it alive ends up living off something it does not mention. {platform} does not handle other people's money or take a cut of any donation: what is given to an initiative reaches it whole and directly.",
+    },
     items: [
       {
-        es: "Intercambio de datos con otras plataformas de ayuda, con atribución y licencia abierta.",
-        en: "Data exchange with other aid platforms, with attribution and an open licence.",
+        es: "Subvenciones y cooperación para la puesta en marcha, con peso decreciente año a año.",
+        en: "Grants and cooperation funding for the start-up, weighing less each year.",
       },
       {
-        es: "Sincronización de puntos desde fuentes locales ya existentes, sin duplicar el trabajo de nadie.",
-        en: "Syncing points from existing local sources, without duplicating anyone's work.",
+        es: "Ingresos propios: Learn&Help, un aporte voluntario a {platform} al lado del botón de donar (aparte de verdad, con otros datos de cobro), el servicio de implantación en otros países e instituciones, y el acceso a datos verificados para instituciones (mes 24).",
+        en: "Own income: Learn&Help, a voluntary contribution to {platform} beside the donate button (genuinely separate, with different payment details), the deployment service for other countries and institutions, and access to verified data for institutions (month 24).",
       },
       {
-        es: "Guía operativa para que un equipo nuevo levante su despliegue sin ayuda técnica externa.",
-        en: "An operational guide so a new team can stand up its deployment without outside technical help.",
+        es: "Auditoría externa del primer ejercicio, e informe anual de transparencia e impacto publicado.",
+        en: "An external audit of the first year, and a published annual transparency and impact report.",
+      },
+    ],
+  },
+  {
+    id: "red",
+    status: "later",
+    title: { es: "Red {platform}", en: "The {platform} network", pt: "Rede {platform}" },
+    note: {
+      es: "Que el trabajo hecho para un país sirva a los demás.",
+      en: "So the work done for one country serves the others.",
+    },
+    items: [
+      {
+        es: "Implantación en nuevos países e instituciones: un país es un archivo de configuración y una base de datos propia, no un proyecto nuevo.",
+        en: "Deployment in new countries and institutions: a country is a configuration file and its own database, not a new project.",
+      },
+      {
+        es: "Cada mejora que paga un despliegue llega a todos, incluido el de Venezuela, que es gratuito.",
+        en: "Every improvement one deployment pays for reaches all of them, including Venezuela's, which is free.",
+      },
+      {
+        es: "La API pública y la licencia abierta como estándar de datos de ayuda para Protección Civil, alcaldías, medios y cooperación.",
+        en: "The public API and open licence as an aid-data standard for Civil Protection, municipalities, the media and cooperation agencies.",
+      },
+      {
+        es: "Guía para que un equipo nuevo levante su despliegue sin ayuda técnica externa.",
+        en: "A guide so a new team can stand up its deployment without outside technical help.",
       },
     ],
   },

@@ -94,6 +94,7 @@ const en: Partial<Dict> = {
   "center.updatedLabel": "Last updated",
   "center.confirmedLabel": "Last confirmed",
   "center.socialLink": "See their social page",
+  "center.profilePage": "View page",
   "center.website": "Website",
   "center.instagram": "Instagram",
   "center.confirmed": "Confirmed {ago}",
@@ -213,7 +214,6 @@ const en: Partial<Dict> = {
   "sheet.digitals": "digital initiatives",
   // ── Giving straight to an initiative ────────────────────────────────────
   "donate.direct": "How to contribute",
-  "donate.button": "Go and donate",
   "donate.claim": "I've contributed",
   "donate.claimHint":
     "The initiative confirms it when it arrives, and that is when it counts towards your level. We ask for no amount and no receipts.",
@@ -556,6 +556,7 @@ const en: Partial<Dict> = {
   "donate.data": "Where to send it",
   "donate.follow": "See their page",
   "donate.go": "Donate",
+  "donate.goHint": "Opens the initiative's payment page",
   "donate.joinTitle": "Does your organisation receive donations?",
   "donate.joinBody":
     "If you can show what happens to what you receive, write to us and we will add you to this list.",
