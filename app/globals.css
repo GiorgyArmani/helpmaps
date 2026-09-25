@@ -1804,6 +1804,32 @@ a {
   min-width: 0;
 }
 
+/* Una fila cuyo valor no cabe al lado de su rótulo —el horario: estado, «cierra a las…» y
+   la semana— se apila: rótulo arriba y el valor debajo a todo el ancho. A la derecha, en la
+   columna de 360px del perfil, «Todos los días» se partía en dos líneas y el «· cierra a
+   las 9:00» caía suelto bajo el estado. */
+.drow-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.drow-stack .dval {
+  text-align: left;
+}
+
+.drow-stack .dval .hours {
+  align-items: stretch;
+}
+
+.drow-stack .dval .hours-line {
+  justify-content: space-between;
+}
+
+.drow-stack .hours-days {
+  white-space: nowrap;
+}
+
 .dval-type {
   display: inline-flex;
   align-items: center;
@@ -9667,6 +9693,12 @@ fieldset.fieldset {
   display: none;
 }
 
+/* Las dos filas de acciones —llegar y contactar, y guardar/avisar/estoy aquí— se leen como
+   una sola rejilla: el mismo hueco de 8px entre filas que entre botones. */
+.prof-do > div > .dactions {
+  margin-top: 8px;
+}
+
 .prof-id .prof-warn {
   align-self: stretch;
 }
@@ -9722,14 +9754,41 @@ fieldset.fieldset {
   }
 
   /* Las acciones en fila, a la derecha del nombre: en escritorio hay sitio para la
-     palabra al lado del icono, y apiladas bajo el nombre empujaban todo hacia abajo. */
+     palabra al lado del icono, y apiladas bajo el nombre empujaban todo hacia abajo.
+     Guardar, avisar y «estoy aquí» van en una segunda fila del mismo bloque. */
+  .prof-head .prof-do {
+    flex: 0 1 560px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    min-width: 0;
+    margin-bottom: 4px;
+    text-align: right;
+  }
+
+  .prof-head .prof-do > div:not(.dactions) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .prof-head .prof-do .small {
+    margin: 0;
+  }
+
+  .prof-head .prof-do .form {
+    align-self: stretch;
+    text-align: left;
+  }
+
   .prof-head .dactions {
-    flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
-    margin: 0 0 4px;
-    max-width: 520px;
+    margin: 0;
   }
 
   .prof-head .dactions .btnp,
@@ -9764,6 +9823,12 @@ fieldset.fieldset {
     border: 1px solid var(--line);
     border-radius: var(--r-lg);
     background: #fff;
+  }
+
+  /* Cinco destinos no caben en fila en la columna de 360px y el quinto quedaba solo en
+     una fila entera. De tres en tres se reparten tres y dos. */
+  .prof-side .targets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .prof-side > :first-child {

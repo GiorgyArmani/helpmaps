@@ -27,6 +27,8 @@ import {
 } from "@/features/centers/InitiativeSections";
 import ProfileTabs, { type ProfileTab } from "@/features/centers/ProfileTabs";
 import HoursView from "@/features/centers/HoursView";
+import PointActions from "@/features/account/PointActions";
+import ShareRow from "@/features/share/ShareRow";
 import type { DictKey } from "@/i18n";
 import { currentEmergencyId } from "@/server/emergency";
 
@@ -188,7 +190,7 @@ export default async function CenterPage({ params, searchParams }: Params) {
               </div>
             ) : null}
             {info?.hours || info?.schedule ? (
-              <div className="drow">
+              <div className="drow drow-stack">
                 <span className="dlabel">{t("center.scheduleTitle")}</span>
                 <span className="dval">
                   <HoursView
@@ -236,6 +238,11 @@ export default async function CenterPage({ params, searchParams }: Params) {
               </div>
             ) : null}
           </div>
+
+          {/* Compartir vive con la información y no en la cabecera: en escritorio queda en la
+              columna fija, a la vista mientras se lee lo demás, igual que en la ficha del mapa. */}
+          <h3 className="dsection">{t("share.title")}</h3>
+          <ShareRow center={center} />
 
           <p className="prof-note">{t("center.disclaimer")}</p>
         </>
@@ -339,41 +346,47 @@ export default async function CenterPage({ params, searchParams }: Params) {
             ) : null}
           </div>
 
-          <div className="dactions">
-            {hasCoords(center) && !digital ? (
-              <a
-                className="btnp"
-                href={directionsUrl(center)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Icon.directions />
-                {t("center.directions")}
-              </a>
-            ) : null}
-            {center.whatsapp ? (
-              <a
-                className="btng"
-                href={whatsappHref(center.whatsapp)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Icon.whatsapp />
-                {t("center.whatsapp")}
-              </a>
-            ) : null}
-            {center.phone ? (
-              <a className="btng" href={telHref(center.phone)}>
-                <Icon.phone />
-                {t("center.call")}
-              </a>
-            ) : null}
-            {/* Al mapa, con este punto ya abierto: quien llegó por un enlace y quiere ver
-                qué hay alrededor no debería tener que buscarlo otra vez. */}
-            <Link className="btng" href={`/?c=${center.id}`}>
-              <Icon.target />
-              {t("entry.enter")}
-            </Link>
+          {/* Lo que se hace con el punto: primero llegar y contactar, debajo guardar, avisar y
+              «estoy aquí» — el mismo orden que la ficha del mapa. En escritorio van juntos a
+              la derecha del nombre. */}
+          <div className="prof-do">
+            <div className="dactions">
+              {hasCoords(center) && !digital ? (
+                <a
+                  className="btnp"
+                  href={directionsUrl(center)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Icon.directions />
+                  {t("center.directions")}
+                </a>
+              ) : null}
+              {center.whatsapp ? (
+                <a
+                  className="btng"
+                  href={whatsappHref(center.whatsapp)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Icon.whatsapp />
+                  {t("center.whatsapp")}
+                </a>
+              ) : null}
+              {center.phone ? (
+                <a className="btng" href={telHref(center.phone)}>
+                  <Icon.phone />
+                  {t("center.call")}
+                </a>
+              ) : null}
+              {/* Al mapa, con este punto ya abierto: quien llegó por un enlace y quiere ver
+                  qué hay alrededor no debería tener que buscarlo otra vez. */}
+              <Link className="btng" href={`/?c=${center.id}`}>
+                <Icon.target />
+                {t("entry.enter")}
+              </Link>
+            </div>
+            <PointActions locationId={center.id} />
           </div>
         </div>
 

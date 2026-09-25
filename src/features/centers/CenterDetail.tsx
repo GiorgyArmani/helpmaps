@@ -154,7 +154,7 @@ export default function CenterDetail({
                   </div>
                 ) : null}
                 {info?.hours || info?.schedule ? (
-                  <div className="drow">
+                  <div className="drow drow-stack">
                     <span className="dlabel">{t("center.scheduleTitle")}</span>
                     <span className="dval">
                       <HoursView
