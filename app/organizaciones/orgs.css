@@ -217,8 +217,8 @@
   animation: olp-found 1.8s var(--ease) 0.2s infinite;
 }
 
-/* Lo encontrado «late» sobre el mapa. Es la única animación de la página y responde a una
-   búsqueda: dice «aquí está», no decora. */
+/* Lo encontrado «late» sobre el mapa. Responde a una búsqueda: dice «aquí está», no
+   decora. */
 @keyframes olp-found {
   0% {
     transform: scale(0.5);
@@ -260,6 +260,13 @@
   font-size: 1.1875rem;
   font-weight: 700;
   letter-spacing: -0.2px;
+}
+
+.olp-find-p {
+  margin: -6px 0 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--mut-track);
 }
 
 .olp-form {
@@ -441,96 +448,816 @@
   text-wrap: balance;
 }
 
-/* Filas, no tarjetas: cada ventaja es una línea de lectura con su icono, separadas por
-   aire. En escritorio, dos columnas. */
-.olp-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 28px;
+.olp-sub {
+  margin: -12px 0 0;
+  max-width: 34em;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--mut-track);
+  text-wrap: pretty;
 }
 
-.olp-item {
+/* ── Las funciones: un recorrido fijo ───────────────────────────────────
+   El contenedor mide una pantalla por paso y dentro va una capa `sticky` de una pantalla de
+   alto. Teléfono: el texto arriba y el teléfono debajo, los dos dentro de la capa fija.
+   Escritorio: texto a la izquierda y teléfono a la derecha. `FeatureTour.tsx` marca cada
+   texto y cada pantalla con `data-pos` (past / on / next). */
+
+.olp-tour {
+  height: calc(var(--steps) * 100svh);
+  margin-top: 24px;
+}
+
+.olp-tour-pin {
+  position: sticky;
+  top: 0;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 16px;
+  height: 100svh;
+  padding-block: 20px 16px;
 }
 
-.olp-item-ic {
-  flex: 0 0 auto;
+/* Cuánto del recorrido va hecho: un segmento por función. */
+.olp-tour-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.olp-tour-dots span {
+  width: 32px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  transition: background-color var(--t-ui) var(--ease);
+}
+
+.olp-tour-dots .is-done {
+  background: var(--brand);
+}
+
+/* Los cuatro textos en la MISMA celda: el hueco lo reserva el más largo y nada salta. */
+.olp-tour-texts {
+  display: grid;
+}
+
+.olp-tour-text {
+  grid-area: 1 / 1;
+  transition:
+    opacity 320ms var(--ease),
+    transform 420ms var(--ease);
+}
+
+.olp-tour-text[data-pos="past"] {
+  opacity: 0;
+  transform: translateY(-16px);
+}
+
+.olp-tour-text[data-pos="next"] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.olp-feat-ic {
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
+  margin-bottom: 14px;
   border-radius: 50%;
   background: #fff;
   box-shadow: var(--e-1);
   color: var(--brand);
 }
 
-.olp-item-t {
-  margin: 2px 0 4px;
+.olp-feat-t {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.olp-feat-d {
+  margin: 0;
+  max-width: 30em;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--mut-track);
+  text-wrap: pretty;
+}
+
+/* El teléfono asoma desde un panel que lo corta por abajo: lo que enseña cada pantalla
+   está arriba. En el móvil el panel ocupa lo que deja libre el texto en la capa fija. */
+.olp-feat-shot {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding-top: 24px;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--brand) 9%, #fff);
+}
+
+.olp-demo-note {
+  margin: 32px 0 0;
+  font-size: 13px;
+  color: var(--mut-track);
+}
+
+/* ── El marco del teléfono ───────────────────────────────────────────── */
+
+.olp-phone {
+  position: relative;
+  width: min(282px, calc(100% - 48px));
+  aspect-ratio: 282 / 580;
+  margin-inline: auto;
+  padding: 8px;
+  border-radius: 44px;
+  background: var(--ink);
+  box-shadow: var(--e-3);
+}
+
+/* La isla de la cámara. */
+.olp-phone::before {
+  content: "";
+  position: absolute;
+  top: 17px;
+  left: 50%;
+  z-index: 2;
+  width: 76px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--ink);
+  transform: translateX(-50%);
+}
+
+.olp-phone-scr {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 36px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.4;
+  user-select: none;
+  display: grid;
+  /* Sin esto, la fila de pestañas (`nowrap`) ensancha la celda y la pantalla se sale. */
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+/* Las pantallas, también en una sola celda. Entran de lado, como al tocar la pestaña
+   siguiente en la app; la que se va sale hacia el otro lado. */
+.olp-scr {
+  grid-area: 1 / 1;
+  min-width: 0;
+  height: 100%;
+  background: #fff;
+  transition:
+    opacity 320ms var(--ease),
+    transform 420ms var(--ease);
+}
+
+.olp-scr[data-pos="past"] {
+  opacity: 0;
+  transform: translateX(-28%);
+}
+
+.olp-scr[data-pos="next"] {
+  opacity: 0;
+  transform: translateX(28%);
+}
+
+/* El «toque»: al entrar una pantalla, un círculo se abre sobre su pestaña, como el dedo
+   que acaba de tocarla. Existe sólo en la pantalla activa, así que se repite en cada paso. */
+.olp-scr[data-pos="on"] .mk-tab-on {
+  position: relative;
+}
+
+.olp-scr[data-pos="on"] .mk-tab-on::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  opacity: 0;
+  animation: mk-tap 700ms var(--ease) 180ms both;
+}
+
+@keyframes mk-tap {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+/* ── Lo de dentro: el perfil real a 390px, en pequeño ────────────────── */
+
+.mk-cover {
+  position: relative;
+  height: 96px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 26%, #fff), var(--soft));
+}
+
+.mk-back {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--e-1);
+}
+
+.mk-back-abs {
+  position: absolute;
+  top: 34px;
+  left: 12px;
+}
+
+.mk-back svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mk-id {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-top: -26px;
+  padding-inline: 14px;
+}
+
+.mk-photo {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+  border: 2px solid #fff;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: var(--e-2);
+}
+
+/* La barra del perfil ya desplazado: debajo de la isla, en una fila. */
+.mk-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 42px 14px 2px;
+}
+
+.mk-photo.mk-photo-sm {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  border: none;
+  border-radius: 10px;
+  box-shadow: var(--e-1);
+}
+
+.mk-top-txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mk-top .mk-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mk-name {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.mk-meta {
+  font-size: 10.5px;
+  color: var(--mut);
+}
+
+.mk-body {
+  padding: 8px 14px 0;
+}
+
+.mk-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ok) 12%, #fff);
+  color: var(--ok);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mk-open i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.mk-acts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.mk-act {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+.mk-act svg {
+  width: 15px;
+  height: 15px;
+}
+
+.mk-act-main {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.mk-tabs {
+  display: flex;
+  gap: 14px;
+  margin: 10px 0;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  /* En la app la fila se desliza; aquí se desvanece, que es como se lee «hay más». */
+  mask-image: linear-gradient(to right, #000 82%, transparent);
+}
+
+.mk-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--mut-track);
+}
+
+.mk-tab-on {
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--ink);
+}
+
+.mk-tab-n {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--soft);
+  font-size: 9px;
+}
+
+.mk-about {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.mk-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.mk-table > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+}
+
+.mk-table > span + span {
+  border-top: 1px solid var(--line);
+}
+
+.mk-table small {
+  font-size: 9.5px;
+  color: var(--mut);
+}
+
+.mk-table b {
+  font-size: 11px;
+}
+
+/* Campaña */
+
+.mk-card {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.mk-img {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 2 / 1;
+  margin-bottom: 8px;
+  border-radius: 8px;
+}
+
+.mk-img svg {
+  width: 30px;
+  height: 30px;
+}
+
+.mk-img-a {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 24%, #fff), color-mix(in srgb, var(--brand) 8%, #fff));
+  color: var(--brand);
+}
+
+.mk-img-b {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ok) 24%, #fff), color-mix(in srgb, var(--ok) 8%, #fff));
+  color: var(--ok);
+}
+
+.mk-card-t {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.mk-card-p {
+  margin: 2px 0 8px;
+  font-size: 10.5px;
+  color: var(--mut);
+}
+
+.mk-bar {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--soft);
+}
+
+.mk-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+.mk-card-n {
+  margin: 6px 0 0;
+  font-size: 10.5px;
+  color: var(--mut);
+}
+
+.mk-card-n b {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.mk-donate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.mk-donate-ic {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.mk-donate-ic svg {
+  width: 15px;
+  height: 15px;
+}
+
+.mk-donate b,
+.mk-donate small {
+  display: block;
+}
+
+.mk-donate b {
+  font-size: 12px;
+}
+
+.mk-donate small {
+  font-size: 9.5px;
+  opacity: 0.75;
+}
+
+/* Agenda */
+
+.mk-ev {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+  padding: 4px 0 12px;
+}
+
+.mk-ev + .mk-ev {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.mk-ev-when {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: start;
+  padding: 5px 0;
+  border-radius: 10px;
+  background: var(--soft);
+}
+
+.mk-ev-when b {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.mk-ev-when span {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--mut-track);
+}
+
+.mk-ev-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mk-ev-t {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mk-ev-meta {
+  font-size: 10px;
+  color: var(--mut);
+}
+
+.mk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.mk-chips span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 10%, #fff);
+  color: var(--brand);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.mk-ev-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  white-space: nowrap;
+  margin-top: 6px;
+}
+
+.mk-join,
+.mk-cal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mk-join {
+  background: var(--accent);
+  color: #fff;
+}
+
+.mk-cal {
+  border: 1px solid var(--line);
+}
+
+.mk-join svg,
+.mk-cal svg,
+.mk-ev-count svg {
+  width: 12px;
+  height: 12px;
+}
+
+.mk-ev-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--mut-track);
+}
+
+/* Novedades */
+
+.mk-post {
+  padding-bottom: 12px;
+}
+
+.mk-post + .mk-post {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.mk-post-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 10px;
+  color: var(--mut);
+}
+
+.mk-kind {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ok) 12%, #fff);
+  color: var(--ok);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mk-kind-b {
+  background: color-mix(in srgb, var(--brand) 10%, #fff);
+  color: var(--brand);
+}
+
+.mk-post-body {
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ── Cómo empezar ────────────────────────────────────────────────────────
+   Una tarjeta propia (la única de la página con `--e-2`): los pasos como línea de tiempo y
+   el CTA en el color de marca. Numerados porque el orden es información. */
+
+.olp-how {
+  padding: 28px 20px;
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--e-2);
+}
+
+.olp-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.olp-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 16px;
+  padding-bottom: 28px;
+}
+
+/* La línea que une un paso con el siguiente. */
+.olp-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 48px;
+  bottom: 6px;
+  left: 19px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.olp-step-n {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 800;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--brand) 12%, #fff);
+}
+
+.olp-step-h {
+  margin: 8px 0 4px;
   font-family: var(--font-display);
   font-size: 1.1875rem;
   font-weight: 700;
   letter-spacing: -0.2px;
 }
 
-.olp-item-d {
+.olp-step-t {
   margin: 0;
-  max-width: 30em;
+  max-width: 24em;
   font-size: 15px;
   line-height: 1.55;
   color: var(--mut-track);
 }
 
-/* Los pasos: el número en grande, en la letra de los titulares. Aquí la numeración es
-   información —el orden importa— y no adorno. */
-.olp-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 20px;
+.olp-how-cta {
+  margin-top: 4px;
 }
 
-.olp-step {
+/* La acción de la página: grande, en marca y a todo el ancho en el teléfono. */
+.olp-cta {
   display: flex;
-  align-items: baseline;
-  gap: 16px;
-}
-
-.olp-step-n {
-  flex: 0 0 auto;
-  width: 44px;
-  font-family: var(--font-display);
-  font-size: 2.75rem;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.04em;
-  color: var(--brand);
-}
-
-.olp-step-t {
-  margin: 0;
-  max-width: 24em;
-  font-size: 1.0625rem;
-  line-height: 1.5;
-}
-
-.olp-again {
-  display: inline-flex;
   align-items: center;
-  min-height: 52px;
-  margin-top: 28px;
-  padding: 0 22px;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 58px;
+  padding: 0 24px;
   border-radius: var(--r-md);
-  background: var(--accent);
+  background: var(--brand);
   color: #fff;
-  font-size: 15px;
+  font-size: 1.0625rem;
   font-weight: 700;
   text-decoration: none;
+  box-shadow: var(--e-2);
+  transition:
+    transform var(--t-tap) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
+}
+
+.olp-cta:hover {
+  box-shadow: var(--e-3);
+}
+
+.olp-cta:active {
+  transform: scale(0.98);
+}
+
+.olp-cta svg:last-child {
+  transition: transform var(--t-ui) var(--ease);
+}
+
+.olp-cta:hover svg:last-child {
+  transform: translateX(3px);
+}
+
+.olp-cta-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  text-align: center;
+  color: var(--mut-track);
 }
 
 /* ── El cierre ───────────────────────────────────────────────────────────
@@ -647,19 +1374,73 @@
     padding-top: 112px;
   }
 
-  .olp-list {
+  /* Texto a la izquierda, teléfono a la derecha, centrados en la capa fija. */
+  .olp-tour-pin {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 40px 56px;
+    align-items: center;
+    gap: 64px;
+    padding-block: 0;
   }
 
+  .olp-feat-t {
+    font-size: 2rem;
+  }
+
+  .olp-feat-d {
+    font-size: 1.0625rem;
+  }
+
+  .olp-feat-shot {
+    flex: none;
+    height: min(560px, 80svh);
+    padding-top: 48px;
+  }
+
+  .olp-phone {
+    width: 300px;
+  }
+
+  .olp-how {
+    padding: 48px 56px;
+  }
+
+  /* En horizontal: la línea va de un número al siguiente, cruzando el hueco. */
   .olp-steps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 40px;
+    margin-top: 8px;
   }
 
   .olp-step {
-    flex-direction: column;
-    gap: 10px;
+    grid-template-columns: none;
+    align-content: start;
+    gap: 12px;
+    padding-bottom: 0;
+  }
+
+  .olp-step:not(:last-child)::before {
+    top: 19px;
+    bottom: auto;
+    left: 60px;
+    right: -28px;
+    width: auto;
+    height: 2px;
+  }
+
+  .olp-how-cta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 40px;
+  }
+
+  .olp-cta {
+    width: auto;
+  }
+
+  .olp-cta-note {
+    margin: 0;
   }
 
   .olp-promise {
@@ -684,11 +1465,15 @@
 
   .olp-input,
   .olp-go,
-  .olp-hitrow {
+  .olp-hitrow,
+  .olp-cta,
+  .olp-cta svg:last-child {
     transition: none;
   }
 
-  .olp-go:active {
+  .olp-go:active,
+  .olp-cta:active,
+  .olp-cta:hover svg:last-child {
     transform: none;
   }
 }

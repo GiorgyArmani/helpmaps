@@ -6,6 +6,8 @@ import { Icon } from "@/ui/icons";
 import { currentEmergencyId } from "@/server/emergency";
 import { CookiePrefsLink } from "@/features/consent/CookieConsent";
 import { dotMap, fetchDirectory, searchDirectory } from "./directory";
+import FeatureTour from "./FeatureTour";
+import { AgendaScreen, CampaignScreen, PostsScreen, ProfileScreen } from "./Mockups";
 import "./orgs.css";
 
 /**
@@ -22,8 +24,7 @@ import "./orgs.css";
  *
  * Ni foto ni degradado: el país dibujado con los puntos publicados de verdad, uno por
  * cada lugar de ayuda. La frase «ya está en el mapa» se VE antes de leerse. Y al buscar,
- * lo encontrado se enciende en ese mismo dibujo: es la única animación de la página, y
- * responde a lo que hizo la persona. Lo pinta el servidor (`dotMap`), sin teselas ni
+ * lo encontrado se enciende en ese mismo dibujo, en respuesta a lo que hizo la persona. Lo pinta el servidor (`dotMap`), sin teselas ni
  * Leaflet: son unos cientos de círculos en un SVG.
  *
  * ── POR QUÉ ES UNA RUTA Y NO UNA VISTA DEL PANEL ────────────────────────────
@@ -44,17 +45,17 @@ export const metadata: Metadata = (() => {
   return {
     // Sin la marca: la plantilla del layout ya la añade.
     title: t("orgs.metaTitle"),
-    description: t("orgs.lead"),
+    description: t("orgs.lead", { country: COUNTRY.name }),
     alternates: { canonical: "/organizaciones" },
-    openGraph: { title: t("orgs.metaTitle"), description: t("orgs.lead") },
+    openGraph: { title: t("orgs.metaTitle"), description: t("orgs.lead", { country: COUNTRY.name }) },
   };
 })();
 
-const BENEFITS = [
-  { icon: Icon.eye, k: "profile" },
-  { icon: Icon.heart, k: "campaigns" },
-  { icon: Icon.users, k: "volunteers" },
-  { icon: Icon.check, k: "trust" },
+const FEATURES = [
+  { k: "profile", icon: Icon.eye, Screen: ProfileScreen },
+  { k: "campaigns", icon: Icon.heart, Screen: CampaignScreen },
+  { k: "events", icon: Icon.users, Screen: AgendaScreen },
+  { k: "posts", icon: Icon.news, Screen: PostsScreen },
 ] as const;
 
 export default async function OrgsPage({
@@ -99,7 +100,7 @@ export default async function OrgsPage({
       <section className="olp-hero">
         <div className="olp-copy">
           <h1 className="olp-h1">{t("orgs.title")}</h1>
-          <p className="olp-lead">{t("orgs.lead")}</p>
+          <p className="olp-lead">{t("orgs.lead", { country: COUNTRY.name })}</p>
         </div>
 
         {map ? (
@@ -169,6 +170,7 @@ export default async function OrgsPage({
           <h2 id="olp-find-h" className="olp-find-h">
             {t("orgs.findTitle")}
           </h2>
+          <p className="olp-find-p">{t("orgs.findHint")}</p>
           <form className="olp-form" action="/organizaciones#buscar" method="get" role="search">
             {lang !== LANGUAGE.default ? <input type="hidden" name="lang" value={lang} /> : null}
             <label className="olp-sr" htmlFor="olp-q">
@@ -235,43 +237,55 @@ export default async function OrgsPage({
         </section>
       </section>
 
-      <section className="olp-band" aria-labelledby="olp-get-h">
-        <h2 id="olp-get-h" className="olp-h2">
-          {t("orgs.getTitle")}
+      {/* Lo que tiene una organización aquí, enseñado y no enumerado: un recorrido fijo en
+          el que cada tramo de scroll cambia el texto y la pantalla del perfil (`FeatureTour`). */}
+      <section className="olp-band" aria-labelledby="olp-feat-h">
+        <h2 id="olp-feat-h" className="olp-h2">
+          {t("orgs.featTitle")}
         </h2>
-        <ul className="olp-list">
-          {BENEFITS.map(({ icon: Glyph, k }) => (
-            <li key={k} className="olp-item">
-              <span className="olp-item-ic" aria-hidden="true">
-                <Glyph width={20} height={20} />
-              </span>
-              <div>
-                <h3 className="olp-item-t">{t(`orgs.b.${k}` as DictKey)}</h3>
-                <p className="olp-item-d">{t(`orgs.b.${k}Desc` as DictKey)}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <p className="olp-sub">{t("orgs.featLead")}</p>
+        <FeatureTour
+          steps={FEATURES.map(({ k, icon: Glyph, Screen }) => ({
+            key: k,
+            icon: <Glyph width={20} height={20} />,
+            title: t(`orgs.f.${k}` as DictKey),
+            desc: t(`orgs.f.${k}Desc` as DictKey),
+            screen: <Screen t={t} />,
+          }))}
+        />
+        <p className="olp-demo-note">{t("orgs.demo.note")}</p>
       </section>
 
+      {/* Cómo empezar: una tarjeta propia, con los pasos como línea de tiempo y la única
+          acción de la página en grande. Es el punto donde quien ya leyó todo decide. */}
       <section className="olp-band" aria-labelledby="olp-how-h">
-        <h2 id="olp-how-h" className="olp-h2">
-          {t("orgs.howTitle")}
-        </h2>
-        {/* Numerados porque SÍ son una secuencia: uno lleva al otro. */}
-        <ol className="olp-steps">
-          {(["1", "2", "3"] as const).map((n) => (
-            <li key={n} className="olp-step">
-              <span className="olp-step-n" aria-hidden="true">
-                {n}
-              </span>
-              <p className="olp-step-t">{t(`orgs.step${n}` as DictKey)}</p>
-            </li>
-          ))}
-        </ol>
-        <a href="#buscar" className="olp-again">
-          {t("orgs.findTitle")}
-        </a>
+        <div className="olp-how">
+          <h2 id="olp-how-h" className="olp-h2">
+            {t("orgs.howTitle")}
+          </h2>
+          {/* Numerados porque SÍ son una secuencia: uno lleva al otro. */}
+          <ol className="olp-steps">
+            {(["1", "2", "3"] as const).map((n) => (
+              <li key={n} className="olp-step">
+                <span className="olp-step-n" aria-hidden="true">
+                  {n}
+                </span>
+                <div>
+                  <h3 className="olp-step-h">{t(`orgs.step${n}Title` as DictKey)}</h3>
+                  <p className="olp-step-t">{t(`orgs.step${n}` as DictKey)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div className="olp-how-cta">
+            <a href="#buscar" className="olp-cta">
+              <Icon.search width={20} height={20} />
+              <span>{t("orgs.findTitle")}</span>
+              <Icon.chevron width={18} height={18} />
+            </a>
+            <p className="olp-cta-note">{t("orgs.ctaNote")}</p>
+          </div>
+        </div>
       </section>
 
       {/* El cierre: la promesa que decide si una organización confía, dicha en grande. */}
@@ -280,7 +294,7 @@ export default async function OrgsPage({
           <h2 id="olp-free-h" className="olp-promise-h">
             {t("orgs.freeTitle")}
           </h2>
-          <p className="olp-promise-p">{t("orgs.freeBody")}</p>
+          <p className="olp-promise-p">{t("orgs.freeBody", { platform: BRAND.platform })}</p>
         </div>
 
         <footer className="olp-foot">
