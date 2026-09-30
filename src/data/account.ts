@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PointReport, Profile, ReportCounts, ReportKind } from "@/domain/account";
+import { toAvailability, toSkills, type Availability, type Skill } from "@/domain/volunteer";
 
 /**
  * Lo que una persona puede leer y escribir sobre SÍ MISMA.
@@ -36,6 +37,8 @@ interface ProfileRow {
   display_name: string;
   region: string | null;
   created_at: string;
+  skills?: unknown;
+  availability?: unknown;
 }
 
 function toProfile(row: ProfileRow): Profile {
@@ -44,20 +47,32 @@ function toProfile(row: ProfileRow): Profile {
     displayName: row.display_name,
     region: row.region,
     createdAt: row.created_at,
+    skills: toSkills(row.skills),
+    availability: toAvailability(row.availability),
   };
+}
+
+/** Sin `db/16_voluntariado.sql`, el perfil se pide sin oficios y no se vuelve a probar. */
+let sinVoluntariado = false;
+
+/** ¿La base todavía guarda oficios? Para no ofrecer un editor que no puede guardar. */
+export function volunteerProfileAvailable(): boolean {
+  return !sinVoluntariado;
 }
 
 /** El perfil de quien tiene la sesión. `null` si todavía no existe. */
 export async function fetchMyProfile(sb: SupabaseClient): Promise<Profile | null> {
   const { data: auth } = await sb.auth.getUser();
   if (!auth.user) return null;
-  const { data, error } = await sb
-    .from("profiles")
-    .select("user_id,display_name,region,created_at")
-    .eq("user_id", auth.user.id)
-    .maybeSingle();
+  const leer = (cols: string) => sb.from("profiles").select(cols).eq("user_id", auth.user!.id).maybeSingle();
+  const base = "user_id,display_name,region,created_at";
+  let { data, error } = await leer(sinVoluntariado ? base : `${base},skills,availability`);
+  if (error?.code === "42703" || error?.code === "PGRST204") {
+    sinVoluntariado = true;
+    ({ data, error } = await leer(base));
+  }
   if (error || !data) return null;
-  return toProfile(data as ProfileRow);
+  return toProfile(data as unknown as ProfileRow);
 }
 
 /**
@@ -70,13 +85,15 @@ export async function fetchMyProfile(sb: SupabaseClient): Promise<Profile | null
  */
 export async function updateMyProfile(
   sb: SupabaseClient,
-  patch: { displayName?: string; region?: string | null },
+  patch: { displayName?: string; region?: string | null; skills?: Skill[]; availability?: Availability[] },
 ): Promise<void> {
   const { data: auth } = await sb.auth.getUser();
   if (!auth.user) throw new Error("sin sesión");
   const row: Record<string, unknown> = {};
   if (patch.displayName !== undefined) row.display_name = patch.displayName;
   if (patch.region !== undefined) row.region = patch.region;
+  if (patch.skills !== undefined) row.skills = patch.skills;
+  if (patch.availability !== undefined) row.availability = patch.availability;
   if (Object.keys(row).length === 0) return;
 
   if (patch.displayName !== undefined) {

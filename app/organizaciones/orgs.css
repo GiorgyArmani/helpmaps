@@ -1,0 +1,694 @@
+/*
+ * /organizaciones — la landing de la campaña de captación.
+ *
+ * Una sola cosa llamativa: el mapa hecho con los puntos publicados. Todo lo demás es
+ * tipografía y aire. Clara a propósito, al revés que /inicio: aquélla es una puerta que se
+ * abre en la calle desde un QR; ésta la lee una coordinadora con calma, muchas veces en
+ * un escritorio, y tiene que parecer un sitio en el que confiar su organización.
+ *
+ * Todo sale de los tokens de marca (`--ink`, `--brand`, `--soft`…): un país la re-marca
+ * desde `config/brand.ts`. Titulares en `--font-display` (Outfit en Venezuela), texto en
+ * `--font-sans`. Un solo canalón, `--gut`, que crece en escritorio.
+ */
+
+.olp {
+  --olp-gut: var(--gut);
+  --olp-max: 1120px;
+
+  min-height: 100dvh;
+  background: var(--soft);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Todo lo que va a lo ancho respeta el mismo canalón y el mismo ancho máximo. El margen
+   lateral lo pone este envoltorio, nunca cada bloque. */
+.olp-top,
+.olp-hero,
+.olp-band,
+.olp-promise-in,
+.olp-foot {
+  width: 100%;
+  max-width: var(--olp-max);
+  margin-inline: auto;
+  padding-inline: var(--olp-gut);
+}
+
+/* ── Barra superior ──────────────────────────────────────────────────── */
+
+.olp-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 14px;
+}
+
+.olp-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.olp-logo {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--e-1);
+  font-weight: 800;
+}
+
+.olp-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.olp-brand-n {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.olp-toplink {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  padding-inline: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mut-track);
+  text-decoration: none;
+}
+
+.olp-toplink:hover {
+  color: var(--ink);
+}
+
+/* ── Portada ─────────────────────────────────────────────────────────────
+   Teléfono: titular, mapa y buscador montado sobre el borde del mapa.
+   Escritorio: titular y buscador a la izquierda, el mapa grande a la derecha. */
+
+.olp-hero {
+  display: grid;
+  grid-template-areas:
+    "copy"
+    "map"
+    "find";
+  padding-top: 20px;
+}
+
+.olp-copy {
+  grid-area: copy;
+}
+
+.olp-h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.35rem, 9.4vw, 4.4rem);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.olp-lead {
+  margin: 16px 0 0;
+  max-width: 34em;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--mut-track);
+  text-wrap: pretty;
+}
+
+/* El mapa. Los puntos en tinta apagada, sin contorno del país: la forma la ponen ellos.
+   `aspect-ratio` reserva el hueco antes de que el SVG se pinte (sin salto al cargar). */
+.olp-map {
+  grid-area: map;
+  margin: 8px 0 0;
+  position: relative;
+}
+
+.olp-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* La trama del país: tenue, para que se lea la forma sin competir con los puntos. */
+.olp-map pattern circle {
+  fill: var(--ink);
+  opacity: 0.16;
+}
+
+.olp-dots circle {
+  fill: var(--ink);
+  opacity: 0.78;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: olp-pop 520ms var(--ease) both;
+}
+
+/* Cada punto brota: de nada a un poco más grande y se asienta. Sólo `transform` y
+   `opacity`, que el navegador anima sin recalcular la página. */
+@keyframes olp-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.35);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.78;
+  }
+}
+
+/* Las ondas: casi todo el ciclo invisibles, y un destello corto. Ocho, desfasadas, se
+   turnan por el país. */
+.olp-ping {
+  fill: none;
+  stroke: var(--brand);
+  stroke-width: 0.45;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: olp-ping 8.8s ease-out infinite;
+}
+
+@keyframes olp-ping {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.9;
+  }
+  14%,
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.olp-hit-dot {
+  fill: var(--brand);
+}
+
+.olp-hit-ring {
+  fill: none;
+  stroke: var(--brand);
+  stroke-width: 0.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: olp-found 1.8s var(--ease) 0.2s infinite;
+}
+
+/* Lo encontrado «late» sobre el mapa. Es la única animación de la página y responde a una
+   búsqueda: dice «aquí está», no decora. */
+@keyframes olp-found {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.olp-cap {
+  position: absolute;
+  left: 0;
+  bottom: 44px;
+  max-width: 16em;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--mut-track);
+}
+
+/* ── El buscador ─────────────────────────────────────────────────────── */
+
+.olp-find {
+  grid-area: find;
+  position: relative;
+  margin-top: -32px;
+  padding: 18px;
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--e-3);
+  scroll-margin-top: 24px;
+}
+
+.olp-find-h {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.olp-form {
+  display: flex;
+  gap: 8px;
+}
+
+.olp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 16px: por debajo, iOS hace zoom al enfocar y descoloca la página. */
+.olp-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  transition:
+    border-color var(--t-ui) var(--ease),
+    background-color var(--t-ui) var(--ease);
+}
+
+.olp-input::placeholder {
+  color: var(--mut-track);
+}
+
+.olp-input:focus {
+  outline: none;
+  border-color: var(--brand);
+  background: #fff;
+}
+
+.olp-go {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--t-tap) var(--ease);
+}
+
+.olp-go:active {
+  transform: scale(0.97);
+}
+
+/* En el teléfono más estrecho el botón se queda en su lupa; la palabra sigue para el
+   lector de pantalla. */
+@media (max-width: 360px) {
+  .olp-go-t {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+}
+
+.olp-count {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  color: var(--mut-track);
+}
+
+.olp-hits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.olp-hitrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 12px 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--soft);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color var(--t-tap) var(--ease);
+}
+
+.olp-hitrow:hover {
+  background: var(--soft2);
+}
+
+.olp-hitrow-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.olp-hitrow-n {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.olp-hitrow-d {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--mut-track);
+}
+
+.olp-hitrow-go {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--brand);
+  white-space: nowrap;
+}
+
+/* El enlace ocupa 44px de alto aunque la letra sea de 14: es la otra salida del
+   buscador y se toca con el pulgar. */
+.olp-missing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+  margin: 4px 0 -8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+.olp-missing a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Qué puede hacer y cómo se pide ──────────────────────────────────── */
+
+.olp-band {
+  padding-top: 64px;
+}
+
+.olp-h2 {
+  margin: 0 0 24px;
+  max-width: 18em;
+  font-family: var(--font-display);
+  font-size: clamp(1.625rem, 6vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+/* Filas, no tarjetas: cada ventaja es una línea de lectura con su icono, separadas por
+   aire. En escritorio, dos columnas. */
+.olp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 28px;
+}
+
+.olp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.olp-item-ic {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--e-1);
+  color: var(--brand);
+}
+
+.olp-item-t {
+  margin: 2px 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.olp-item-d {
+  margin: 0;
+  max-width: 30em;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--mut-track);
+}
+
+/* Los pasos: el número en grande, en la letra de los titulares. Aquí la numeración es
+   información —el orden importa— y no adorno. */
+.olp-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 20px;
+}
+
+.olp-step {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.olp-step-n {
+  flex: 0 0 auto;
+  width: 44px;
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--brand);
+}
+
+.olp-step-t {
+  margin: 0;
+  max-width: 24em;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.olp-again {
+  display: inline-flex;
+  align-items: center;
+  min-height: 52px;
+  margin-top: 28px;
+  padding: 0 22px;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* ── El cierre ───────────────────────────────────────────────────────────
+   La promesa en grande, sobre tinta: el único bloque oscuro, y por eso el que se recuerda. */
+
+.olp-promise {
+  margin-top: 72px;
+  padding-top: 56px;
+  background: var(--ink);
+  color: #fff;
+}
+
+.olp-promise-h {
+  margin: 0;
+  max-width: 14em;
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 8.4vw, 4rem);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.olp-promise-p {
+  margin: 18px 0 0;
+  max-width: 32em;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.olp-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+  margin-top: 56px;
+  padding-block: 20px 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.olp-foot a,
+.olp-foot button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+}
+
+.olp-foot a:hover,
+.olp-foot button:hover {
+  color: #fff;
+}
+
+/* ── Foco visible ────────────────────────────────────────────────────── */
+
+.olp a:focus-visible,
+.olp button:focus-visible,
+.olp-input:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.olp-promise a:focus-visible,
+.olp-promise button:focus-visible {
+  outline-color: #fff;
+}
+
+/* ── Escritorio ──────────────────────────────────────────────────────── */
+
+@media (min-width: 960px) {
+  .olp {
+    --olp-gut: 40px;
+  }
+
+  .olp-hero {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    grid-template-areas:
+      "copy map"
+      "find map";
+    column-gap: 48px;
+    align-items: start;
+    padding-top: 56px;
+  }
+
+  /* Tres líneas y no cuatro: a este ancho de columna, el tamaño del teléfono partía
+     «organización» sola en su renglón. */
+  .olp-h1 {
+    font-size: clamp(3rem, 4.6vw, 4rem);
+  }
+
+  .olp-find {
+    margin-top: 32px;
+    max-width: 520px;
+  }
+
+  /* Pegado arriba: con una lista larga de resultados, lo encontrado sigue a la vista
+     mientras se recorre. */
+  .olp-map {
+    position: sticky;
+    top: 32px;
+    align-self: start;
+    margin: 24px 0 0;
+  }
+
+  .olp-cap {
+    bottom: 0;
+  }
+
+  .olp-band {
+    padding-top: 112px;
+  }
+
+  .olp-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 40px 56px;
+  }
+
+  .olp-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 40px;
+  }
+
+  .olp-step {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .olp-promise {
+    margin-top: 128px;
+    padding-top: 96px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .olp-dots circle {
+    animation: none;
+  }
+
+  .olp-ping {
+    display: none;
+  }
+
+  .olp-hit-ring {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .olp-input,
+  .olp-go,
+  .olp-hitrow {
+    transition: none;
+  }
+
+  .olp-go:active {
+    transform: none;
+  }
+}

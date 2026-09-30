@@ -165,6 +165,33 @@ const es = {
   "email.centerInvite.ignore":
     "Si crees que es un error, ignora este mensaje y no pasa nada: sin aceptar, nadie queda como responsable de nada.",
 
+  // ── «¿Es tu organización?» ────────────────────────────────────────────────
+  //
+  // El primero va al buzón del EQUIPO. Los otros dos los dispara alguien del equipo al
+  // resolver, hacia la cuenta que pidió: pueden llevar el nombre del punto por la misma
+  // razón que la invitación.
+  "email.manage.subject": "[{brand}] Quieren gestionar {place}",
+  "email.manage.preheader": "Una organización pide el control de su perfil.",
+  "email.manage.title": "Solicitud para gestionar un punto",
+  "email.manage.place": "Punto",
+  "email.manage.role": "Cargo en la organización",
+  "email.manage.proof": "Cómo comprobarlo",
+  "email.manage.note":
+    "Aprobar le da acceso para publicar en vivo a nombre de esta organización, incluidos sus datos para donar. Compruébalo antes por un canal que ya conozcas: el teléfono o la red que publica el propio punto.",
+  "email.manage.cta": "Revisar en el panel",
+  "email.manageOk.subject": "Ya gestionas {place} · {brand}",
+  "email.manageOk.preheader": "Tu organización ya tiene su perfil en tus manos.",
+  "email.manageOk.title": "Ya puedes gestionar tu organización",
+  "email.manageOk.body":
+    "Comprobamos tu solicitud y ya gestionas {place} en {brand}. Al entrar te pediremos lo básico —horario, qué necesitan y cómo recibir aportes— y desde ahí podrás abrir campañas, publicar eventos y contar lo que ya entregaron.",
+  "email.manageOk.cta": "Entrar a mi organización",
+  "email.manageNo.subject": "Sobre tu solicitud para gestionar {place} · {brand}",
+  "email.manageNo.preheader": "Todavía no pudimos comprobar tu solicitud.",
+  "email.manageNo.title": "Todavía no pudimos comprobarlo",
+  "email.manageNo.body":
+    "Revisamos tu solicitud para gestionar {place} y por ahora no pudimos confirmar que representas a la organización. Suele arreglarse con un dato más: un enlace a su red o su web donde aparezcas, o un teléfono de la organización.",
+  "email.manageNo.cta": "Volver a pedirlo",
+
   // ── Postulación resuelta ──────────────────────────────────────────────────
   //
   // Este sí lo dispara un admin, así que puede llevar el nombre de la persona.

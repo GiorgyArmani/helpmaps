@@ -5,6 +5,7 @@ import type { Center } from "@/domain/types";
 import { useI18n } from "@/i18n/context";
 import Recognition from "@/features/account/Recognition";
 import MyEvents from "@/features/account/MyEvents";
+import VolunteerProfile from "@/features/account/VolunteerProfile";
 import type { DictKey } from "@/i18n";
 import { Icon } from "@/ui/icons";
 import { Button, Input, Notice, Spinner } from "@/ui/primitives";
@@ -223,6 +224,10 @@ export default function AccountView({
       {/* ── Mis eventos ─────────────────────────────────────────────────────
           Justo después de lo aportado: es lo que viene, y lo que más fácil se olvida. */}
       {account.userId ? <MyEvents userId={account.userId} onOpenCenter={onOpenCenter} /> : null}
+
+      {/* ── Cómo puedes ayudar ──────────────────────────────────────────────
+          Junto a los eventos: es lo que hace que un evento te encuentre a ti. */}
+      <VolunteerProfile profile={account.profile} onSaved={account.refresh} />
 
       {/* ── Tus puntos ──────────────────────────────────────────────────── */}
       <section className="acc-sec">

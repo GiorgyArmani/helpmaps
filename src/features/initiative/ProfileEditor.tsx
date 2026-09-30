@@ -32,7 +32,9 @@ import {
 } from "@/features/centers/InitiativeSections";
 import type { Activity } from "@/domain/types";
 import type { CalendarEvent } from "@/lib/calendar";
-import { fetchAttendeeNames } from "@/data/events";
+import { fetchAttendanceToConfirm, fetchAttendees, type Attendee, type AttendanceToConfirm } from "@/data/events";
+import { useAccount } from "@/features/account/useAccount";
+import { skillLabel } from "@/features/volunteer/EventNeeds";
 import { ActivityForm, CampaignForm, CampaignImagePicker, Field, PostForm } from "./forms";
 import { InfoSections, type SectionId } from "./ProfileSections";
 import OrgSettings from "./OrgSettings";
@@ -107,6 +109,26 @@ export default function ProfileEditor({
     };
   }, [center.id, vueltaClaims]);
 
+  // Y los eventos que ya pasaron con gente por confirmar: mismo motivo, alguien que fue
+  // espera que su organización diga que fue.
+  const me = useAccount(true);
+  const [asistencia, setAsistencia] = useState<AttendanceToConfirm[]>([]);
+  const [vueltaAsistencia, setVueltaAsistencia] = useState(0);
+  const recargarAsistencia = useCallback(() => setVueltaAsistencia((v) => v + 1), []);
+  useEffect(() => {
+    const sb = getSupabase();
+    if (!sb || !me.checked) return;
+    let vivo = true;
+    void fetchAttendanceToConfirm(sb, center.id, me.userId).then((a) => {
+      if (vivo) setAsistencia(a);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [center.id, me.checked, me.userId, vueltaAsistencia]);
+  const porConfirmar = asistencia.reduce((n, a) => n + a.people.length, 0);
+  const pendientes = claims.length + porConfirmar;
+
   async function resolver(id: string, status: "confirmed" | "rejected") {
     const sb = getSupabase();
     if (!sb) return;
@@ -140,6 +162,8 @@ export default function ProfileEditor({
         center={center}
         claims={claims}
         onResolve={resolver}
+        attendance={asistencia}
+        onAttendanceConfirmed={recargarAsistencia}
         onBack={() => setScreen("profile")}
       />
     );
@@ -335,7 +359,7 @@ export default function ProfileEditor({
           title={t("pedit.settings")}
         >
           <Icon.gear />
-          {claims.length > 0 ? <span className="pedit-badge">{claims.length}</span> : null}
+          {pendientes > 0 ? <span className="pedit-badge">{pendientes}</span> : null}
         </button>
       </div>
 
@@ -363,6 +387,15 @@ export default function ProfileEditor({
               <Icon.heart />
               <span>{t("claims.title")}</span>
               <b>{claims.length}</b>
+              <Icon.chevron />
+            </button>
+          ) : null}
+
+          {porConfirmar > 0 ? (
+            <button type="button" className="pedit-claims" onClick={() => setScreen("settings")}>
+              <Icon.users />
+              <span>{t("att.shortcut")}</span>
+              <b>{porConfirmar}</b>
               <Icon.chevron />
             </button>
           ) : null}
@@ -916,16 +949,16 @@ function CampaignManage({
  */
 function Attendees({ activity }: { activity: Activity }) {
   const { t } = useI18n();
-  const [names, setNames] = useState<string[] | null>(null);
+  const [people, setPeople] = useState<Attendee[] | null>(null);
   const [open, setOpen] = useState(false);
 
   async function abrir() {
     const next = !open;
     setOpen(next);
-    if (!next || names) return;
+    if (!next || people) return;
     const sb = getSupabase();
     if (!sb) return;
-    setNames(await fetchAttendeeNames(sb, activity.id));
+    setPeople(await fetchAttendees(sb, activity.id));
   }
 
   if (activity.going_count === 0) {
@@ -940,13 +973,18 @@ function Attendees({ activity }: { activity: Activity }) {
         <Icon.chevron />
       </button>
       {open ? (
-        names === null ? (
+        people === null ? (
           <span className="skel pedit-att-skel" aria-hidden="true" />
         ) : (
-          <span className="pedit-att-list">
-            {names.map((n, i) => (
-              <span key={i} className="dtag">
-                {n || t("account.noName")}
+          // Con sus oficios: es lo que deja repartir tareas antes de llegar, en vez de
+          // preguntarle a cada uno en la puerta qué sabe hacer.
+          <span className="att-list">
+            {people.map((p) => (
+              <span key={p.userId} className="att-row">
+                <b>{p.name || t("account.noName")}</b>
+                {p.skills.length > 0 ? (
+                  <span className="att-skills">{p.skills.map((sk) => t(skillLabel(sk))).join(" · ")}</span>
+                ) : null}
               </span>
             ))}
           </span>

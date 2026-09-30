@@ -7879,6 +7879,94 @@ fieldset.fieldset {
   color: var(--mut);
 }
 
+/* «¿Es tu organización?» — lo último de «Información».
+   Apagado a propósito: pista suave y sin borde ni sombra, para que no compita con
+   «Cómo llegar», que es el único primario de la ficha. El icono en una teja blanca es lo
+   que lo distingue de un párrafo más sin subirle el peso. */
+.mreq {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  margin-top: 20px;
+  padding: var(--gut);
+  border-radius: var(--r-md);
+  background: var(--soft);
+}
+
+.mreq-ic {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--e-1);
+  color: var(--accent);
+}
+
+.mreq-ic svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mreq-done .mreq-ic {
+  color: var(--ok);
+}
+
+.mreq-txt {
+  align-self: center;
+  min-width: 0;
+}
+
+.mreq-t {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+/* Sobre la pista, `--mut` no llega a 4,5:1: va `--mut-track`. */
+.mreq-d {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+/* Las acciones y el formulario ocupan el ancho entero, bajo el icono y el texto. */
+.mreq-acts,
+.mreq-form {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mreq-acts .btnp,
+.mreq-acts .btng,
+.mreq-done .btng {
+  text-decoration: none;
+}
+
+.mreq-done .btng {
+  grid-column: 1 / -1;
+}
+
+.mreq-form .fld {
+  margin: 0;
+}
+
+.mreq-row {
+  display: flex;
+  gap: 8px;
+}
+
+.mreq-row > * {
+  flex: 1;
+  min-height: 44px;
+}
+
 /* La publicación a la que apunta un enlace del feed. `:target` la resuelve el navegador
    solo: sin JavaScript, sin estado y sin que el servidor tenga que saber cuál era. El
    resaltado se desvanece —queda el sitio, no una marca permanente— porque su trabajo es
@@ -10311,4 +10399,302 @@ button.layers-inside svg:last-child {
   .zonelbl {
     transition: none;
   }
+}
+
+/* En la página pública el bloque va bajo la rejilla, con el ancho de la columna de lectura
+   para que en escritorio no se estire de borde a borde. */
+.prof-claim {
+  max-width: 560px;
+}
+
+.prof-claim:empty {
+  display: none;
+}
+
+/* ─────────────────────  Voluntariado (db/16_voluntariado.sql)  ─────────────────────
+ * Los oficios, lo que le falta a un evento y «¿Quién vino?». Nada de esto inventa borde ni
+ * sombra: los chips son los de la pista (`--soft`/`--line`), las tarjetas son `.ecard`, y
+ * el único color con intención es el acento para lo elegido y `--ok` para lo confirmado.
+ */
+
+/* Chips de elegir varios. 44 px de alto y 8 px entre uno y otro: se aciertan con el pulgar. */
+.tchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--mut-track);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease),
+    border-color var(--t-tap) var(--ease);
+}
+
+.tchip svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.tchip:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--ink);
+}
+
+.tchip-on,
+.tchip-on:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.tchip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Lo que le falta a un evento, en la ficha pública. */
+.ineeds {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.ineeds-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ineed {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+  background: var(--soft);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.ineed svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  color: var(--brand);
+}
+
+/* «Buscan lo que sabes hacer»: la frase que cierra el puente, y por eso la que destaca. */
+.ineeds-match {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 8px 11px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--brand) 10%, #fff);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* La marca y no el acento: en un país con acento negro, el acento al 9% es un gris que no
+   destaca, y esta es la línea que más tiene que destacar del evento. */
+.ineeds-match svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--brand);
+}
+
+/* Quién va, dentro del evento, para la organización. */
+.att-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.att-row,
+.att-who {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.att-row b,
+.att-who b {
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.att-skills {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--mut);
+}
+
+/* «¿Quién vino?» */
+.att-event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.att-event span {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.att-people {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+
+/* La fila entera es el blanco, no sólo la casilla. */
+.att-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background var(--t-tap) var(--ease);
+}
+
+.att-person input {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--ok);
+  cursor: pointer;
+}
+
+.att-person-on {
+  background: color-mix(in srgb, var(--ok) 7%, #fff);
+}
+
+.att-acts {
+  display: flex;
+  gap: 8px;
+}
+
+.att-acts .btng {
+  flex: 0 0 auto;
+  padding: 0 14px;
+  min-height: 48px;
+}
+
+.att-acts .btnp {
+  flex: 1 1 auto;
+  gap: 7px;
+  padding: 0 14px;
+  min-height: 48px;
+}
+
+.att-done {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--ok) 10%, #fff);
+  color: var(--ok);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.att-done svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+/* «Cómo puedes ayudar», en la cuenta. */
+.vprof-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vprof-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vprof-edit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.vprof-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vprof-form .flabel {
+  margin-top: 4px;
+}
+
+.vprof-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vprof-when {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.vprof-when svg {
+  width: 12px;
+  height: 12px;
+  color: var(--mut);
+}
+
+.nowrap {
+  white-space: nowrap;
 }

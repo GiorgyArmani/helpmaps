@@ -1,3 +1,4 @@
+import type { Availability, Skill } from "@/domain/volunteer";
 /**
  * Cuentas de persona: quién es alguien para esta aplicación, sin decir su correo.
  *
@@ -25,6 +26,9 @@ export interface Profile {
   /** Estado, opcional. Nunca una dirección. */
   region: string | null;
   createdAt: string;
+  /** Lo que sabe hacer y cuándo puede. Vacío sin `db/16_voluntariado.sql`. */
+  skills: Skill[];
+  availability: Availability[];
 }
 
 export const DISPLAY_NAME_MIN = 2;

@@ -14,6 +14,10 @@ import type { CalendarEvent } from "@/lib/calendar";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
 import { getSupabase } from "@/lib/supabase/client";
+import type { DictKey } from "@/i18n";
+import { EVENT_NEEDS, SKILLS, type EventNeed, type Skill } from "@/domain/volunteer";
+import ToggleChips from "@/features/volunteer/ToggleChips";
+import { needIcon, skillLabel } from "@/features/volunteer/EventNeeds";
 
 /**
  * Los formularios del panel de una iniciativa, y las dos piezas que comparten.
@@ -187,7 +191,8 @@ export function ActivityForm({
   const [when, setWhen] = useState("");
   const [place, setPlace] = useState("");
   const [description, setDescription] = useState("");
-  const [vol, setVol] = useState(false);
+  const [needs, setNeeds] = useState<EventNeed[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -208,7 +213,8 @@ export function ActivityForm({
         description: description.trim() || null,
         starts_at: startsAt,
         place: place.trim() || null,
-        needs_volunteers: vol,
+        needs,
+        skills,
         status: "scheduled",
       });
       const origin = window.location.origin;
@@ -242,10 +248,32 @@ export function ActivityForm({
       <Field label={t("mine.f.actDesc")}>
         <textarea className="finput" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={600} />
       </Field>
-      <label className="mine-check">
-        <input type="checkbox" checked={vol} onChange={(e) => setVol(e.target.checked)} />
-        {t("activity.needsVolunteers")}
-      </label>
+      {/* Un `div` y no `Field`: dentro de un <label>, tocar el título pulsaría el primer chip. */}
+      <div className="fld">
+        <span className="flabel">{t("event.needs")}</span>
+        <span className="fhint">{t("event.needsHint")}</span>
+        <ToggleChips
+          options={EVENT_NEEDS}
+          value={needs}
+          onChange={setNeeds}
+          label={t("event.needs")}
+          renderLabel={(n) => t(`event.need.${n}` as DictKey)}
+          icon={needIcon}
+        />
+      </div>
+      {/* Los oficios, sólo si pide oficios: una lista de doce que nadie pidió es ruido. */}
+      {needs.includes("skills") ? (
+        <div className="fld">
+          <span className="flabel">{t("event.skillsWanted")}</span>
+          <ToggleChips
+            options={SKILLS}
+            value={skills}
+            onChange={setSkills}
+            label={t("event.skillsWanted")}
+            renderLabel={(sk) => t(skillLabel(sk))}
+          />
+        </div>
+      ) : null}
       {error ? <p className="onb-err" role="status">{error}</p> : null}
       <button type="button" className="btnp" onClick={() => void guardar()} disabled={!listo || guardando}>
         {guardando ? t("common.saving") : t("mine.publish")}

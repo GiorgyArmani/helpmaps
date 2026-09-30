@@ -60,6 +60,15 @@ const pt: Partial<Dict> = {
   "campaign.until": "Até {date}",
   "activity.title": "O que vai fazer",
   "activity.needsVolunteers": "Precisam de voluntários",
+
+  "event.need.hands": "Mãos",
+  "event.need.skills": "Ofícios",
+  "event.need.in_kind": "Doações em espécie",
+  "event.need.spread": "Divulgação",
+  "event.needLong.hands": "Faltam mãos",
+  "event.needLong.skills": "Procuram ofícios",
+  "event.needLong.in_kind": "Pedem doações em espécie",
+  "event.needLong.spread": "Ajude a divulgar",
   "post.title": "O que já fez",
   "post.kind.avance": "Novidade",
   "post.kind.entrega": "Entrega",
@@ -284,6 +293,20 @@ const pt: Partial<Dict> = {
   "consent.reject": "Recusar",
   "footer.cookies": "Cookies",
   "account.language": "Idioma",
+
+  "manage.title": "Esta organização é sua?",
+  "manage.body":
+    "Gerencie este perfil de graça: mantenha as necessidades em dia, abra campanhas e publique eventos.",
+  "manage.cta": "Gerenciar este perfil",
+  "manage.haveAccount": "Já tem conta?",
+  "manage.login": "Entrar",
+  "manage.role": "Seu cargo na organização",
+  "manage.phone": "Telefone ou WhatsApp",
+  "manage.proof": "Como podemos confirmar?",
+  "manage.send": "Enviar solicitação",
+  "manage.pendingTitle": "Solicitação em análise",
+  "manage.youManage": "Você gerencia esta organização",
+  "manage.edit": "Editar o perfil",
 };
 
 export default pt;

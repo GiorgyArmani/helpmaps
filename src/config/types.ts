@@ -50,6 +50,12 @@ export interface CountryGeo {
   bounds: [[number, number], [number, number]];
   /** ISO 3166-1 alpha-2 lowercased, passed to Nominatim as `countrycodes`. */
   geocodeCountry: string;
+  /**
+   * The country's silhouette as one [lat, lng] ring, simplified — a few dozen vertices,
+   * not a border to navigate by. Drawn as the dotted backdrop of `/organizaciones`.
+   * Optional: without it that page draws the published points alone.
+   */
+  outline?: [number, number][];
 }
 
 export interface CountryLegal {

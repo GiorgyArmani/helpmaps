@@ -10,6 +10,7 @@ import { useI18n, useTimeAgo } from "@/i18n/context";
 import { BRAND } from "@/config";
 import { fetchMyAttendance, joinActivity, leaveActivity } from "@/data/events";
 import { downloadIcs, googleCalendarUrl, type CalendarEvent } from "@/lib/calendar";
+import EventNeeds from "@/features/volunteer/EventNeeds";
 
 const noSubscribe = () => () => {};
 
@@ -267,12 +268,7 @@ export function ActivityList({
               {a.place ? ` · ${a.place}` : ""}
             </span>
             {a.description ? <span className="iact-d">{a.description}</span> : null}
-            {a.needs_volunteers ? (
-              <span className="iact-vol">
-                <Icon.volunteer />
-                {t("activity.needsVolunteers")}
-              </span>
-            ) : null}
+            <EventNeeds activity={a} mySkills={account.profile?.skills ?? []} />
             {extra ? extra(a) : null}
             <EventActions
               activity={a}

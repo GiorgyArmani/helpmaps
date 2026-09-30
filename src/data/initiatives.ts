@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Activity, Campaign, InitiativePost } from "@/domain/types";
 import { shrinkImage } from "@/lib/image";
 import { parseHours, type WeeklyHours } from "@/domain/hours";
+import { needsVolunteers, toEventNeeds, toSkills, type EventNeed, type Skill } from "@/domain/volunteer";
 
 // Lecturas y escrituras contra `campaigns`, `activities` e `initiative_posts`.
 // Una lista de columnas explícita, como en el resto de módulos de datos: nunca
@@ -26,6 +27,11 @@ const ACTIVITY_COLUMNS =
 const CAMPAIGN_COLUMNS_13 = `${CAMPAIGN_COLUMNS},image_url`;
 const ACTIVITY_COLUMNS_13 = `${ACTIVITY_COLUMNS},going_count`;
 let columnasEventosAusentes = false;
+
+// Y las de `db/16_voluntariado.sql`, con el mismo escalón: sin ellas un evento no dice qué
+// le falta, pero se sigue viendo.
+const ACTIVITY_COLUMNS_15 = `${ACTIVITY_COLUMNS_13},needs,skills`;
+let columnasVoluntariadoAusentes = false;
 
 const POST_COLUMNS = "id,location_id,campaign_id,kind,body,photo_url,created_at";
 
@@ -125,6 +131,9 @@ function mapActivity(row: Row): Activity {
     needs_volunteers: row.needs_volunteers === true,
     status: (row.status as Activity["status"]) ?? "scheduled",
     going_count: typeof row.going_count === "number" ? row.going_count : 0,
+    // Un evento de antes de la 16 sólo sabía decir «necesita voluntarios»: eso era pedir manos.
+    needs: row.needs === undefined ? (row.needs_volunteers === true ? ["hands"] : []) : toEventNeeds(row.needs),
+    skills: toSkills(row.skills),
   };
 }
 
@@ -263,7 +272,17 @@ export async function fetchActivities(sb: SupabaseClient, locationId: string): P
       .gte("starts_at", desde)
       .order("starts_at", { ascending: true })
       .limit(20);
-  let { data, error } = await leer(columnasEventosAusentes ? ACTIVITY_COLUMNS : ACTIVITY_COLUMNS_13);
+  let { data, error } = await leer(
+    columnasEventosAusentes
+      ? ACTIVITY_COLUMNS
+      : columnasVoluntariadoAusentes
+        ? ACTIVITY_COLUMNS_13
+        : ACTIVITY_COLUMNS_15,
+  );
+  if (faltaLaColumna(error) && !columnasVoluntariadoAusentes && !columnasEventosAusentes) {
+    columnasVoluntariadoAusentes = true;
+    ({ data, error } = await leer(ACTIVITY_COLUMNS_13));
+  }
   if (faltaLaColumna(error)) {
     columnasEventosAusentes = true;
     ({ data, error } = await leer(ACTIVITY_COLUMNS));
@@ -406,7 +425,8 @@ export interface ActivityDraft {
   description: string | null;
   starts_at: string;
   place: string | null;
-  needs_volunteers: boolean;
+  needs: EventNeed[];
+  skills: Skill[];
   status: Activity["status"];
 }
 
@@ -418,17 +438,24 @@ export async function saveActivity(sb: SupabaseClient, draft: ActivityDraft): Pr
     description: draft.description,
     starts_at: draft.starts_at,
     place: draft.place,
-    needs_volunteers: draft.needs_volunteers,
+    needs_volunteers: needsVolunteers(draft.needs),
     status: draft.status,
   };
-  if (draft.id) {
-    const { error } = await sb.from("activities").update(row).eq("id", draft.id);
-    if (error) throw error;
-    return draft.id;
+  // Qué le falta, sólo en una base que ya lo guarda: en una sin la 16, mandarlo tumbaría la
+  // publicación entera por dos columnas que el evento no necesita para existir.
+  const conFaltas = { ...row, needs: draft.needs, skills: draft.needs.includes("skills") ? draft.skills : [] };
+  const escribir = (valores: Row) =>
+    draft.id
+      ? sb.from("activities").update(valores).eq("id", draft.id).select("id").maybeSingle()
+      : sb.from("activities").insert(valores).select("id").maybeSingle();
+
+  let { data, error } = await escribir(columnasVoluntariadoAusentes ? row : conFaltas);
+  if (faltaLaColumna(error) && !columnasVoluntariadoAusentes) {
+    columnasVoluntariadoAusentes = true;
+    ({ data, error } = await escribir(row));
   }
-  const { data, error } = await sb.from("activities").insert(row).select("id").maybeSingle();
   if (error) throw error;
-  return data ? String((data as Row).id) : null;
+  return data ? String((data as Row).id) : (draft.id ?? null);
 }
 
 export interface PostDraft {
@@ -972,4 +999,107 @@ export async function fetchFeedCampaigns(sb: SupabaseClient, limit = 60): Promis
   if (faltaLaTabla(error)) tablasAusentes = true;
   if (error || !data) return [];
   return (data as unknown as Row[]).map(mapCampaign);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// «¿Es tu organización?» — pedir gestionar un punto que ya está en el mapa.
+//
+// La otra puerta de entrada, al lado de la invitación. La pide la persona y la aprueba
+// el equipo; aprobar la deja en `center_managers` por un trigger. Ver
+// `db/15_gestion.sql`, donde está el porqué de cada pieza.
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Bandera propia: esta tabla llega con una migración posterior a la de iniciativas. */
+let gestionAusente = false;
+
+export type ManageRequestStatus = "pending" | "approved" | "rejected";
+
+export interface MyManageRequest {
+  id: string;
+  status: ManageRequestStatus;
+  created_at: string;
+}
+
+/**
+ * La última solicitud de ESTA persona para este punto, o null.
+ *
+ * El `eq("user_id")` no es una precaución: la política de lectura deja al equipo ver las
+ * de todos, y sin el filtro un voluntario vería «la estamos revisando» en la ficha de un
+ * punto que pidió otra persona.
+ */
+export async function fetchMyManageRequest(
+  sb: SupabaseClient,
+  userId: string,
+  locationId: string,
+): Promise<MyManageRequest | null> {
+  if (gestionAusente) return null;
+  const { data, error } = await sb
+    .from("manage_requests")
+    .select("id,status,created_at")
+    .eq("user_id", userId)
+    .eq("location_id", locationId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (faltaLaTabla(error)) gestionAusente = true;
+  if (error || !data) return null;
+  const r = data as unknown as Row;
+  return {
+    id: String(r.id),
+    status: r.status as ManageRequestStatus,
+    created_at: String(r.created_at ?? ""),
+  };
+}
+
+export interface PendingManageRequest {
+  id: string;
+  location_id: string;
+  place: string;
+  display_name: string | null;
+  role: string;
+  phone: string | null;
+  proof: string | null;
+  created_at: string;
+}
+
+/**
+ * La cola del equipo. RLS ya la recorta a las emergencias que alcanza quien mira, así que
+ * aquí no se filtra nada más.
+ */
+export async function fetchPendingManageRequests(
+  sb: SupabaseClient,
+): Promise<PendingManageRequest[]> {
+  if (gestionAusente) return [];
+  const { data, error } = await sb
+    .from("manage_requests")
+    .select("id,location_id,user_id,role,phone,proof,created_at,locations(name)")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+  if (faltaLaTabla(error)) gestionAusente = true;
+  if (error || !data || data.length === 0) return [];
+
+  const rows = data as unknown as Row[];
+  const ids = [...new Set(rows.map((r) => String(r.user_id)))];
+  const { data: perfiles } = await sb
+    .from("profiles")
+    .select("user_id,display_name")
+    .in("user_id", ids);
+  const nombres = new Map(
+    ((perfiles ?? []) as unknown as Row[]).map((p) => [String(p.user_id), text(p.display_name)]),
+  );
+
+  return rows.map((r) => {
+    const loc = r.locations as Row | Row[] | null;
+    const place = Array.isArray(loc) ? loc[0]?.name : loc?.name;
+    return {
+      id: String(r.id),
+      location_id: String(r.location_id),
+      place: text(place) ?? String(r.location_id),
+      display_name: nombres.get(String(r.user_id)) ?? null,
+      role: String(r.role ?? ""),
+      phone: text(r.phone),
+      proof: text(r.proof),
+      created_at: String(r.created_at ?? ""),
+    };
+  });
 }

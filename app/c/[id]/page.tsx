@@ -29,6 +29,7 @@ import ProfileTabs, { type ProfileTab } from "@/features/centers/ProfileTabs";
 import HoursView from "@/features/centers/HoursView";
 import PointActions from "@/features/account/PointActions";
 import ShareRow from "@/features/share/ShareRow";
+import ManageRequest from "@/features/initiative/ManageRequest";
 import type { DictKey } from "@/i18n";
 import { currentEmergencyId } from "@/server/emergency";
 
@@ -398,6 +399,13 @@ export default async function CenterPage({ params, searchParams }: Params) {
           <div className="prof-main">
             <ProfileTabs tabs={tabs} initial={inicial} wideOmit="info" />
           </div>
+        </div>
+
+        {/* «¿Es tu organización?», fuera de las pestañas: la columna lateral repite
+            «Información» y el bloque se montaría dos veces. Es la puerta de la campaña de
+            captación, cuyo enlace apunta aquí con `?gestionar=1`. */}
+        <div className="prof-claim">
+          <ManageRequest locationId={center.id} />
         </div>
       </div>
     </main>

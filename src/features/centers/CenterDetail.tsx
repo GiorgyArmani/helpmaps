@@ -23,6 +23,7 @@ import {
 import ProfileTabs, { type ProfileTab } from "@/features/centers/ProfileTabs";
 import HoursView from "@/features/centers/HoursView";
 import { EMPTY_PROFILE, type InitiativeProfile } from "@/data/initiatives";
+import ManageRequest from "@/features/initiative/ManageRequest";
 
 /**
  * The full card for one point.
@@ -211,6 +212,9 @@ export default function CenterDetail({
               {info?.external_id && info.source ? (
                 <p className="dsource">{t("center.source", { source: info.source })}</p>
               ) : null}
+
+              {/* Lo último: quien abre una ficha viene a buscar ayuda, no a administrarla. */}
+              <ManageRequest locationId={center.id} />
         </>
       ),
     },

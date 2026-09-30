@@ -39,6 +39,7 @@ import { Badge, Notice } from "@/ui/primitives";
 import { Icon } from "@/ui/icons";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import { fetchPendingReports, resolveReports, type ReportGroup } from "@/data/account";
+import { fetchPendingManageRequests, type PendingManageRequest } from "@/data/initiatives";
 import CenterForm, { type CenterPrefill } from "@/features/admin/CenterForm";
 import DonationForm from "@/features/admin/DonationForm";
 import ZoneEditor, { type ZoneDraft } from "@/features/area/ZoneEditor";
@@ -132,6 +133,10 @@ export default function AdminPanel({
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [volunteers, setVolunteers] = useState<VolunteerRequest[]>([]);
   const [reports, setReports] = useState<ReportGroup[]>([]);
+  // «¿Es tu organización?»: organizaciones que piden gestionar su punto. Van en la misma
+  // cola que las sugerencias porque son lo mismo para el equipo — alguien de fuera pide
+  // algo que hay que comprobar antes de que salga al mapa.
+  const [manageReqs, setManageReqs] = useState<PendingManageRequest[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [editingDonation, setEditingDonation] = useState<Donation | null>(null);
@@ -163,7 +168,7 @@ export default function AdminPanel({
     const sb = getSupabase();
     if (!sb) return;
     try {
-      const [c, sub, vol, log, settings, don, rep] = await Promise.all([
+      const [c, sub, vol, log, settings, don, rep, mreq] = await Promise.all([
         fetchAllCenters(sb, emergencyId),
         fetchSubmissions(sb),
         isAdmin ? fetchVolunteerRequests(sb) : Promise.resolve([]),
@@ -173,15 +178,17 @@ export default function AdminPanel({
         // Los avisos los ve TODO el equipo, no sólo los admins: un voluntario que sale a
         // comprobar puntos es justo quien mejor puede resolverlos.
         fetchPendingReports(sb),
+        fetchPendingManageRequests(sb),
       ]);
       setCenters(c);
       setSubmissions(sub);
       setVolunteers(vol);
       setReports(rep);
+      setManageReqs(mreq);
       setAudit(log);
       setDonations(don);
       setMaintenanceState(settings.maintenance);
-      onPendingChange?.(sub.length + vol.length + rep.length);
+      onPendingChange?.(sub.length + vol.length + rep.length + mreq.length);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "load failed");
@@ -436,7 +443,34 @@ export default function AdminPanel({
     );
   }
 
-  const pendingTotal = submissions.length + volunteers.length;
+  /**
+   * Resolver una solicitud de gestión. Pasa por el servidor sólo para avisar por correo a
+   * quien la pidió; el permiso lo da un trigger al aprobar (`db/15_gestion.sql`).
+   */
+  async function reviewManage(id: string, action: "approve" | "reject") {
+    setBusy(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/staff/manage-requests", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id, action }),
+      });
+      if (!res.ok) {
+        setError(t("admin.saveError"));
+      } else {
+        setNotice(t(action === "approve" ? "admin.manage.approved" : "admin.manage.rejected"));
+      }
+      await load();
+    } catch {
+      setError(t("error.network"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const pendingTotal = submissions.length + volunteers.length + manageReqs.length;
 
   return (
     <div className="admwrap-body">
@@ -468,7 +502,7 @@ export default function AdminPanel({
           onClick={setTab}
           label={t("admin.tab.submissions")}
           icon={<Icon.mail />}
-          count={submissions.length}
+          count={submissions.length + manageReqs.length}
         />
         <TabButton
           id="reports"
@@ -719,7 +753,55 @@ export default function AdminPanel({
 
       {tab === "submissions" ? (
         <div className="stack">
-          {submissions.length === 0 ? <p className="mut">{t("admin.none")}</p> : null}
+          {submissions.length === 0 && manageReqs.length === 0 ? (
+            <p className="mut">{t("admin.none")}</p>
+          ) : null}
+          {manageReqs.length > 0 ? (
+            <>
+              <h3 className="fld-sec">{t("admin.manage.title")}</h3>
+              <p className="fhint">{t("admin.manage.hint")}</p>
+            </>
+          ) : null}
+          {manageReqs.map((m) => (
+            <article key={m.id} className="subcard">
+              <div className="subcard-head">
+                <span className="subcard-kind">{t("admin.manage.kind")}</span>
+                <strong>{m.place}</strong>
+                <span>{ago(m.created_at)}</span>
+              </div>
+              <p className="subcard-msg">
+                {m.display_name ?? t("account.noName")} · {t("admin.manage.role", { role: m.role })}
+                {/* El teléfono entero en una línea: partido por el guion se copia mal. */}
+                {m.phone ? (
+                  <>
+                    {" · "}
+                    <a className="nowrap" href={`tel:${m.phone}`}>
+                      {m.phone}
+                    </a>
+                  </>
+                ) : null}
+              </p>
+              {m.proof ? <p className="subcard-msg">{m.proof}</p> : null}
+              <div className="subcard-acts">
+                <button
+                  type="button"
+                  className="btnp"
+                  disabled={busy}
+                  onClick={() => void reviewManage(m.id, "approve")}
+                >
+                  {t("admin.manage.approve")}
+                </button>
+                <button
+                  type="button"
+                  className="btng"
+                  disabled={busy}
+                  onClick={() => void reviewManage(m.id, "reject")}
+                >
+                  {t("admin.manage.reject")}
+                </button>
+              </div>
+            </article>
+          ))}
           {submissions.map((sub) => (
             <article key={sub.id} className="subcard">
               <div className="subcard-head">

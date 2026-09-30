@@ -1,4 +1,5 @@
 import type { WeeklyHours } from "@/domain/hours";
+import type { EventNeed, Skill } from "@/domain/volunteer";
 
 // Domain model — mirrors the Supabase schema in `db/`. Country-agnostic by construction:
 // a region is a `string` code resolved against the active CountryConfig, never a union of
@@ -262,6 +263,10 @@ export interface Activity {
   status: ActivityStatus;
   /** Cuántas personas se apuntaron. Lo mantiene un trigger; 0 sin `db/13_eventos.sql`. */
   going_count: number;
+  /** Lo que le falta: manos, oficios, especie, difusión. Vacío sin `db/16_voluntariado.sql`. */
+  needs: EventNeed[];
+  /** Si pide oficios, cuáles. */
+  skills: Skill[];
 }
 
 export type PostKind = "avance" | "entrega" | "necesidad";

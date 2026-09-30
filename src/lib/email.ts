@@ -812,3 +812,112 @@ export async function sendVolunteerRejected(input: {
     ),
   });
 }
+
+// ---------------------------------------------------------------------------
+// «¿Es tu organización?» — alguien pide gestionar un punto
+// ---------------------------------------------------------------------------
+
+/** Al buzón del equipo. El correo de quien pide va como `replyTo`, nunca como destino. */
+export async function notifyManageRequest(input: {
+  place: string;
+  name: string | null;
+  email: string;
+  role: string;
+  phone: string | null;
+  proof: string | null;
+  lang?: Lang;
+}): Promise<boolean> {
+  const t = emailT(input.lang);
+  const dash = t("email.none");
+  const place = cleanName(input.place, 120) || dash;
+  const name = cleanName(input.name ?? "") || dash;
+  const email = cleanText(input.email, 120) || dash;
+  const role = cleanText(input.role, 120) || dash;
+  const phone = cleanText(input.phone ?? "", 40) || dash;
+  const proof = cleanText(input.proof ?? "", 600);
+  const panelUrl = absoluteUrl("/admin");
+
+  const html = emailShell({
+    preheader: t("email.manage.preheader"),
+    footer: t("email.footer.note", { brand: BRAND.name }),
+    body: lines(
+      heading(t("email.manage.title")),
+      field(t("email.manage.place"), place),
+      field(t("email.label.name"), name),
+      field(t("email.label.email"), email),
+      field(t("email.manage.role"), role),
+      field(t("email.label.phone"), phone),
+      proof && sectionLabel(t("email.manage.proof")),
+      proof && quote(proof),
+      divider(),
+      note(t("email.manage.note")),
+      button(panelUrl, t("email.manage.cta")),
+    ),
+  });
+
+  return deliver({
+    subject: t("email.manage.subject", { brand: BRAND.short, place }),
+    replyTo: replyTo(input.email),
+    html,
+    text: lines(
+      t("email.manage.title"),
+      `${t("email.manage.place")}: ${place}`,
+      `${t("email.label.name")}: ${name}`,
+      `${t("email.label.email")}: ${email}`,
+      `${t("email.manage.role")}: ${role}`,
+      `${t("email.label.phone")}: ${phone}`,
+      "",
+      proof || "",
+      "",
+      t("email.manage.note"),
+      `${t("email.manage.cta")}: ${panelUrl}`,
+    ),
+  });
+}
+
+/**
+ * Cómo terminó la solicitud, a la cuenta que la hizo.
+ *
+ * Aprobada lleva a `/?mine=1`, el mismo sitio al que llega quien acepta una invitación:
+ * abre su punto y, si el perfil está sin contar, el onboarding.
+ */
+export async function sendManageDecision(input: {
+  to: string;
+  place: string;
+  approved: boolean;
+  lang?: Lang;
+  site?: string;
+}): Promise<boolean> {
+  if (!isEmail(input.to)) return false;
+
+  const t = emailT(input.lang);
+  const site = (input.site ?? siteUrl()).replace(/\/+$/, "");
+  const place = cleanName(input.place, 120) || COUNTRY.name;
+  const k = input.approved ? "manageOk" : "manageNo";
+  const url = input.approved ? `${site}/?mine=1` : site;
+  const vars = { brand: BRAND.name, place };
+
+  const html = emailShell({
+    site,
+    preheader: t(`email.${k}.preheader`),
+    footer: t("email.footer.note", { brand: BRAND.name }),
+    body: lines(
+      heading(t(`email.${k}.title`)),
+      paragraph(t(`email.${k}.body`, vars)),
+      button(url, t(`email.${k}.cta`)),
+    ),
+  });
+
+  return deliver({
+    to: input.to,
+    subject: t(`email.${k}.subject`, vars),
+    html,
+    text: lines(
+      t(`email.${k}.title`),
+      "",
+      t(`email.${k}.body`, vars),
+      "",
+      `${t(`email.${k}.cta`)}: ${url}`,
+    ),
+  });
+}

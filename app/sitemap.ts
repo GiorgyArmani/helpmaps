@@ -21,6 +21,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...(!IS_HUB && FEATURES.entryPage
       ? [{ url: `${base}/inicio`, lastModified: now, priority: 0.8 }]
       : []),
+    // La página de la campaña de captación: una ONG que busca «mapa ayuda Venezuela» tiene
+    // que poder llegar a ella sin el enlace de WhatsApp.
+    ...(!IS_HUB ? [{ url: `${base}/organizaciones`, lastModified: now, priority: 0.7 }] : []),
     { url: `${base}/docs/privacidad`, lastModified: now, priority: 0.3 },
     { url: `${base}/docs/terminos`, lastModified: now, priority: 0.3 },
     { url: `${base}/docs/api`, lastModified: now, priority: 0.5 },
