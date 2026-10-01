@@ -6,7 +6,6 @@ import { resolveLang, translator, type DictKey } from "@/i18n";
 import type { LocationType } from "@/domain/types";
 import { Icon } from "@/ui/icons";
 import { currentEmergency } from "@/server/emergency";
-import NewsSection from "@/features/news/NewsSection";
 import { CookiePrefsLink } from "@/features/consent/CookieConsent";
 import { dotMap, emergencyFocus, fetchDirectory } from "../organizaciones/directory";
 import FeatureTour from "../organizaciones/FeatureTour";
@@ -402,11 +401,6 @@ export default async function EntryPage({
           </article>
         </div>
       </section>
-
-      {/* Lo que se está reportando: sólo aparece si hay boletín. */}
-      <div className="olp-band ilp-news">
-        <NewsSection />
-      </div>
 
       {/* Para quien tiene una iniciativa: registrarla, o buscarla si ya está y pedir
           manejarla. Es la puerta de entrada a /organizaciones desde la portada. */}

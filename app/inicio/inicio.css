@@ -545,6 +545,11 @@
 /* La bajada, bajo los botones: el aire lo pone el `gap` de `.ilp-doors`. */
 .ilp-lead {
   margin: 8px 0 0;
+  /* Más oscura que el `--mut-track` de las otras bajadas: ésta vive sobre el mapa y en gris
+     claro se fundía con la trama. Y más estrecha, para no llegar a la zona de los puntos. */
+  max-width: 30em;
+  font-size: 1.125rem;
+  color: color-mix(in srgb, var(--ink) 78%, var(--soft));
 }
 
 /* ── Las cifras ──────────────────────────────────────────────────────── */
@@ -753,13 +758,6 @@
   font-size: 13px;
   text-align: center;
   color: rgba(255, 255, 255, 0.66);
-}
-
-/* ── El boletín ──────────────────────────────────────────────────────── */
-
-/* Sin boletín `NewsSection` no pinta nada, y la banda no deja su hueco. */
-.ilp-news:not(:has(section)) {
-  display: none;
 }
 
 /* ── Iniciativas y ONG ───────────────────────────────────────────────── */
@@ -1274,9 +1272,15 @@
 
 @media (min-width: 960px) {
   .ilp .olp-hero {
-    /* La fila del titular se ajusta a él; la de los botones se lleva el resto. Si no, el mapa
-       (que ocupa las dos) estira la primera y deja un hueco entre la pregunta y la acción. */
-    grid-template-rows: auto 1fr;
+    /* El bloque de la izquierda (titular, botones, bajada) va CENTRADO en vertical respecto
+       al mapa: dos filas elásticas, arriba y abajo, se reparten el sobrante. El mapa ocupa las
+       cuatro. Antes, pegado arriba, dejaba un vacío debajo de la bajada. */
+    grid-template-areas:
+      ". map"
+      "copy map"
+      "find map"
+      ". map";
+    grid-template-rows: 1fr auto auto 1fr;
     /* Mitad y mitad: los dos botones caben en fila, y el mapa igual acaba llenando el fondo. */
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 40px;
@@ -1331,8 +1335,8 @@
     background: linear-gradient(
       to right,
       var(--soft) 0,
-      var(--soft) calc(50% - 120px),
-      color-mix(in srgb, var(--soft) 0%, transparent) calc(50% + 40px)
+      var(--soft) calc(50% - 20px),
+      color-mix(in srgb, var(--soft) 0%, transparent) calc(50% + 140px)
     );
   }
 
