@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BRAND, COUNTRY, FEATURES, IS_HUB, LANGUAGE, enabledTypes, regionLabel } from "@/config";
-import { resolveLang, translator, type DictKey } from "@/i18n";
+import { getDict, resolveLang, translator, type DictKey, type Translate } from "@/i18n";
 import type { LocationType } from "@/domain/types";
 import { Icon } from "@/ui/icons";
 import { currentEmergency } from "@/server/emergency";
 import { CookiePrefsLink } from "@/features/consent/CookieConsent";
 import { asciiMap, dotMap, emergencyFocus, fetchDirectory } from "../organizaciones/directory";
 import FeatureTour from "../organizaciones/FeatureTour";
+import { CampaignScreen } from "../organizaciones/Mockups";
 import { JoinScreen, LevelScreen, NearScreen, NeedsScreen } from "./Mockups";
 import "../organizaciones/orgs.css";
 import "./inicio.css";
@@ -54,11 +55,20 @@ export const metadata: Metadata = (() => {
   };
 })();
 
-const TOUR = [
+const TOUR_A = [
   { k: "near", icon: Icon.target, Screen: NearScreen },
   { k: "needs", icon: Icon.box, Screen: NeedsScreen },
   { k: "join", icon: Icon.users, Screen: JoinScreen },
   { k: "level", icon: Icon.spark, Screen: LevelScreen },
+] as const;
+
+// La variante B añade la donación directa, con la pantalla de campaña de /organizaciones.
+const TOUR_B = [
+  TOUR_A[0],
+  TOUR_A[1],
+  { k: "donate", icon: Icon.heart, Screen: CampaignScreen },
+  TOUR_A[2],
+  TOUR_A[3],
 ] as const;
 
 export default async function EntryPage({
@@ -74,6 +84,25 @@ export default async function EntryPage({
   const raw = params.lang;
   const lang = resolveLang(Array.isArray(raw) ? raw[0] : raw);
   const t = translator(lang);
+
+  // ── DOS TEXTOS PARA COMPARAR ─────────────────────────────────────────────
+  // A es la portada de siempre; B, el texto nuevo (2026-10-01). No es un experimento: nadie
+  // recibe B por sorteo ni se mide nada. `?v=b` lo enseña, y con `?v=` en la dirección
+  // aparece un selector A | B en una esquina para pasar de uno a otro.
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const forced = one(params.v);
+  const isB = forced === "b";
+  const switcher = forced === "a" || forced === "b";
+  // En B, cada `home.x` busca primero `homeB.x`; lo que B no cambia cae a A. Así las dos
+  // variantes son la misma página y sólo difiere el texto (y tres detalles de estructura).
+  const dict = getDict(lang);
+  const tv: Translate = (key, vars) => {
+    if (isB && key.startsWith("home.")) {
+      const alt = `homeB.${key.slice(5)}` as DictKey;
+      if (alt in dict) return t(alt, vars);
+    }
+    return t(key, vars);
+  };
 
   const withLang = (path: string) =>
     lang === LANGUAGE.default ? path : `${path}${path.includes("?") ? "&" : "?"}lang=${lang}`;
@@ -110,6 +139,8 @@ export default async function EntryPage({
     };
   })();
   const total = directory.length.toLocaleString(lang);
+  const proof =
+    directory.length >= 100 ? Math.floor(directory.length / 100) * 100 : directory.length;
 
   // Only a figure we actually have: a "0" on a landing page reads as failure. Ordered by
   // the map's own type order and capped so the grid stays 2×2.
@@ -133,6 +164,19 @@ export default async function EntryPage({
 
   return (
     <main className="olp ilp">
+      {switcher ? (
+        <nav className="ilp-ab" aria-label="Versión del texto">
+          {(["a", "b"] as const).map((v) => (
+            <Link
+              key={v}
+              href={withLang(`/inicio?v=${v}`)}
+              aria-current={(v === "b") === isB ? "page" : undefined}
+            >
+              {v.toUpperCase()}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
       <header className="olp-top">
         <Link href={withLang("/")} className="olp-brand">
           <span className="olp-logo" aria-hidden="true">
@@ -147,7 +191,7 @@ export default async function EntryPage({
         </Link>
         <Link href={withLang("/login")} className="olp-toplink ilp-login">
           <Icon.user width={16} height={16} />
-          {t("home.login")}
+          {tv("home.login")}
         </Link>
       </header>
 
@@ -157,9 +201,13 @@ export default async function EntryPage({
       <section className="olp-hero">
         <div className="olp-copy">
           {/* Las dos preguntas: la portada les habla a los dos lados del puente a la vez. */}
-          <h1 className="olp-h1 ilp-h1">
-            <span>{t("home.titleNeed")}</span> <span>{t("home.titleGive")}</span>
-          </h1>
+          {isB ? (
+            <h1 className="olp-h1 ilp-h1 ilp-h1-b">{t("homeB.title")}</h1>
+          ) : (
+            <h1 className="olp-h1 ilp-h1">
+              <span>{tv("home.titleNeed")}</span> <span>{tv("home.titleGive")}</span>
+            </h1>
+          )}
         </div>
 
         {map ? (
@@ -181,7 +229,7 @@ export default async function EntryPage({
               <svg
                 viewBox={map.viewBox}
                 role="img"
-                aria-label={t("home.mapLabel", { n: total })}
+                aria-label={tv("home.mapLabel", { n: total })}
                 preserveAspectRatio="xMidYMid meet"
               >
                 {/* El país en caracteres, fila a fila: aparecen como en una terminal. */}
@@ -273,7 +321,7 @@ export default async function EntryPage({
             <figcaption className="ilp-cap">
               <span className="ilp-cap-live" aria-hidden="true" />
               <b className="ilp-cap-n">{total}</b>
-              <span className="ilp-cap-l">{t("home.mapCount")}</span>
+              <span className="ilp-cap-l">{tv("home.mapCount")}</span>
             </figcaption>
           </figure>
         ) : null}
@@ -285,25 +333,26 @@ export default async function EntryPage({
             teléfono, apilados y a lo ancho (el pulgar); en escritorio, en fila. */}
         <nav className="olp-find ilp-doors" aria-labelledby="ilp-doors-h">
           <h2 id="ilp-doors-h" className="olp-sr">
-            {t("home.doorsTitle")}
+            {tv("home.doorsTitle")}
           </h2>
           <div className="ilp-ctas">
             <Link href={withLang("/registro")} className="ilp-cta ilp-cta-main">
               <Icon.user width={20} height={20} aria-hidden="true" />
-              <span>{t("home.createAccount")}</span>
+              <span>{tv("home.createAccount")}</span>
               <Icon.chevron width={18} height={18} className="ilp-cta-go" aria-hidden="true" />
             </Link>
             <Link href={app()} className="ilp-cta ilp-cta-alt">
               <Icon.search width={20} height={20} aria-hidden="true" />
-              <span>{t("home.enterAnon")}</span>
+              <span>{tv("home.enterAnon")}</span>
               <Icon.chevron width={18} height={18} className="ilp-cta-go" aria-hidden="true" />
             </Link>
           </div>
           {/* La explicación va DESPUÉS de los botones: pregunta, acción y luego el porqué.
               Quien ya sabe a qué viene no tiene que leer un párrafo para encontrar la puerta. */}
           <p className="olp-lead ilp-lead">
-            {t("home.lead", { platform: BRAND.platform, country: COUNTRY.name })}
+            {tv("home.lead", { platform: BRAND.platform, country: COUNTRY.name })}
           </p>
+          {isB && proof > 0 ? <p className="ilp-proof">{t("homeB.proof", { n: proof })}</p> : null}
         </nav>
       </section>
       </div>
@@ -311,7 +360,7 @@ export default async function EntryPage({
       {stats.length > 0 ? (
         <section className="olp-band ilp-reveal" aria-labelledby="ilp-stats-h">
           <h2 id="ilp-stats-h" className="ilp-kicker">
-            {t("home.statsTitle")}
+            {tv("home.statsTitle")}
           </h2>
           <ul className="ilp-stats">
             {stats.map((s, i) => (
@@ -321,7 +370,7 @@ export default async function EntryPage({
               </li>
             ))}
           </ul>
-          <p className="ilp-stats-note">{t("home.statsNote")}</p>
+          <p className="ilp-stats-note">{tv("home.statsNote")}</p>
         </section>
       ) : null}
 
@@ -329,16 +378,16 @@ export default async function EntryPage({
           Es la idea de HelpMaps en un dibujo; las líneas «fluyen» de arriba abajo. */}
       <section className="olp-band" aria-labelledby="ilp-bridge-h">
         <h2 id="ilp-bridge-h" className="olp-h2">
-          {t("home.bridgeTitle")}
+          {tv("home.bridgeTitle")}
         </h2>
-        <p className="olp-sub">{t("home.bridgeLead", { platform: BRAND.platform })}</p>
+        <p className="olp-sub">{tv("home.bridgeLead", { platform: BRAND.platform })}</p>
         <div className="ilp-bridge">
           <div className="ilp-node ilp-node-org ilp-reveal">
             <span className="ilp-node-ic" aria-hidden="true">
               <Icon.volunteer width={22} height={22} />
             </span>
-            <h3 className="ilp-node-t">{t("home.bridgeOrgs")}</h3>
-            <p className="ilp-node-d">{t("home.bridgeOrgsDesc")}</p>
+            <h3 className="ilp-node-t">{tv("home.bridgeOrgs")}</h3>
+            <p className="ilp-node-d">{tv("home.bridgeOrgsDesc")}</p>
           </div>
           {/* De las organizaciones al mapa. Las líneas son SVG con el trazo discontinuo
               «fluyendo» hacia las personas: lo que se publica, llega. */}
@@ -365,7 +414,7 @@ export default async function EntryPage({
                 <Icon.target width={18} height={18} />
               )}
             </span>
-            {t("home.bridgeHub")}
+            {tv("home.bridgeHub")}
           </div>
           </div>
           <div className="ilp-people">
@@ -373,15 +422,15 @@ export default async function EntryPage({
               <span className="ilp-node-ic ilp-node-ic-need" aria-hidden="true">
                 <Icon.search width={20} height={20} />
               </span>
-              <h3 className="ilp-node-t">{t("home.bridgeNeed")}</h3>
-              <p className="ilp-node-d">{t("home.bridgeNeedDesc")}</p>
+              <h3 className="ilp-node-t">{tv("home.bridgeNeed")}</h3>
+              <p className="ilp-node-d">{tv("home.bridgeNeedDesc")}</p>
             </div>
             <div className="ilp-node ilp-reveal">
               <span className="ilp-node-ic ilp-node-ic-give" aria-hidden="true">
                 <Icon.heart width={20} height={20} />
               </span>
-              <h3 className="ilp-node-t">{t("home.bridgeGive")}</h3>
-              <p className="ilp-node-d">{t("home.bridgeGiveDesc")}</p>
+              <h3 className="ilp-node-t">{tv("home.bridgeGive")}</h3>
+              <p className="ilp-node-d">{tv("home.bridgeGiveDesc")}</p>
             </div>
           </div>
         </div>
@@ -391,64 +440,66 @@ export default async function EntryPage({
           pantalla. Sin hablar de cuentas aquí; eso va en la sección siguiente. */}
       <section className="olp-band" aria-labelledby="ilp-tour-h">
         <h2 id="ilp-tour-h" className="olp-h2">
-          {t("home.tourTitle", { platform: BRAND.platform })}
+          {tv("home.tourTitle", { platform: BRAND.platform })}
         </h2>
-        <p className="olp-sub">{t("home.tourLead")}</p>
+        {isB ? null : <p className="olp-sub">{tv("home.tourLead")}</p>}
         {/* Lo maneja la persona: toca un paso, o usa anterior / siguiente bajo el teléfono. */}
         <FeatureTour
-          manual={{ prev: t("home.tourPrev"), next: t("home.tourNext") }}
-          steps={TOUR.map(({ k, icon: Glyph, Screen }) => ({
+          manual={{ prev: tv("home.tourPrev"), next: tv("home.tourNext") }}
+          steps={(isB ? TOUR_B : TOUR_A).map(({ k, icon: Glyph, Screen }) => ({
             key: k,
             icon: <Glyph width={20} height={20} />,
-            title: t(`home.f.${k}` as DictKey),
-            desc: t(`home.f.${k}Desc` as DictKey),
+            title: isB ? t(`homeB.f.${k}` as DictKey) : t(`home.f.${k}` as DictKey),
+            desc: isB
+              ? t(`homeB.f.${k}Desc` as DictKey, { platform: BRAND.platform })
+              : t(`home.f.${k}Desc` as DictKey),
             screen: <Screen t={t} />,
           }))}
         />
-        <p className="olp-demo-note">{t("home.demo.note")}</p>
+        <p className="olp-demo-note">{tv("home.demo.note")}</p>
       </section>
 
       {/* Sin cuenta o con ella: las dos salidas, lado a lado. La de la cuenta es la única
           tarjeta en tinta, porque es la decisión que esta sección pide. */}
       <section className="olp-band" aria-labelledby="ilp-cmp-h">
         <h2 id="ilp-cmp-h" className="olp-h2">
-          {t("home.compareTitle")}
+          {tv("home.compareTitle")}
         </h2>
         <div className="ilp-cmp">
           <article className="ilp-plan ilp-reveal">
-            <h3 className="ilp-plan-t">{t("home.freeTitle")}</h3>
-            <p className="ilp-plan-lead">{t("home.freeLead")}</p>
+            <h3 className="ilp-plan-t">{tv("home.freeTitle")}</h3>
+            <p className="ilp-plan-lead">{tv("home.freeLead")}</p>
             <ul className="ilp-list">
               {(["1", "2", "3", "4", "5"] as const).map((n) => (
                 <li key={n}>
                   <Icon.check width={18} height={18} aria-hidden="true" />
-                  {t(`home.free${n}` as DictKey)}
+                  {tv(`home.free${n}` as DictKey)}
                 </li>
               ))}
             </ul>
             <Link href={app()} className="ilp-btn ilp-btn-ghost">
               <Icon.search width={18} height={18} />
-              {t("home.freeCta")}
+              {tv("home.freeCta")}
             </Link>
           </article>
 
           <article className="ilp-plan ilp-plan-acc ilp-reveal">
-            <h3 className="ilp-plan-t">{t("home.accTitle")}</h3>
-            <p className="ilp-plan-lead">{t("home.accLead")}</p>
+            <h3 className="ilp-plan-t">{tv("home.accTitle")}</h3>
+            <p className="ilp-plan-lead">{tv("home.accLead")}</p>
             <ul className="ilp-list">
               {(["1", "2", "3", "4"] as const).map((n) => (
                 <li key={n}>
                   <Icon.plus width={18} height={18} aria-hidden="true" />
-                  {t(`home.acc${n}` as DictKey)}
+                  {tv(`home.acc${n}` as DictKey)}
                 </li>
               ))}
             </ul>
             <Link href={withLang("/registro")} className="ilp-btn ilp-btn-brand">
               <Icon.user width={18} height={18} />
-              {t("home.accCta")}
+              {tv("home.accCta")}
               <Icon.chevron width={18} height={18} className="ilp-btn-go" />
             </Link>
-            <p className="ilp-plan-note">{t("home.accNote")}</p>
+            <p className="ilp-plan-note">{tv("home.accNote")}</p>
           </article>
         </div>
       </section>
@@ -458,9 +509,10 @@ export default async function EntryPage({
       <section className="olp-band" aria-labelledby="ilp-org-h">
         <div className="olp-how ilp-org ilp-reveal">
           <h2 id="ilp-org-h" className="ilp-org-h">
-            {t("home.orgTitle")}
+            {tv("home.orgTitle")}
           </h2>
-          <p className="ilp-org-p">{t("home.orgBody")}</p>
+          <p className="ilp-org-p">{tv("home.orgBody")}</p>
+          {isB ? <p className="ilp-org-p">{t("homeB.orgBody2")}</p> : null}
           <div className="ilp-org-acts">
             {FEATURES.suggestions ? (
               <Link href={app("initiative")} className="ilp-btn ilp-btn-ghost">
@@ -470,10 +522,10 @@ export default async function EntryPage({
             ) : null}
             <Link href={withLang("/organizaciones")} className="ilp-btn ilp-btn-ghost">
               <Icon.search width={18} height={18} />
-              {t("home.orgFind")}
+              {tv("home.orgFind")}
             </Link>
           </div>
-          <p className="olp-cta-note ilp-org-note">{t("entry.campaignFine")}</p>
+          <p className="olp-cta-note ilp-org-note">{isB ? t("homeB.orgFine") : t("entry.campaignFine")}</p>
         </div>
       </section>
 
@@ -504,11 +556,11 @@ export default async function EntryPage({
           <div className="ilp-end-acts">
             <Link href={app()} className="ilp-cta ilp-cta-light">
               <Icon.search width={20} height={20} aria-hidden="true" />
-              <span>{t("home.freeCta")}</span>
+              <span>{tv("home.freeCta")}</span>
             </Link>
             <Link href={withLang("/registro")} className="ilp-cta ilp-cta-ghost">
               <Icon.user width={20} height={20} aria-hidden="true" />
-              <span>{t("home.createAccount")}</span>
+              <span>{tv("home.createAccount")}</span>
             </Link>
           </div>
         </div>
@@ -530,8 +582,8 @@ export default async function EntryPage({
               ))}
             </ul>
           ) : null}
-          <nav className="ilp-legal" aria-label={t("home.footNav")}>
-            <Link href={withLang("/organizaciones")}>{t("home.footOrgs")}</Link>
+          <nav className="ilp-legal" aria-label={tv("home.footNav")}>
+            <Link href={withLang("/organizaciones")}>{tv("home.footOrgs")}</Link>
             <Link href={`/docs/privacidad?lang=${lang}`}>{t("footer.privacy")}</Link>
             <Link href={`/docs/terminos?lang=${lang}`}>{t("footer.terms")}</Link>
             <CookiePrefsLink className="olp-foot-cookie" label={t("footer.cookies")} />

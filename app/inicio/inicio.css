@@ -652,6 +652,50 @@
   transform: translateX(3px);
 }
 
+/* El selector A | B para comparar los dos textos: sólo aparece con `?v=` en la dirección. */
+.ilp-ab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--ink);
+  box-shadow: var(--e-3);
+}
+
+.ilp-ab a {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.ilp-ab a[aria-current="page"] {
+  background: #fff;
+  color: var(--ink);
+}
+
+/* Texto B: el titular es una frase, no dos preguntas; que se parta donde caiga bien en vez
+   de forzar un renglón por pregunta. */
+.ilp-h1-b {
+  text-wrap: balance;
+}
+
+/* Variante B: la prueba social bajo la bajada («+500 organizaciones…»). */
+.ilp-proof {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 /* La bajada, bajo los botones: el aire lo pone el `gap` de `.ilp-doors`. */
 .ilp-lead {
   margin: 8px 0 0;
