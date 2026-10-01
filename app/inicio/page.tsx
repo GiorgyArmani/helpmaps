@@ -7,7 +7,7 @@ import type { LocationType } from "@/domain/types";
 import { Icon } from "@/ui/icons";
 import { currentEmergency } from "@/server/emergency";
 import { CookiePrefsLink } from "@/features/consent/CookieConsent";
-import { dotMap, emergencyFocus, fetchDirectory } from "../organizaciones/directory";
+import { asciiMap, dotMap, emergencyFocus, fetchDirectory } from "../organizaciones/directory";
 import FeatureTour from "../organizaciones/FeatureTour";
 import { JoinScreen, LevelScreen, NearScreen, NeedsScreen } from "./Mockups";
 import "../organizaciones/orgs.css";
@@ -83,6 +83,8 @@ export default async function EntryPage({
   const emergency = await currentEmergency();
   const directory = await fetchDirectory(emergency?.id ?? null);
   const map = dotMap(directory, COUNTRY.geo, new Set());
+  // El mapa de la portada es arte de píxel en ASCII; `dotMap` sigue dando el encuadre.
+  const ascii = map ? asciiMap(directory, COUNTRY.geo, map.viewBox) : null;
 
   // El zoom de la portada: hasta donde está pasando la emergencia, si hay una en curso.
   // Sin emergencia (o archivada) se queda el país entero: HelpMaps es un puente de siempre
@@ -115,6 +117,17 @@ export default async function EntryPage({
     .map((type: LocationType) => ({ type, n: counts.get(type) ?? 0 }))
     .filter((s) => s.n > 0)
     .slice(0, 4);
+
+  // Las redes del pie: sólo las que el preset trae. Venezuela hoy sólo tiene correo.
+  const { email, whatsapp, instagram, repo } = BRAND.contact;
+  const socials = [
+    email ? { key: "mail", href: `mailto:${email}`, label: t("home.socialEmail"), Glyph: Icon.mail } : null,
+    whatsapp ? { key: "wa", href: `https://wa.me/${whatsapp}`, label: "WhatsApp", Glyph: Icon.whatsapp } : null,
+    instagram
+      ? { key: "ig", href: `https://instagram.com/${instagram}`, label: "Instagram", Glyph: Icon.instagram }
+      : null,
+    repo ? { key: "code", href: repo, label: t("home.socialCode"), Glyph: Icon.link } : null,
+  ].filter((x) => x !== null);
 
   return (
     <main className="olp ilp">
@@ -161,43 +174,30 @@ export default async function EntryPage({
                 aria-label={t("home.mapLabel", { n: total })}
                 preserveAspectRatio="xMidYMid meet"
               >
-                {map.outline ? (
-                  <defs>
-                    <pattern id="ilp-grain" width="2.6" height="2.6" patternUnits="userSpaceOnUse">
-                      <circle cx="1.3" cy="1.3" r="0.5" />
-                    </pattern>
-                  </defs>
-                ) : null}
-                {/* El país y sus puntos. El zoom va sobre el SVG entero (`.ilp-stage-zoom > svg`). */}
-                <g>
-                  {map.outline ? (
-                    <path className="olp-land" d={map.outline} fill="url(#ilp-grain)" />
-                  ) : null}
-                  <g className="olp-dots">
-                    {map.dots.map((d) => (
-                      <circle
-                        key={`${d.x}:${d.y}`}
-                        cx={d.x}
-                        cy={d.y}
-                        r={0.52}
-                        // El turno en que brota, como variable: `inicio.css` le suma una
-                        // segunda animación (encogerse con el zoom) con su propio retraso.
-                        style={{ ["--d" as string]: `${(d.k * 0.14).toFixed(2)}s` }}
-                      />
-                    ))}
-                  </g>
-                  {zoom
-                    ? null
-                    : map.pings.map((p, i) => (
-                        <circle
-                          key={`p${i}`}
-                          className="olp-ping"
-                          cx={p.x}
-                          cy={p.y}
-                          r={3}
-                          style={{ animationDelay: `${2 + i * 1.1}s` }}
-                        />
-                      ))}
+                {/* El país en caracteres, fila a fila: aparecen como en una terminal. */}
+                <g className="ilp-ascii" fontSize={ascii?.fontSize}>
+                  {ascii?.rows.map((row, i) => (
+                    <g key={row.y} className="ilp-ascii-row" style={{ ["--r" as string]: i }}>
+                      <text
+                        className="ilp-ascii-land"
+                        x={ascii.x}
+                        y={row.y}
+                        textLength={ascii.width}
+                        lengthAdjust="spacing"
+                      >
+                        {row.land}
+                      </text>
+                      <text
+                        className="ilp-ascii-ink"
+                        x={ascii.x}
+                        y={row.y}
+                        textLength={ascii.width}
+                        lengthAdjust="spacing"
+                      >
+                        {row.ink}
+                      </text>
+                    </g>
+                  ))}
                 </g>
               </svg>
 
@@ -406,9 +406,6 @@ export default async function EntryPage({
           manejarla. Es la puerta de entrada a /organizaciones desde la portada. */}
       <section className="olp-band" aria-labelledby="ilp-org-h">
         <div className="olp-how ilp-org ilp-reveal">
-          <span className="olp-feat-ic" aria-hidden="true">
-            <Icon.volunteer width={20} height={20} />
-          </span>
           <h2 id="ilp-org-h" className="ilp-org-h">
             {t("home.orgTitle")}
           </h2>
@@ -429,31 +426,69 @@ export default async function EntryPage({
         </div>
       </section>
 
-      {/* El cierre: la promesa de privacidad en grande, y las dos salidas otra vez. */}
-      <section className="olp-promise" aria-labelledby="ilp-promise-h">
-        <div className="olp-promise-in">
-          <h2 id="ilp-promise-h" className="olp-promise-h">
-            {t("home.promiseTitle")}
-          </h2>
-          <p className="olp-promise-p">{t("home.promiseBody", { brand: BRAND.name })}</p>
-          <div className="ilp-promise-acts">
-            <Link href={app()} className="ilp-btn ilp-btn-light">
-              <Icon.search width={18} height={18} />
-              {t("home.freeCta")}
+      {/* El cierre: la marca, las dos salidas otra vez, y el pie con lo que importa —redes,
+          legal, organizaciones—. Las redes salen de `brand.contact`: un país que no tiene
+          Instagram simplemente no lo enseña, y añadirlo es una línea en su preset. */}
+      <section className="olp-promise ilp-end" aria-labelledby="ilp-end-h">
+        <div className="olp-promise-in ilp-end-in">
+          <div className="ilp-end-brand">
+            <span className="olp-logo" aria-hidden="true">
+              {BRAND.logo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- un asset estático
+                <img src={BRAND.logo} alt="" />
+              ) : (
+                (BRAND.emoji || COUNTRY.code.slice(0, 1))
+              )}
+            </span>
+            <div>
+              <h2 id="ilp-end-h" className="ilp-end-name">
+                {BRAND.name}
+              </h2>
+              {/* The tagline is written in this deployment's language only. */}
+              {lang === LANGUAGE.default && BRAND.tagline ? (
+                <p className="ilp-end-tag">{BRAND.tagline}</p>
+              ) : null}
+            </div>
+          </div>
+          <div className="ilp-end-acts">
+            <Link href={app()} className="ilp-cta ilp-cta-light">
+              <Icon.search width={20} height={20} aria-hidden="true" />
+              <span>{t("home.freeCta")}</span>
             </Link>
-            <Link href={withLang("/registro")} className="ilp-btn ilp-btn-line">
-              {t("home.accCta")}
+            <Link href={withLang("/registro")} className="ilp-cta ilp-cta-ghost">
+              <Icon.user width={20} height={20} aria-hidden="true" />
+              <span>{t("home.createAccount")}</span>
             </Link>
           </div>
         </div>
 
-        <footer className="olp-foot">
-          {/* The tagline is written in this deployment's language only. */}
-          <span>{lang === LANGUAGE.default && BRAND.tagline ? BRAND.tagline : BRAND.name}</span>
-          <Link href={`/docs/privacidad?lang=${lang}`}>{t("footer.privacy")}</Link>
-          <Link href={`/docs/terminos?lang=${lang}`}>{t("footer.terms")}</Link>
-          <CookiePrefsLink className="olp-foot-cookie" label={t("footer.cookies")} />
-          <Link href={`/docs?lang=${lang}`}>{t("footer.about")}</Link>
+        <footer className="olp-foot ilp-foot">
+          {socials.length > 0 ? (
+            <ul className="ilp-social">
+              {socials.map(({ key, href, label, Glyph }) => (
+                <li key={key}>
+                  <a
+                    href={href}
+                    aria-label={label}
+                    title={label}
+                    {...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  >
+                    <Glyph width={20} height={20} aria-hidden="true" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <nav className="ilp-legal" aria-label={t("home.footNav")}>
+            <Link href={withLang("/organizaciones")}>{t("home.footOrgs")}</Link>
+            <Link href={`/docs/privacidad?lang=${lang}`}>{t("footer.privacy")}</Link>
+            <Link href={`/docs/terminos?lang=${lang}`}>{t("footer.terms")}</Link>
+            <CookiePrefsLink className="olp-foot-cookie" label={t("footer.cookies")} />
+            <Link href={`/docs?lang=${lang}`}>{t("footer.about")}</Link>
+          </nav>
+          <span className="ilp-copy">
+            © {new Date().getFullYear()} {BRAND.platform}
+          </span>
         </footer>
       </section>
     </main>

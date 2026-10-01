@@ -349,3 +349,83 @@ export function emergencyFocus(
 
   return { x: x(lng), y: y(lat), place };
 }
+
+/**
+ * El mismo país que `dotMap`, dibujado con CARACTERES: arte de píxel en ASCII para la
+ * portada de `/inicio`.
+ *
+ * Usa el encuadre de `dotMap` (`viewBox`) y su proyección, así que todo lo que se apoya en
+ * él —el zoom hacia el foco, el rótulo, la leyenda— cae en el mismo sitio.
+ *
+ * Una rejilla de celdas de ~14 × 22 km. La tierra sin lugares es un `:` tenue; con lugares,
+ * la densidad sube por `+ * # @` (1, 2–3, 4–8, 9 o más). Dos capas por fila —la tierra y la
+ * tinta— para que cada una lleve su color sin un `<tspan>` por carácter. Los huecos son
+ * espacios de no separación: un espacio normal lo colapsa el SVG y descuadra la fila.
+ */
+export interface AsciiMap {
+  rows: { y: number; land: string; ink: string }[];
+  x: number;
+  width: number;
+  fontSize: number;
+}
+
+const BLANK = "\u00a0";
+
+function densityChar(n: number): string {
+  if (n <= 0) return BLANK;
+  if (n === 1) return "+";
+  if (n <= 3) return "*";
+  if (n <= 8) return "#";
+  return "@";
+}
+
+export function asciiMap(
+  entries: DirectoryEntry[],
+  geo: {
+    bounds: [[number, number], [number, number]];
+    outline?: [number, number][];
+  },
+  viewBox: string,
+): AsciiMap {
+  const [minX, minY, w, h] = viewBox.split(" ").map(Number) as [number, number, number, number];
+  const [[, w0], [n0]] = geo.bounds;
+  const x = (lng: number) => (lng - w0) * SCALE;
+  const y = (lat: number) => (n0 - lat) * SCALE;
+  const ring = geo.outline && geo.outline.length > 2 ? geo.outline : null;
+  const poly: [number, number][] | null = ring ? ring.map(([lat, lng]) => [x(lng), y(lat)]) : null;
+
+  // Celdas más altas que anchas, como un carácter de letra monoespaciada.
+  const cols = Math.max(20, Math.round(w / 1.3));
+  const rowsN = Math.max(12, Math.round(h / 1.95));
+  const cw = w / cols;
+  const ch = h / rowsN;
+
+  const counts = new Map<number, number>();
+  for (const e of entries) {
+    if (e.lat === null || e.lng === null) continue;
+    const c = Math.floor((x(e.lng) - minX) / cw);
+    const r = Math.floor((y(e.lat) - minY) / ch);
+    if (c < 0 || r < 0 || c >= cols || r >= rowsN) continue;
+    const k = r * cols + c;
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+
+  const rows: AsciiMap["rows"] = [];
+  for (let r = 0; r < rowsN; r++) {
+    let land = "";
+    let ink = "";
+    let any = false;
+    const cy = minY + (r + 0.5) * ch;
+    for (let c = 0; c < cols; c++) {
+      const cx = minX + (c + 0.5) * cw;
+      const n = counts.get(r * cols + c) ?? 0;
+      const onLand = poly ? inside(cx, cy, poly) : n > 0;
+      land += onLand && n === 0 ? ":" : BLANK;
+      ink += densityChar(n);
+      if (onLand || n > 0) any = true;
+    }
+    if (any) rows.push({ y: +cy.toFixed(2), land, ink });
+  }
+
+  return { rows, x: minX, width: w, fontSize: +(ch * 0.95).toFixed(2) };
+}

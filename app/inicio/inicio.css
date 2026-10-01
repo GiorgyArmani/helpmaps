@@ -29,7 +29,7 @@
 }
 
 /* ── El mapa de la portada, con zoom ─────────────────────────────────────
-   Primero brota el país entero (los puntos de `orgs.css`, ~2 s). Después el dibujo crece
+   Primero se imprime el país en ASCII, fila a fila (~1,5 s). Después el dibujo crece
    ALREDEDOR del foco de la emergencia (`--fx/--fy`, en % del dibujo; `--zs`, los aumentos;
    los pone la página con `emergencyFocus`). El foco se queda quieto y el país se derrama
    hacia fuera: en escritorio llena todo el fondo de la portada; en el teléfono se queda en
@@ -83,37 +83,35 @@
   }
 }
 
-/* El retraso de cada punto llega como `--d`. Sin zoom, sólo brotan. */
-.ilp-stage .olp-dots circle {
-  animation-delay: var(--d);
+/* El mapa en ASCII. Letra monoespaciada del sistema: `textLength` estira cada fila al ancho
+   exacto, así que da igual cuál tenga cada teléfono. La tierra, tenue; los lugares, en tinta. */
+.ilp-ascii {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-weight: 700;
+  dominant-baseline: central;
+  user-select: none;
 }
 
-/* Con zoom, además se encogen a la vez que el dibujo crece: sin esto, ampliados, cada punto
-   es un borrón. `scale` es una propiedad aparte de `transform`, así que no pisa la
-   animación con la que brotan. */
-.ilp-stage-zoom .olp-dots circle {
-  animation:
-    olp-pop 520ms var(--ease) var(--d) both,
-    ilp-dot 2600ms cubic-bezier(0.65, 0, 0.35, 1) 2200ms both;
+.ilp-ascii-land {
+  fill: color-mix(in srgb, var(--ink) 20%, transparent);
 }
 
-@keyframes ilp-dot {
+.ilp-ascii-ink {
+  fill: var(--ink);
+}
+
+/* Fila a fila, de arriba abajo, como una terminal que imprime el país. */
+.ilp-ascii-row {
+  animation: ilp-type 260ms steps(3, end) both;
+  animation-delay: calc(var(--r) * 26ms);
+}
+
+@keyframes ilp-type {
   from {
-    scale: 1;
+    opacity: 0;
   }
   to {
-    scale: 0.7;
-  }
-}
-
-/* Con el zoom, la trama del país se aclara un poco: sus puntos crecen y compiten. */
-.ilp-stage-zoom .olp-land {
-  animation: ilp-grain 2600ms var(--ease) 2200ms both;
-}
-
-@keyframes ilp-grain {
-  to {
-    opacity: 0.75;
+    opacity: 1;
   }
 }
 
@@ -653,20 +651,6 @@
   background: var(--soft2);
 }
 
-.ilp-btn-light {
-  background: #fff;
-  color: var(--ink);
-}
-
-.ilp-btn-line {
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
-  color: #fff;
-}
-
-.ilp-btn-line:hover {
-  border-color: #fff;
-}
-
 /* ── Sin cuenta / con cuenta ─────────────────────────────────────────── */
 
 .ilp-cmp {
@@ -789,12 +773,117 @@
   text-align: left;
 }
 
-/* ── El cierre ───────────────────────────────────────────────────────── */
+/* ── El cierre ───────────────────────────────────────────────────────────
+   Sobre tinta (`.olp-promise`): la marca y las dos salidas arriba; el pie con las redes,
+   los enlaces clave y el © abajo. */
 
-.ilp-promise-acts {
+.ilp-end {
+  padding-top: 48px;
+}
+
+.ilp-end-in {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.ilp-end-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ilp-end-brand .olp-logo {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.ilp-end-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.ilp-end-tag {
+  margin: 4px 0 0;
+  max-width: 28em;
+  font-size: 15px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.ilp-end-acts {
   display: grid;
   gap: 8px;
-  margin-top: 28px;
+}
+
+/* Los botones del hero, en su versión sobre tinta. */
+.ilp-cta-light {
+  background: #fff;
+  color: var(--ink);
+}
+
+.ilp-cta-light svg {
+  color: var(--brand);
+}
+
+.ilp-cta-ghost {
+  border: 1.5px solid rgba(255, 255, 255, 0.32);
+  color: #fff;
+}
+
+.ilp-cta-ghost:hover {
+  border-color: #fff;
+}
+
+.ilp-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin-top: 40px;
+}
+
+.ilp-social {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.ilp-social a {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transition: background-color var(--t-ui) var(--ease);
+}
+
+.ilp-social a:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.ilp-legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 18px;
+}
+
+.ilp-copy {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ── Las pantallas propias del recorrido ─────────────────────────────── */
@@ -1248,7 +1337,8 @@
 /* ── Escritorio ──────────────────────────────────────────────────────── */
 
 @media (min-width: 640px) {
-  .ilp-ctas {
+  .ilp-ctas,
+  .ilp-end-acts {
     display: flex;
     flex-wrap: wrap;
   }
@@ -1257,14 +1347,12 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .ilp-promise-acts,
   .ilp-org-acts {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
   }
 
-  .ilp-promise-acts .ilp-btn,
   .ilp-org-acts .ilp-btn {
     width: auto;
   }
@@ -1377,6 +1465,17 @@
     font-size: 15px;
   }
 
+  /* La marca a la izquierda, los botones a la derecha; el © se va al final de la fila. */
+  .ilp-end-in {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .ilp-copy {
+    margin-left: auto;
+  }
+
   .ilp-cmp {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
@@ -1435,14 +1534,8 @@
     opacity: 1;
   }
 
-  .ilp-stage-zoom .olp-land {
+  .ilp-ascii-row {
     animation: none;
-    opacity: 0.75;
-  }
-
-  .ilp-stage-zoom .olp-dots circle {
-    animation: none;
-    scale: 0.7;
   }
 
   .ilp-focus {
