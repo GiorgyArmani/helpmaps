@@ -497,6 +497,179 @@
   background: var(--brand);
 }
 
+/* Modo manual (`/inicio`): altura normal, sin capa fija. Lo maneja la persona: una lista
+   de pasos que se despliegan y, bajo el teléfono, anterior y siguiente. */
+.olp-tour-manual {
+  height: auto;
+}
+
+.olp-tour-manual .olp-tour-pin {
+  position: static;
+  height: auto;
+  padding-block: 0;
+}
+
+.olp-tour-manual .olp-feat-shot {
+  flex: none;
+  height: 500px;
+}
+
+.olp-stepper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.olp-stepper-item {
+  border-radius: var(--r-lg);
+  transition:
+    background-color var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
+}
+
+/* El paso abierto es una tarjeta; los demás, filas sobre el fondo. */
+.olp-stepper-item[data-on] {
+  background: #fff;
+  box-shadow: var(--e-1);
+}
+
+.olp-stepper-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: none;
+  color: var(--mut-track);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--t-ui) var(--ease);
+}
+
+.olp-stepper-item:not([data-on]) .olp-stepper-btn:hover {
+  background: var(--soft2);
+  color: var(--ink);
+}
+
+.olp-stepper-item[data-on] .olp-stepper-btn {
+  color: var(--ink);
+  cursor: default;
+}
+
+.olp-stepper-ic {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--mut-track);
+  box-shadow: var(--e-1);
+  transition:
+    background-color var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease);
+}
+
+.olp-stepper-item[data-on] .olp-stepper-ic {
+  background: var(--brand);
+  color: #fff;
+}
+
+.olp-stepper-t {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/* Se despliega con filas de rejilla (0fr → 1fr): anima la altura real sin medirla. */
+.olp-stepper-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--t-ui) var(--ease);
+}
+
+.olp-stepper-item[data-on] .olp-stepper-body {
+  grid-template-rows: 1fr;
+}
+
+.olp-stepper-d {
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0 16px 0 68px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--mut-track);
+  text-wrap: pretty;
+}
+
+.olp-stepper-item[data-on] .olp-stepper-d {
+  padding-bottom: 16px;
+}
+
+/* Anterior y siguiente: sobre el borde de abajo del panel del teléfono. */
+.olp-tour-manual .olp-feat-shot {
+  position: relative;
+}
+
+.olp-tour-nav {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--e-3);
+  transform: translateX(-50%);
+}
+
+.olp-tour-arrow {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    transform var(--t-tap) var(--ease),
+    opacity var(--t-ui) var(--ease);
+}
+
+.olp-tour-arrow:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.olp-tour-arrow:disabled {
+  background: var(--soft);
+  color: var(--mut-track);
+  cursor: default;
+}
+
+.olp-tour-count {
+  min-width: 3.2em;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Los cuatro textos en la MISMA celda: el hueco lo reserva el más largo y nada salta. */
 .olp-tour-texts {
   display: grid;
@@ -1395,6 +1568,15 @@
     flex: none;
     height: min(560px, 80svh);
     padding-top: 48px;
+  }
+
+  .olp-tour-manual .olp-feat-shot {
+    height: 600px;
+  }
+
+  /* La lista es más baja que el teléfono: centrada, no colgando arriba con un hueco. */
+  .olp-tour-manual .olp-tour-pin {
+    align-items: center;
   }
 
   .olp-phone {

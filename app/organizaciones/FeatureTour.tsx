@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/ui/icons";
 
 export interface TourStep {
   key: string;
@@ -12,37 +13,44 @@ export interface TourStep {
 }
 
 /**
- * Las funciones del perfil como un recorrido: la sección se queda fija mientras se hace
- * scroll, y cada tramo cambia a la vez el texto y la pantalla del teléfono.
+ * Las funciones como un recorrido: un solo teléfono que va cambiando de pantalla, con el
+ * texto de cada paso al lado.
  *
  * ── POR QUÉ ASÍ ─────────────────────────────────────────────────────────────
  *
  * Cuatro teléfonos apilados se leían como una galería de capturas. Uno solo que va
  * cambiando de pestaña se lee como la app EN USO: se ve moverse la pestaña, el toque sobre
- * ella y la pantalla que entra, que es justo lo que queremos que una coordinadora imagine
- * haciendo con su organización.
+ * ella y la pantalla que entra.
  *
- * ── CÓMO ────────────────────────────────────────────────────────────────────
+ * ── DOS MODOS ───────────────────────────────────────────────────────────────
  *
- * El contenedor mide un tramo de pantalla por paso y dentro va una capa `sticky`. El paso
- * activo sale de cuánto se ha recorrido el contenedor, leído en un `requestAnimationFrame`
- * y guardado sólo cuando cambia: un render por paso, no uno por píxel. Las transiciones son
- * de `transform` y `opacity`, que el navegador anima sin recalcular la página.
+ * Por scroll (`/organizaciones`): el contenedor mide un tramo de pantalla por paso y dentro
+ * va una capa `sticky`; el paso sale de cuánto se ha recorrido, leído en un
+ * `requestAnimationFrame` y guardado sólo cuando cambia.
  *
- * Los cuatro textos y las cuatro pantallas están siempre en el marcado, apilados en la misma
- * celda de una rejilla: el hueco lo reserva el más alto y nada salta al cambiar. Un lector de
- * pantalla los lee todos, en orden; el teléfono es `aria-hidden` porque sólo ilustra.
+ * Manual (`manual`, en `/inicio`): lo maneja la persona. Los pasos son una lista; tocar uno
+ * lo despliega con su texto y cambia la pantalla. Bajo el teléfono, anterior y siguiente,
+ * para no tener que subir a la lista en el móvil. Se probó antes que avanzara solo y el
+ * usuario lo descartó el 2026-09-30: quien lee decide cuándo pasar.
  *
- * Con `prefers-reduced-motion` las transiciones las anula la regla global: el paso cambia
- * igual, sin movimiento.
+ * Las pantallas están siempre en el marcado, apiladas en la misma celda de una rejilla: el
+ * hueco lo reserva la más alta y nada salta al cambiar. El teléfono es `aria-hidden` porque
+ * sólo ilustra; lo que enseña lo dice el texto del paso.
  */
-export default function FeatureTour({ steps }: { steps: TourStep[] }) {
+export default function FeatureTour({
+  steps,
+  manual,
+}: {
+  steps: TourStep[];
+  /** Con él, el recorrido lo maneja la persona y no el scroll; trae los rótulos de las flechas. */
+  manual?: { prev: string; next: string };
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || manual) return;
     let frame = 0;
     let last = -1;
 
@@ -69,9 +77,82 @@ export default function FeatureTour({ steps }: { steps: TourStep[] }) {
       window.removeEventListener("resize", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [steps.length]);
+  }, [steps.length, manual]);
 
   const pos = (i: number) => (i === active ? "on" : i < active ? "past" : "next");
+
+  const phone = (
+    <div className="olp-phone" aria-hidden="true" inert>
+      <div className="olp-phone-scr">
+        {steps.map((s, i) => (
+          <div key={s.key} className="olp-scr" data-pos={pos(i)}>
+            {s.screen}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (manual) {
+    return (
+      <div ref={ref} className="olp-tour olp-tour-manual">
+        <div className="olp-tour-pin">
+          <ol className="olp-stepper">
+            {steps.map((s, i) => {
+              const on = i === active;
+              return (
+                <li key={s.key} className="olp-stepper-item" data-on={on ? "" : undefined}>
+                  <button
+                    type="button"
+                    className="olp-stepper-btn"
+                    aria-expanded={on}
+                    aria-controls={`olp-step-${s.key}`}
+                    onClick={() => setActive(i)}
+                  >
+                    <span className="olp-stepper-ic" aria-hidden="true">
+                      {s.icon}
+                    </span>
+                    <span className="olp-stepper-t">{s.title}</span>
+                  </button>
+                  {/* Siempre en el marcado: se despliega con `grid-template-rows`, sin medir. */}
+                  <div id={`olp-step-${s.key}`} className="olp-stepper-body">
+                    <p className="olp-stepper-d">{s.desc}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          <div className="olp-feat-shot">
+            {phone}
+            <div className="olp-tour-nav">
+              <button
+                type="button"
+                className="olp-tour-arrow"
+                aria-label={manual.prev}
+                disabled={active === 0}
+                onClick={() => setActive((a) => Math.max(0, a - 1))}
+              >
+                <Icon.back width={20} height={20} />
+              </button>
+              <span className="olp-tour-count" aria-hidden="true">
+                {active + 1} / {steps.length}
+              </span>
+              <button
+                type="button"
+                className="olp-tour-arrow"
+                aria-label={manual.next}
+                disabled={active === steps.length - 1}
+                onClick={() => setActive((a) => Math.min(steps.length - 1, a + 1))}
+              >
+                <Icon.chevron width={20} height={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className="olp-tour" style={{ ["--steps" as string]: steps.length }}>
@@ -95,17 +176,7 @@ export default function FeatureTour({ steps }: { steps: TourStep[] }) {
           </div>
         </div>
 
-        <div className="olp-feat-shot">
-          <div className="olp-phone" aria-hidden="true" inert>
-            <div className="olp-phone-scr">
-              {steps.map((s, i) => (
-                <div key={s.key} className="olp-scr" data-pos={pos(i)}>
-                  {s.screen}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <div className="olp-feat-shot">{phone}</div>
       </div>
     </div>
   );

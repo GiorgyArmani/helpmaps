@@ -47,7 +47,7 @@ export default async function NewsSection() {
           ? "Resumen generado automáticamente a partir de "
           : "Titulares recogidos de "}
         {latest.sources.filter((s) => !s.error).map((s) => s.name).join(", ")}.
-        {latest.model ? " Puede contener errores: seguí el enlace al medio antes de darlo por cierto." : null}
+        {latest.model ? " Puede contener errores: sigue el enlace al medio antes de darlo por cierto." : null}
       </p>
 
       {/* Un medio caído se dice. Si no, un boletín corto se lee como "no pasó nada" cuando

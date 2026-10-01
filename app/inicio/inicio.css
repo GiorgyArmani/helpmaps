@@ -1,0 +1,1496 @@
+/*
+ * /inicio — la portada para personas.
+ *
+ * Se apoya en `orgs.css` (`.olp-*` y `.mk-*`): barra, portada con el mapa de puntos,
+ * recorrido, tarjeta y cierre en tinta son las mismas piezas que /organizaciones. Aquí va
+ * sólo lo propio: las dos puertas, las cifras, la comparación sin cuenta / con cuenta,
+ * los botones y las pantallas del recorrido que allí no existen.
+ *
+ * Todo sale de los tokens de marca. Un solo canalón, el de `.olp-*`. Movimiento con
+ * `--t-tap` / `--t-ui` y anulado entero con `prefers-reduced-motion`.
+ */
+
+/* ── Barra ───────────────────────────────────────────────────────────── */
+
+.ilp-login {
+  gap: 6px;
+  padding-inline: 14px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--e-1);
+  color: var(--ink);
+}
+
+/* ── Titular ─────────────────────────────────────────────────────────────
+   Una pregunta por renglón: se leen como dos puertas, igual que las de abajo. */
+
+.ilp-h1 > span {
+  display: block;
+}
+
+/* ── El mapa de la portada, con zoom ─────────────────────────────────────
+   Primero brota el país entero (los puntos de `orgs.css`, ~2 s). Después el dibujo crece
+   ALREDEDOR del foco de la emergencia (`--fx/--fy`, en % del dibujo; `--zs`, los aumentos;
+   los pone la página con `emergencyFocus`). El foco se queda quieto y el país se derrama
+   hacia fuera: en escritorio llena todo el fondo de la portada; en el teléfono se queda en
+   su cuadro, porque derramarlo pondría puntos bajo el titular. Un solo `transform` sobre el
+   SVG: el navegador lo anima sin recalcular nada. */
+
+/* La franja: de borde a borde. Recorta lo que el zoom derrama (sin scroll lateral) y lleva
+   encima los velos que dejan leer el texto. */
+.ilp-band {
+  position: relative;
+  overflow: clip;
+}
+
+/* Más grande que en /organizaciones: en el teléfono va a sangre, de borde a borde. */
+.ilp-map {
+  margin: 12px calc(-1 * var(--olp-gut)) 0;
+}
+
+.ilp-stage {
+  position: relative;
+  overflow: hidden;
+  /* En el teléfono, los bordes se funden: el país sale del cuadro sin un corte recto. */
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 7%, #000 93%, transparent),
+    linear-gradient(to bottom, transparent, #000 7%, #000 88%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 7%, #000 93%, transparent),
+    linear-gradient(to bottom, transparent, #000 7%, #000 88%, transparent);
+  mask-composite: intersect;
+}
+
+.ilp-stage > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-origin: var(--fx, 50%) var(--fy, 50%);
+}
+
+.ilp-stage-zoom > svg {
+  animation: ilp-zoom 2600ms cubic-bezier(0.65, 0, 0.35, 1) 2200ms both;
+}
+
+@keyframes ilp-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(var(--zs));
+  }
+}
+
+/* El retraso de cada punto llega como `--d`. Sin zoom, sólo brotan. */
+.ilp-stage .olp-dots circle {
+  animation-delay: var(--d);
+}
+
+/* Con zoom, además se encogen a la vez que el dibujo crece: sin esto, ampliados, cada punto
+   es un borrón. `scale` es una propiedad aparte de `transform`, así que no pisa la
+   animación con la que brotan. */
+.ilp-stage-zoom .olp-dots circle {
+  animation:
+    olp-pop 520ms var(--ease) var(--d) both,
+    ilp-dot 2600ms cubic-bezier(0.65, 0, 0.35, 1) 2200ms both;
+}
+
+@keyframes ilp-dot {
+  from {
+    scale: 1;
+  }
+  to {
+    scale: 0.7;
+  }
+}
+
+/* Con el zoom, la trama del país se aclara un poco: sus puntos crecen y compiten. */
+.ilp-stage-zoom .olp-land {
+  animation: ilp-grain 2600ms var(--ease) 2200ms both;
+}
+
+@keyframes ilp-grain {
+  to {
+    opacity: 0.75;
+  }
+}
+
+/* El foco: en su sitio del dibujo, que es el punto alrededor del cual crece el zoom. */
+.ilp-focus {
+  position: absolute;
+  left: var(--fx);
+  top: var(--fy);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  /* El anillo (16px) centrado en el foco; la etiqueta, debajo. */
+  margin-top: -8px;
+  color: var(--ink);
+  text-decoration: none;
+  opacity: 0;
+  transform: translateX(-50%);
+  animation: ilp-focus 500ms var(--ease) 4700ms both;
+}
+
+@keyframes ilp-focus {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+
+.ilp-focus-ring {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: var(--e-2);
+}
+
+.ilp-focus-ring::before,
+.ilp-focus-ring::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--danger);
+  animation: ilp-ring 2s ease-out infinite;
+}
+
+.ilp-focus-ring::after {
+  animation-delay: 1s;
+}
+
+@keyframes ilp-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(4.2);
+    opacity: 0;
+  }
+}
+
+.ilp-focus-tag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  max-width: min(300px, calc(100vw - 48px));
+  padding: 7px 10px 7px 12px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--e-3);
+  transition: transform var(--t-tap) var(--ease);
+}
+
+.ilp-focus:active .ilp-focus-tag {
+  transform: scale(0.97);
+}
+
+/* `.olp-map svg` (orgs.css) pone todo SVG del mapa a lo ancho: el chevrón vuelve a su talla. */
+.ilp-focus-tag > svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--mut-track);
+}
+
+.ilp-focus-live {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.ilp-focus-txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.ilp-focus-txt b {
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ilp-focus-txt span {
+  font-size: 12.5px;
+  color: var(--mut-track);
+}
+
+/* La leyenda: una pastilla con la cifra en grande. En el teléfono, abajo a la izquierda
+   (justo por encima de donde monta la tarjeta de las puertas): arriba está el foco. */
+.ilp-cap {
+  position: absolute;
+  bottom: 48px;
+  left: var(--olp-gut);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 2 * var(--olp-gut));
+  padding: 8px 16px 8px 14px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--e-2);
+}
+
+.ilp-cap-live {
+  position: relative;
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+/* «En vivo»: el registro se actualiza cada día, y esto lo dice sin palabras. */
+.ilp-cap-live::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: ilp-live 2s ease-out infinite;
+}
+
+@keyframes ilp-live {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+.ilp-cap-n {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ilp-cap-l {
+  max-width: 12.5em;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--mut-track);
+  text-wrap: balance;
+}
+
+.ilp-focus:focus-visible .ilp-focus-tag {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+/* ── El puente ───────────────────────────────────────────────────────────
+   Organizaciones arriba, el mapa en medio y los dos lados abajo, unidos por líneas por las
+   que baja un punto: lo que publica una organización llega a las personas. */
+
+.ilp-bridge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 28px;
+}
+
+.ilp-node {
+  width: 100%;
+  padding: 18px;
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--e-1);
+}
+
+.ilp-node-org {
+  box-shadow: var(--e-2);
+}
+
+.ilp-node-ic {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--brand) 12%, #fff);
+  color: var(--brand);
+}
+
+.ilp-node-ic-need {
+  background: var(--accent);
+  color: #fff;
+}
+
+.ilp-node-ic-give {
+  background: color-mix(in srgb, var(--ok) 14%, #fff);
+  color: var(--ok);
+}
+
+.ilp-node-t {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.ilp-node-d {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+/* Las líneas: un trazo tenue de fondo y, encima, uno discontinuo que corre hacia las
+   personas. `non-scaling-stroke` mantiene 2px aunque el SVG se estire a lo ancho. */
+.ilp-link {
+  display: block;
+  width: 4px;
+  height: 36px;
+  overflow: visible;
+}
+
+.ilp-wire-track,
+.ilp-wire {
+  fill: none;
+  stroke-width: 2px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.ilp-wire-track {
+  stroke: color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.ilp-wire {
+  stroke: var(--brand);
+  stroke-dasharray: 6 10;
+  animation: ilp-dash 1.2s linear infinite;
+}
+
+@keyframes ilp-dash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+/* El cruce: la pastilla del mapa encima, las dos «L» por debajo saliendo de su centro. */
+.ilp-junction {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  height: 76px;
+}
+
+.ilp-fork {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ilp-hub {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 16px 6px 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: var(--e-2);
+}
+
+.ilp-hub-logo {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+}
+
+.ilp-hub-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ilp-people {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.ilp-people .ilp-node {
+  padding: 16px 14px;
+}
+
+/* ── Las dos puertas ─────────────────────────────────────────────────────
+   Dos botones en píldora, sin caja alrededor: `.olp-find` sólo da el sitio en la rejilla
+   (y en el teléfono, montarse sobre el borde del mapa). «Crear una cuenta» relleno en
+   tinta, la acción principal; «Entrar sin cuenta» blanco con borde. */
+
+.ilp-doors {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.ilp-ctas {
+  display: grid;
+  gap: 8px;
+}
+
+.ilp-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    transform var(--t-tap) var(--ease),
+    box-shadow var(--t-ui) var(--ease),
+    background-color var(--t-ui) var(--ease),
+    border-color var(--t-ui) var(--ease);
+}
+
+.ilp-cta:hover {
+  transform: translateY(-1px);
+}
+
+.ilp-cta:active {
+  transform: scale(0.98);
+}
+
+.ilp-cta-main {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--e-2);
+}
+
+.ilp-cta-main:hover {
+  box-shadow: var(--e-3);
+}
+
+.ilp-cta-alt {
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-1);
+}
+
+.ilp-cta-alt svg:first-child {
+  color: var(--brand);
+}
+
+.ilp-cta-alt:hover {
+  border-color: var(--ink);
+}
+
+.ilp-cta-go {
+  margin-left: -2px;
+  opacity: 0.7;
+  transition: transform var(--t-ui) var(--ease);
+}
+
+.ilp-cta:hover .ilp-cta-go {
+  transform: translateX(3px);
+}
+
+/* La bajada, bajo los botones: el aire lo pone el `gap` de `.ilp-doors`. */
+.ilp-lead {
+  margin: 8px 0 0;
+}
+
+/* ── Las cifras ──────────────────────────────────────────────────────── */
+
+.ilp-kicker {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--mut-track);
+}
+
+.ilp-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ilp-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border-radius: var(--r-md);
+  background: #fff;
+  box-shadow: var(--e-1);
+}
+
+.ilp-stat-n {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 8vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ilp-stat-l {
+  font-size: 14px;
+  color: var(--mut-track);
+}
+
+.ilp-stats-note {
+  margin: 14px 0 0;
+  max-width: 34em;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+/* ── Botones de la página ────────────────────────────────────────────── */
+
+.ilp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px;
+  padding: 0 22px;
+  border-radius: var(--r-md);
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    transform var(--t-tap) var(--ease),
+    box-shadow var(--t-ui) var(--ease),
+    background-color var(--t-ui) var(--ease);
+}
+
+.ilp-btn:active {
+  transform: scale(0.98);
+}
+
+.ilp-btn-brand {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: var(--e-2);
+}
+
+.ilp-btn-brand:hover {
+  box-shadow: var(--e-3);
+}
+
+.ilp-btn-go {
+  transition: transform var(--t-ui) var(--ease);
+}
+
+.ilp-btn:hover .ilp-btn-go {
+  transform: translateX(3px);
+}
+
+.ilp-btn-ghost {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.ilp-btn-ghost:hover {
+  background: var(--soft2);
+}
+
+.ilp-btn-light {
+  background: #fff;
+  color: var(--ink);
+}
+
+.ilp-btn-line {
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+.ilp-btn-line:hover {
+  border-color: #fff;
+}
+
+/* ── Sin cuenta / con cuenta ─────────────────────────────────────────── */
+
+.ilp-cmp {
+  display: grid;
+  gap: 14px;
+}
+
+.ilp-plan {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px;
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--e-1);
+}
+
+/* La de la cuenta: la única en tinta, con un halo del color de marca arriba. */
+.ilp-plan-acc {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: var(--e-3);
+}
+
+.ilp-plan-acc::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  right: -80px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--brand) 55%, transparent), transparent);
+  pointer-events: none;
+}
+
+.ilp-plan > * {
+  position: relative;
+}
+
+.ilp-plan-t {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ilp-plan-lead {
+  margin: 4px 0 18px;
+  font-size: 15px;
+  color: var(--mut-track);
+}
+
+.ilp-plan-acc .ilp-plan-lead {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.ilp-list {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+}
+
+.ilp-list li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  font-size: 15.5px;
+  line-height: 1.45;
+}
+
+.ilp-list svg {
+  margin-top: 2px;
+  color: var(--ok);
+}
+
+.ilp-plan-acc .ilp-list svg {
+  color: color-mix(in srgb, var(--brand) 55%, #fff);
+}
+
+.ilp-plan-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+/* ── El boletín ──────────────────────────────────────────────────────── */
+
+/* Sin boletín `NewsSection` no pinta nada, y la banda no deja su hueco. */
+.ilp-news:not(:has(section)) {
+  display: none;
+}
+
+/* ── Iniciativas y ONG ───────────────────────────────────────────────── */
+
+.ilp-org-h {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 5.4vw, 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.ilp-org-p {
+  margin: 0 0 20px;
+  max-width: 34em;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--mut-track);
+}
+
+.ilp-org-acts {
+  display: grid;
+  gap: 8px;
+}
+
+.ilp-org-note {
+  text-align: left;
+}
+
+/* ── El cierre ───────────────────────────────────────────────────────── */
+
+.ilp-promise-acts {
+  display: grid;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+/* ── Las pantallas propias del recorrido ─────────────────────────────── */
+
+/* Cerca de ti: un trozo de mapa con la persona en el centro. */
+.mk-map {
+  position: relative;
+  height: 150px;
+  background:
+    linear-gradient(90deg, transparent 47%, #fff 47%, #fff 53%, transparent 53%) 0 0 / 70px 100%,
+    linear-gradient(0deg, transparent 46%, #fff 46%, #fff 54%, transparent 54%) 0 0 / 100% 60px,
+    color-mix(in srgb, var(--ok) 9%, var(--soft));
+}
+
+.mk-pin {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--tc);
+  box-shadow: var(--e-1);
+}
+
+.mk-me {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--e-2);
+}
+
+/* El pulso de «estás aquí». Sólo en la pantalla activa del recorrido. */
+.olp-scr[data-pos="on"] .mk-me::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  animation: mk-me 1.8s var(--ease) infinite;
+}
+
+@keyframes mk-me {
+  0% {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.mk-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  margin-bottom: 10px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--soft);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--mut-track);
+}
+
+.mk-seg > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 0;
+  border-radius: 8px;
+}
+
+.mk-seg-on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-1);
+}
+
+.mk-seg svg {
+  width: 12px;
+  height: 12px;
+}
+
+.mk-h {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mut-track);
+}
+
+.mk-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.mk-row + .mk-row {
+  border-top: 1px solid var(--line);
+}
+
+.mk-row-ic {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--tc) 14%, #fff);
+  color: var(--tc);
+}
+
+.mk-row-txt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mk-row-txt b {
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mk-row-txt span {
+  font-size: 9.5px;
+  color: var(--mut);
+}
+
+.mk-row-st {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--mut);
+}
+
+.mk-row-open {
+  color: var(--ok);
+}
+
+/* Qué necesita un punto. */
+.mk-need {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--warn) 12%, #fff);
+}
+
+.mk-need-h {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.mk-need-h svg {
+  width: 13px;
+  height: 13px;
+  color: var(--warn);
+}
+
+.mk-chips-need span {
+  background: #fff;
+  color: var(--ink);
+  font-size: 10px;
+  padding: 3px 8px;
+}
+
+.mk-sub {
+  margin: 12px 0 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--mut-track);
+}
+
+.mk-chips-soft span {
+  background: var(--soft);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.mk-upd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 10px 0 0;
+  font-size: 9.5px;
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.mk-upd svg {
+  width: 11px;
+  height: 11px;
+}
+
+.mk-acts.mk-acts-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Anotarse: el botón cambia a «Anotado» poco después de entrar la pantalla, como si
+   alguien lo acabara de tocar. Las dos caras en la misma celda: nada se mueve. */
+.mk-join-flip {
+  display: inline-grid;
+}
+
+.mk-join-flip > span {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mk-join-b {
+  opacity: 0;
+}
+
+.olp-scr[data-pos="on"] .mk-join-flip {
+  animation: mk-joined 360ms var(--ease) 900ms both;
+}
+
+.olp-scr[data-pos="on"] .mk-join-a {
+  animation: mk-out 200ms var(--ease) 900ms both;
+}
+
+.olp-scr[data-pos="on"] .mk-join-b {
+  animation: mk-in 240ms var(--ease) 1000ms both;
+}
+
+@keyframes mk-joined {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+    background: var(--ok);
+  }
+}
+
+@keyframes mk-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Tu nivel. */
+.mk-lvl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 44px 16px 16px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--brand) 20%, #fff), var(--soft));
+  text-align: center;
+}
+
+.mk-lvl-badge {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 18%, #fff), var(--e-2);
+}
+
+.mk-lvl-badge svg {
+  width: 22px;
+  height: 22px;
+}
+
+.mk-lvl small {
+  font-size: 10px;
+  color: var(--mut-track);
+}
+
+.mk-lvl-n {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.mk-bar.mk-bar-lvl {
+  width: 100%;
+  margin-top: 8px;
+  background: #fff;
+}
+
+/* La barra se llena al entrar la pantalla. `transform` y no `width`: no recalcula nada. */
+.mk-bar-lvl span {
+  width: 60%;
+  transform-origin: left;
+  transform: scaleX(0.35);
+  transition: transform 900ms var(--ease) 300ms;
+}
+
+.olp-scr[data-pos="on"] .mk-bar-lvl span {
+  transform: scaleX(1);
+}
+
+.mk-lvl-meta {
+  margin-top: 5px;
+  font-size: 9.5px;
+  color: var(--mut-track);
+}
+
+.mk-toast {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 10.5px;
+  box-shadow: var(--e-2);
+}
+
+.mk-toast svg {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  color: color-mix(in srgb, var(--ok) 60%, #fff);
+}
+
+.olp-scr[data-pos="on"] .mk-toast {
+  animation: mk-toast 420ms var(--ease) 500ms both;
+}
+
+@keyframes mk-toast {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mk-badges {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.mk-badges > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.mk-badges i {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--brand) 12%, #fff);
+  color: var(--brand);
+}
+
+.mk-badges svg {
+  width: 12px;
+  height: 12px;
+}
+
+.mk-badges .mk-badge-off {
+  color: var(--mut);
+  border-style: dashed;
+}
+
+.mk-badge-off i {
+  background: var(--soft);
+  color: var(--mut);
+}
+
+/* ── Entrada al hacer scroll ─────────────────────────────────────────────
+   Sin JavaScript: `animation-timeline: view()` donde el navegador lo sabe hacer (Chrome y
+   Android, que es casi todo el público); en el resto el bloque simplemente está. */
+
+@supports (animation-timeline: view()) {
+  .ilp-reveal {
+    animation: ilp-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 60%;
+  }
+
+  .ilp-stat {
+    animation: ilp-rise linear both;
+    animation-timeline: view();
+    animation-range: entry calc(var(--i) * 6%) entry calc(50% + var(--i) * 6%);
+  }
+}
+
+@keyframes ilp-veil {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ilp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Foco visible ────────────────────────────────────────────────────── */
+
+.ilp-plan-acc a:focus-visible,
+.ilp-cta:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+/* ── Escritorio ──────────────────────────────────────────────────────── */
+
+@media (min-width: 640px) {
+  .ilp-ctas {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .ilp-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .ilp-promise-acts,
+  .ilp-org-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .ilp-promise-acts .ilp-btn,
+  .ilp-org-acts .ilp-btn {
+    width: auto;
+  }
+}
+
+@media (min-width: 960px) {
+  .ilp .olp-hero {
+    /* La fila del titular se ajusta a él; la de los botones se lleva el resto. Si no, el mapa
+       (que ocupa las dos) estira la primera y deja un hueco entre la pregunta y la acción. */
+    grid-template-rows: auto 1fr;
+    /* Mitad y mitad: los dos botones caben en fila, y el mapa igual acaba llenando el fondo. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 40px;
+  }
+
+  .ilp-map {
+    margin: 0 calc(-1 * var(--olp-gut)) 0 0;
+  }
+
+  .ilp-band {
+    padding-bottom: 24px;
+  }
+
+  /* Sin recorte ni máscara: el zoom sale del cuadro y llena el fondo de la franja. */
+  .ilp-stage {
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  /* El texto y las puertas, por encima del mapa. */
+  .ilp .olp-copy,
+  .ilp-doors {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Sin contexto de apilado propio: el dibujo queda bajo los velos (z 1), pero el rótulo
+     del foco (z 2) y la leyenda (z 3) suben por encima de ellos y no se apagan. Por eso no
+     es `sticky` como en /organizaciones: `sticky` SIEMPRE crea un contexto de apilado y
+     dejaba la leyenda debajo del velo. Aquí no hace falta, no hay lista de resultados. */
+  .ilp .olp-map {
+    position: relative;
+    top: auto;
+    z-index: auto;
+  }
+
+  /* Los velos: el fondo de la página sobre la columna del texto, y abajo un fundido hacia
+     la sección siguiente. Aparecen con el zoom, que es cuando el mapa llega hasta ahí. */
+  .ilp-band-zoom::before,
+  .ilp-band-zoom::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    animation: ilp-veil 1600ms var(--ease) 2600ms both;
+  }
+
+  .ilp-band-zoom::before {
+    inset: 0;
+    background: linear-gradient(
+      to right,
+      var(--soft) 0,
+      var(--soft) calc(50% - 120px),
+      color-mix(in srgb, var(--soft) 0%, transparent) calc(50% + 40px)
+    );
+  }
+
+  /* Arriba y abajo, fundido: el mapa no termina en una línea recta contra la barra ni
+     contra las cifras. */
+  .ilp-band-zoom::after {
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      var(--soft) 0,
+      color-mix(in srgb, var(--soft) 0%, transparent) 72px,
+      color-mix(in srgb, var(--soft) 0%, transparent) calc(100% - 120px),
+      var(--soft) 100%
+    );
+  }
+
+  /* Una pregunta por renglón también aquí, en la columna estrecha. */
+  .ilp-h1 {
+    font-size: clamp(2.3rem, 3.1vw, 2.9rem);
+  }
+
+  /* En escritorio, abajo a la derecha: con el zoom el foco queda arriba, y aquí no lo tapa. */
+  .ilp-cap {
+    top: auto;
+    bottom: 0;
+    right: var(--olp-gut);
+    left: auto;
+    z-index: 3;
+    padding: 12px 20px 12px 16px;
+  }
+
+  .ilp-cap-n {
+    font-size: 1.75rem;
+  }
+
+  .ilp-cap-l {
+    max-width: 13em;
+    font-size: 15px;
+  }
+
+  .ilp-cmp {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .ilp-plan {
+    padding: 36px 32px;
+  }
+
+  .ilp-bridge {
+    max-width: 760px;
+    margin-inline: auto;
+  }
+
+  .ilp-node-org {
+    max-width: 480px;
+    text-align: center;
+  }
+
+  .ilp-node-org .ilp-node-ic {
+    margin-inline: auto;
+  }
+
+  .ilp-people {
+    gap: 20px;
+  }
+
+  .ilp-people .ilp-node {
+    padding: 24px;
+  }
+
+  .ilp-org-h {
+    max-width: 18em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ilp-reveal,
+  .ilp-stat {
+    animation: none;
+  }
+
+  .ilp-wire {
+    animation: none;
+  }
+
+  /* Sin movimiento, el mapa abre ya acercado y rotulado: la información es la misma. */
+  .ilp-stage-zoom > svg {
+    animation: none;
+    transform: scale(var(--zs));
+  }
+
+  .ilp-band-zoom::before,
+  .ilp-band-zoom::after {
+    animation: none;
+    opacity: 1;
+  }
+
+  .ilp-stage-zoom .olp-land {
+    animation: none;
+    opacity: 0.75;
+  }
+
+  .ilp-stage-zoom .olp-dots circle {
+    animation: none;
+    scale: 0.7;
+  }
+
+  .ilp-focus {
+    animation: none;
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+
+  .ilp-focus-ring::before,
+  .ilp-focus-ring::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  .ilp-cap-live::after {
+    display: none;
+  }
+
+  .ilp-cta,
+  .ilp-cta-go,
+  .ilp-btn,
+  .ilp-btn-go {
+    transition: none;
+  }
+
+  .ilp-cta:hover,
+  .ilp-cta:active,
+  .ilp-btn:active,
+  .ilp-cta:hover .ilp-cta-go,
+  .ilp-btn:hover .ilp-btn-go {
+    transform: none;
+  }
+
+  .olp-scr[data-pos="on"] .mk-me::after,
+  .olp-scr[data-pos="on"] .mk-toast,
+  .olp-scr[data-pos="on"] .mk-join-flip,
+  .olp-scr[data-pos="on"] .mk-join-a,
+  .olp-scr[data-pos="on"] .mk-join-b {
+    animation: none;
+  }
+
+  /* Sin movimiento, la pantalla enseña directamente el estado final. */
+  .olp-scr[data-pos="on"] .mk-join-a {
+    opacity: 0;
+  }
+
+  .olp-scr[data-pos="on"] .mk-join-b {
+    opacity: 1;
+  }
+
+  .mk-bar-lvl span {
+    transition: none;
+    transform: none;
+  }
+}

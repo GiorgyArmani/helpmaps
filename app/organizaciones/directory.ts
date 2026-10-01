@@ -25,6 +25,8 @@ export interface DirectoryEntry {
   /** Null en una iniciativa digital: no tiene puerta, así que no va en el dibujo. */
   lat: number | null;
   lng: number | null;
+  /** La emergencia a la que pertenece el punto, o null si es de siempre. */
+  emergencyId: string | null;
 }
 
 /** PostgREST devuelve `numeric` como texto: se aceptan las dos formas. */
@@ -39,7 +41,7 @@ async function queryDirectory(emergencyId: string | null): Promise<DirectoryEntr
   try {
     let q = sb
       .from("locations")
-      .select("id,name,type,municipality,region,lat,lng")
+      .select("id,name,type,municipality,region,lat,lng,emergency_id")
       .eq("active", true);
     // El mismo recorte que el mapa: los puntos de esta emergencia y los que no tienen.
     if (emergencyId) q = q.or(`emergency_id.eq.${emergencyId},emergency_id.is.null`);
@@ -55,13 +57,14 @@ async function queryDirectory(emergencyId: string | null): Promise<DirectoryEntr
         region: typeof r.region === "string" ? r.region : null,
         lat: coord(r.lat),
         lng: coord(r.lng),
+        emergencyId: typeof r.emergency_id === "string" ? r.emergency_id : null,
       }));
   } catch {
     return [];
   }
 }
 
-export const fetchDirectory = unstable_cache(queryDirectory, ["org-directory-v2", COUNTRY.slug], {
+export const fetchDirectory = unstable_cache(queryDirectory, ["org-directory-v3", COUNTRY.slug], {
   revalidate: 1800,
 });
 
@@ -276,4 +279,73 @@ export function dotMap(
       .filter((e) => hitIds.has(e.id))
       .map((e) => ({ x: +x(e.lng).toFixed(2), y: +y(e.lat).toFixed(2) })),
   };
+}
+
+/**
+ * Dónde está pasando la emergencia, en las coordenadas del dibujo de `dotMap`. La portada
+ * de `/inicio` hace zoom hasta ahí.
+ *
+ * ── DE LOS DATOS, NUNCA DE UN NOMBRE ESCRITO ────────────────────────────────
+ *
+ * Nada aquí sabe que en 2026 fue La Guaira. En orden:
+ *
+ *   1. Las zonas afectadas que dibujó quien opera la emergencia: su centro.
+ *   2. Si no hay zonas, la zona más tupida de los puntos DE esa emergencia (unos 30 km
+ *      de lado, promediada con sus vecinas para no caer en el borde de una celda).
+ *   3. Si ningún punto está marcado con la emergencia, la más tupida de todos.
+ *
+ * Así otro país, u otra emergencia en Venezuela, cae donde tiene que caer sin tocar esto.
+ * `place` es la región más repetida alrededor del foco, para rotularlo.
+ */
+export interface MapFocus {
+  x: number;
+  y: number;
+  place: string | null;
+}
+
+export function emergencyFocus(
+  entries: DirectoryEntry[],
+  geo: { bounds: [[number, number], [number, number]] },
+  emergencyId: string,
+  zones: { label: string; ring: [number, number][] }[],
+): MapFocus | null {
+  const [[, w0], [n0]] = geo.bounds;
+  const x = (lng: number) => +((lng - w0) * SCALE).toFixed(2);
+  const y = (lat: number) => +((n0 - lat) * SCALE).toFixed(2);
+
+  const ring = zones.flatMap((z) => z.ring);
+  if (ring.length > 0) {
+    const lat = ring.reduce((a, [la]) => a + la, 0) / ring.length;
+    const lng = ring.reduce((a, [, lo]) => a + lo, 0) / ring.length;
+    return { x: x(lng), y: y(lat), place: zones[0]?.label ?? null };
+  }
+
+  const placed = entries.filter(
+    (e): e is DirectoryEntry & { lat: number; lng: number } => e.lat !== null && e.lng !== null,
+  );
+  const own = placed.filter((e) => e.emergencyId === emergencyId);
+  const pool = own.length >= 5 ? own : placed;
+  if (pool.length === 0) return null;
+
+  const CELL = 0.3;
+  const key = (e: { lat: number; lng: number }) =>
+    `${Math.floor(e.lat / CELL)}:${Math.floor(e.lng / CELL)}`;
+  const cells = new Map<string, number>();
+  for (const e of pool) cells.set(key(e), (cells.get(key(e)) ?? 0) + 1);
+  const [best] = [...cells.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]!;
+  const [bi, bj] = best.split(":").map(Number) as [number, number];
+
+  const near = pool.filter((e) => {
+    const i = Math.floor(e.lat / CELL);
+    const j = Math.floor(e.lng / CELL);
+    return Math.abs(i - bi) <= 1 && Math.abs(j - bj) <= 1;
+  });
+  const lat = near.reduce((a, e) => a + e.lat, 0) / near.length;
+  const lng = near.reduce((a, e) => a + e.lng, 0) / near.length;
+
+  const regions = new Map<string, number>();
+  for (const e of near) if (e.region) regions.set(e.region, (regions.get(e.region) ?? 0) + 1);
+  const place = [...regions.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+  return { x: x(lng), y: y(lat), place };
 }
