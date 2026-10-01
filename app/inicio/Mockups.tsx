@@ -79,6 +79,64 @@ export function NearScreen({ t }: { t: T }) {
   );
 }
 
+/**
+ * El lado de quien NECESITA ayuda: la ficha de un comedor vista para ir a él. Si está
+ * abierto, hasta qué hora, dónde queda, y cómo llegar o preguntar antes de ir.
+ */
+export function GetScreen({ t }: { t: T }) {
+  const style = typeStyle("comedor");
+  return (
+    <>
+      <div className="mk-top">
+        <span className="mk-back">
+          <Icon.back />
+        </span>
+        <span className="mk-photo mk-photo-sm" style={{ color: style.color }}>
+          <TypeGlyph name={style.icon} size={18} />
+        </span>
+        <span className="mk-top-txt">
+          <b className="mk-name">{t("home.demo.p1")}</b>
+          <span className="mk-meta">{t("type.comedor")} · 450 m</span>
+        </span>
+      </div>
+      <div className="mk-body">
+        <span className="mk-open">
+          <i />
+          {t("hours.openNow")} · {t("hours.closesAt", { time: "1:30 p. m." })}
+        </span>
+        <div className="mk-acts">
+          <span className="mk-act mk-act-main">
+            <Icon.directions />
+            {t("center.directions")}
+          </span>
+          <span className="mk-act">
+            <Icon.phone />
+            {t("center.call")}
+          </span>
+          <span className="mk-act">
+            <Icon.whatsapp />
+            {t("center.whatsapp")}
+          </span>
+        </div>
+        <div className="mk-table">
+          <span>
+            <small>{t("hours.title")}</small>
+            <b>{t("home.demo.hours")}</b>
+          </span>
+          <span>
+            <small>{t("orgs.demo.addressLabel")}</small>
+            <b>{t("orgs.demo.address")}</b>
+          </span>
+        </div>
+        <p className="mk-upd">
+          <Icon.check />
+          {t("home.demo.updated")}
+        </p>
+      </div>
+    </>
+  );
+}
+
 export function NeedsScreen({ t }: { t: T }) {
   const style = typeStyle("shelter");
   return (

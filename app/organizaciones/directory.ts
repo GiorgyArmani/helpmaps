@@ -8,8 +8,8 @@ import { isLocationType, type LocationType } from "@/domain/types";
  *
  * ── EN MEMORIA Y NO CON `ilike` ─────────────────────────────────────────────
  *
- * Son unos cientos de filas de cinco columnas: caben enteras y se filtran aquí. Además es
- * lo único que busca bien: quien escribe su organización en un teléfono no pone tildes, y
+ * Son unos cientos de filas de cinco columnas: caben enteras y se filtran en el teléfono
+ * (`search.ts`) mientras se escribe. Además es lo único que busca bien: quien escribe su organización en un teléfono no pone tildes, y
  * `ilike '%fundacion%'` no encuentra «Fundación». Normalizar las dos partes sí.
  *
  * Cacheado media hora por país y emergencia, como las cifras de `/inicio`: la página se
@@ -68,37 +68,6 @@ export const fetchDirectory = unstable_cache(queryDirectory, ["org-directory-v3"
   revalidate: 1800,
 });
 
-/** Minúsculas, sin tildes y sin signos: «Fundación "Amigos"» y «fundacion amigos» son lo mismo. */
-export function fold(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9ñ]+/g, " ")
-    .trim();
-}
-
-/**
- * Las que contienen TODAS las palabras buscadas, en cualquier orden. Primero las que
- * empiezan por lo escrito: quien teclea «casa hogar» busca «Casa Hogar …», no un punto
- * que dice «hogar» en mitad del nombre.
- */
-export function searchDirectory(
-  entries: DirectoryEntry[],
-  query: string,
-  limit = 8,
-): DirectoryEntry[] {
-  const q = fold(query);
-  if (q.length < 2) return [];
-  const words = q.split(" ");
-  return entries
-    .map((e) => ({ e, n: fold(e.name) }))
-    .filter(({ n }) => words.every((w) => n.includes(w)))
-    .sort((a, b) => Number(b.n.startsWith(q)) - Number(a.n.startsWith(q)) || a.n.localeCompare(b.n))
-    .slice(0, limit)
-    .map(({ e }) => e);
-}
-
 // ───────────────────────────────────────────────────────────────────────────
 // El mapa de la portada, hecho con los propios puntos.
 //
@@ -112,6 +81,42 @@ const SCALE = 10;
 /** El lado de una «zona» para comprimir la densidad: unos 14 km. */
 const GRID = 1.3;
 
+/**
+ * La cifra de portada, redondeada hacia abajo a la centena: «+500» con 519 lugares. Dice
+ * «son muchos» sin envejecer cada vez que se publica un punto. Por debajo de 100, la
+ * exacta. En inglés el signo va detrás («500+»).
+ */
+export function roundedCount(n: number, lang: string): string {
+  if (n < 100) return n.toLocaleString(lang);
+  const r = (Math.floor(n / 100) * 100).toLocaleString(lang);
+  return lang === "en" ? `${r}+` : `+${r}`;
+}
+
+/**
+ * Dónde cae cada lugar dentro del dibujo, en % del cuadro: para que el buscador, en el
+ * cliente, encienda lo encontrado sin volver a proyectar nada. Misma proyección que
+ * `dotMap` y su posición EXACTA (la respuesta a «¿dónde está la mía?»). Sin coordenadas,
+ * o fuera del país, no tiene sitio en el dibujo.
+ */
+export function mapSpots(
+  entries: DirectoryEntry[],
+  geo: { bounds: [[number, number], [number, number]] },
+  viewBox: string,
+): Map<string, { l: number; t: number }> {
+  const [[s0, w0], [n0, e0]] = geo.bounds;
+  const [minX, minY, w, h] = viewBox.split(" ").map(Number) as [number, number, number, number];
+  const out = new Map<string, { l: number; t: number }>();
+  for (const e of entries) {
+    if (e.lat === null || e.lng === null) continue;
+    if (e.lat < s0 || e.lat > n0 || e.lng < w0 || e.lng > e0) continue;
+    out.set(e.id, {
+      l: +((((e.lng - w0) * SCALE - minX) / w) * 100).toFixed(2),
+      t: +((((n0 - e.lat) * SCALE - minY) / h) * 100).toFixed(2),
+    });
+  }
+  return out;
+}
+
 export interface DotMap {
   viewBox: string;
   /** La silueta del país como trazado SVG, o null si el preset no la trae. */
@@ -120,7 +125,6 @@ export interface DotMap {
   dots: { x: number; y: number; k: number }[];
   /** Dónde se enciende, de vez en cuando, una onda de «actividad». */
   pings: { x: number; y: number }[];
-  hits: { x: number; y: number }[];
 }
 
 /**
@@ -169,7 +173,6 @@ export function dotMap(
     bounds: [[number, number], [number, number]];
     outline?: [number, number][];
   },
-  hitIds: Set<string>,
 ): DotMap | null {
   const [[s0, w0], [n0, e0]] = geo.bounds;
   const placed = entries.filter(
@@ -273,11 +276,6 @@ export function dotMap(
       .sort((a, b) => hash2(b.j, b.i) - hash2(a.j, a.i))
       .slice(0, 8)
       .map(at),
-    // Lo encontrado va en su sitio EXACTO, encima del racimo: es la respuesta a «¿dónde
-    // está la mía?», y ahí la precisión importa más que el orden de la rejilla.
-    hits: placed
-      .filter((e) => hitIds.has(e.id))
-      .map((e) => ({ x: +x(e.lng).toFixed(2), y: +y(e.lat).toFixed(2) })),
   };
 }
 

@@ -62,26 +62,7 @@
   mask-composite: intersect;
 }
 
-/* El zoom va sobre el envoltorio (dibujo + celdas vivas), alrededor del foco. */
-.ilp-zoomwrap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-origin: var(--fx, 50%) var(--fy, 50%);
-}
-
-.ilp-zoomwrap > svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.ilp-stage {
-  container-type: inline-size;
-}
-
-.ilp-stage-zoom .ilp-zoomwrap {
+.ilp-stage-zoom .amap-wrap {
   animation: ilp-zoom 2600ms cubic-bezier(0.65, 0, 0.35, 1) 2200ms both;
 }
 
@@ -91,70 +72,6 @@
   }
   to {
     transform: scale(var(--zs));
-  }
-}
-
-/* El mapa en ASCII, con los colores de la bandera. Letra monoespaciada del sistema:
-   `textLength` estira cada fila al ancho exacto, así que da igual cuál tenga cada teléfono.
-   La tierra, maciza y del color de su franja (`--c`, de `brand.flag`); los lugares, en tinta
-   encima. Sin bandera configurada, la tierra sale en el color de marca. */
-.ilp-ascii {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-weight: 700;
-  dominant-baseline: central;
-  user-select: none;
-}
-
-.ilp-ascii-land {
-  fill: var(--c, var(--brand));
-}
-
-.ilp-ascii-ink {
-  fill: var(--ink);
-}
-
-/* Las celdas vivas: un carácter en HTML sobre su celda, del color de su franja, que pasa
-   por `# % & +` (casi todo el ciclo en `#`). Cambiar `content` repinta sólo ese cuadrito.
-   Cada una con su desfase (`--k`), para que el país respire en todas partes y no a la vez.
-   La letra sale del ancho del cuadro (`--fs`, en `cqw`): la misma que la del SVG. */
-.ilp-tws {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.ilp-tws span {
-  position: absolute;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: calc(var(--fs) * 100cqw);
-  font-weight: 700;
-  line-height: 1;
-  color: var(--c, var(--brand));
-  transform: translateY(-50%);
-}
-
-.ilp-tws span::before {
-  content: "#";
-  animation: ilp-tw 3.6s steps(1, end) infinite;
-  animation-delay: calc(var(--k) * -0.37s);
-}
-
-@keyframes ilp-tw {
-  0%,
-  72% {
-    content: "#";
-  }
-  73%,
-  81% {
-    content: "%";
-  }
-  82%,
-  90% {
-    content: "&";
-  }
-  91%,
-  100% {
-    content: "+";
   }
 }
 
@@ -199,21 +116,6 @@
   100% {
     transform: scale(3.4);
     opacity: 0;
-  }
-}
-
-/* Fila a fila, de arriba abajo, como una terminal que imprime el país. */
-.ilp-ascii-row {
-  animation: ilp-type 260ms steps(3, end) both;
-  animation-delay: calc(var(--r) * 26ms);
-}
-
-@keyframes ilp-type {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }
 
@@ -360,6 +262,11 @@
   border-radius: 999px;
   background: #fff;
   box-shadow: var(--e-2);
+}
+
+/* La copia de la columna del texto: sólo en escritorio (ver `@media (min-width: 960px)`). */
+.ilp-cap-side {
+  display: none;
 }
 
 .ilp-cap-live {
@@ -689,13 +596,6 @@
 }
 
 /* Variante B: la prueba social bajo la bajada («+500 organizaciones…»). */
-.ilp-proof {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--ink);
-}
-
 /* La bajada, bajo los botones: el aire lo pone el `gap` de `.ilp-doors`. */
 .ilp-lead {
   margin: 8px 0 0;
@@ -1602,14 +1502,25 @@
     font-size: clamp(2.3rem, 3.1vw, 2.9rem);
   }
 
-  /* En escritorio, abajo a la derecha: con el zoom el foco queda arriba, y aquí no lo tapa. */
-  .ilp-cap {
-    top: auto;
-    bottom: 0;
-    right: var(--olp-gut);
-    left: auto;
-    z-index: 3;
+  /* En escritorio, la leyenda sale del mapa y cierra la columna del texto, bajo la bajada
+     (pedido del usuario, 2026-10-01): ahí se lee junto a lo que afirma la portada. */
+  .ilp-map .ilp-cap {
+    display: none;
+  }
+
+  .ilp-cap-side {
+    display: inline-flex;
+    position: static;
+    align-self: flex-start;
+    max-width: none;
+    margin: 4px 0 0;
     padding: 12px 20px 12px 16px;
+  }
+
+  /* En una línea: partido en dos, la pastilla guardaba el ancho de una y dejaba un hueco. */
+  .ilp-cap-side .ilp-cap-l {
+    max-width: none;
+    white-space: nowrap;
   }
 
   .ilp-cap-n {
@@ -1679,7 +1590,7 @@
   }
 
   /* Sin movimiento, el mapa abre ya acercado y rotulado: la información es la misma. */
-  .ilp-stage-zoom .ilp-zoomwrap {
+  .ilp-stage-zoom .amap-wrap {
     animation: none;
     transform: scale(var(--zs));
   }
@@ -1690,15 +1601,7 @@
     opacity: 1;
   }
 
-  .ilp-ascii-row {
-    animation: none;
-  }
-
-  /* Quietas: la celda se queda en su `#` y las ondas no salen. */
-  .ilp-tws span::before {
-    animation: none;
-  }
-
+  /* Las ondas no salen. */
   .ilp-waves {
     display: none;
   }

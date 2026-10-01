@@ -131,11 +131,30 @@
   text-wrap: pretty;
 }
 
-/* El mapa. Los puntos en tinta apagada, sin contorno del país: la forma la ponen ellos.
-   `aspect-ratio` reserva el hueco antes de que el SVG se pinte (sin salto al cargar). */
+/* El segundo párrafo de la bajada va pegado al primero: es la misma idea, continuada. */
+.olp-lead2 {
+  margin-top: 10px;
+}
+
+/* La prueba: en tinta y en negrita, distinta de la bajada gris que la precede. */
+.olp-proof {
+  margin: 14px 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+/* El mapa: el país en ASCII (`AsciiMap`, `ascii-map.css`). `aspect-ratio` reserva el
+   hueco antes de que el SVG se pinte (sin salto al cargar). */
 .olp-map {
   grid-area: map;
   margin: 8px 0 0;
+  position: relative;
+}
+
+/* La caja del dibujo: lo encontrado (`.amap-hits`) se monta encima, del mismo tamaño. */
+.olp-map-box {
   position: relative;
 }
 
@@ -146,96 +165,12 @@
   overflow: visible;
 }
 
-/* La trama del país: tenue, para que se lea la forma sin competir con los puntos. */
-.olp-map pattern circle {
-  fill: var(--ink);
-  opacity: 0.16;
-}
-
-.olp-dots circle {
-  fill: var(--ink);
-  opacity: 0.78;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: olp-pop 520ms var(--ease) both;
-}
-
-/* Cada punto brota: de nada a un poco más grande y se asienta. Sólo `transform` y
-   `opacity`, que el navegador anima sin recalcular la página. */
-@keyframes olp-pop {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.35);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.78;
-  }
-}
-
-/* Las ondas: casi todo el ciclo invisibles, y un destello corto. Ocho, desfasadas, se
-   turnan por el país. */
-.olp-ping {
-  fill: none;
-  stroke: var(--brand);
-  stroke-width: 0.45;
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: olp-ping 8.8s ease-out infinite;
-}
-
-@keyframes olp-ping {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-  2% {
-    opacity: 0.9;
-  }
-  14%,
-  100% {
-    transform: scale(1.8);
-    opacity: 0;
-  }
-}
-
-.olp-hit-dot {
-  fill: var(--brand);
-}
-
-.olp-hit-ring {
-  fill: none;
-  stroke: var(--brand);
-  stroke-width: 0.5;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: olp-found 1.8s var(--ease) 0.2s infinite;
-}
-
-/* Lo encontrado «late» sobre el mapa. Responde a una búsqueda: dice «aquí está», no
-   decora. */
-@keyframes olp-found {
-  0% {
-    transform: scale(0.5);
-    opacity: 0.9;
-  }
-  70%,
-  100% {
-    transform: scale(1.6);
-    opacity: 0;
-  }
-}
-
 .olp-cap {
   position: absolute;
   left: 0;
   bottom: 44px;
-  max-width: 16em;
+  /* Estrecha: cabe en el hueco que deja el país abajo a la izquierda, sin tapar el sur. */
+  max-width: 10em;
   font-size: 13px;
   line-height: 1.4;
   color: var(--mut-track);
@@ -457,61 +392,85 @@
   text-wrap: pretty;
 }
 
-/* ── Las funciones: un recorrido fijo ───────────────────────────────────
-   El contenedor mide una pantalla por paso y dentro va una capa `sticky` de una pantalla de
-   alto. Teléfono: el texto arriba y el teléfono debajo, los dos dentro de la capa fija.
-   Escritorio: texto a la izquierda y teléfono a la derecha. `FeatureTour.tsx` marca cada
-   texto y cada pantalla con `data-pos` (past / on / next). */
+/* ── Las funciones: un recorrido que maneja la persona ──────────────────
+   En /inicio y en /organizaciones (`FeatureTour.tsx`). Teléfono: iconos, un texto y el
+   teléfono, apilados. Escritorio: la lista de pasos a la izquierda y el teléfono a la
+   derecha. Cada texto y cada pantalla llevan `data-pos` (past / on / next). */
 
 .olp-tour {
-  height: calc(var(--steps) * 100svh);
   margin-top: 24px;
 }
 
 .olp-tour-pin {
-  position: sticky;
-  top: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100svh;
-  padding-block: 20px 16px;
-}
-
-/* Cuánto del recorrido va hecho: un segmento por función. */
-.olp-tour-dots {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
-.olp-tour-dots span {
-  width: 32px;
-  height: 4px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ink) 12%, transparent);
-  transition: background-color var(--t-ui) var(--ease);
-}
-
-.olp-tour-dots .is-done {
-  background: var(--brand);
-}
-
-/* Modo manual (`/inicio`): altura normal, sin capa fija. Lo maneja la persona: una lista
-   de pasos que se despliegan y, bajo el teléfono, anterior y siguiente. */
-.olp-tour-manual {
-  height: auto;
-}
-
-.olp-tour-manual .olp-tour-pin {
-  position: static;
-  height: auto;
-  padding-block: 0;
 }
 
 .olp-tour-manual .olp-feat-shot {
   flex: none;
-  height: 500px;
+  /* Lo justo para que anterior / siguiente no tapen lo último de la pantalla más alta (el
+     «Donar» de la campaña). */
+  height: 540px;
+  /* Se toca y se desliza de lado (`FeatureTour`); el scroll vertical sigue siendo de la
+     página. */
+  touch-action: pan-y;
+  cursor: pointer;
+}
+
+/* En el teléfono, la lista desplegable no: cambiaba de alto a cada toque. En su lugar, un
+   bloque fijo (`.olp-tour-m`): los pasos como iconos y un solo texto. En escritorio, al
+   revés (ver más abajo). */
+.olp-tour-manual .olp-stepper {
+  display: none;
+}
+
+.olp-tour-m {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.olp-tour-ics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.olp-tour-ic {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--mut-track);
+  box-shadow: var(--e-1);
+  cursor: pointer;
+  transition:
+    background-color var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease),
+    transform var(--t-tap) var(--ease);
+}
+
+.olp-tour-ic:active {
+  transform: scale(0.94);
+}
+
+.olp-tour-ic[aria-pressed="true"] {
+  background: var(--brand);
+  color: #fff;
+}
+
+.olp-tour-ic svg {
+  width: 20px;
+  height: 20px;
+}
+
+.olp-tour-m .olp-feat-t {
+  font-size: 1.375rem;
 }
 
 .olp-stepper {
@@ -692,18 +651,6 @@
   transform: translateY(16px);
 }
 
-.olp-feat-ic {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin-bottom: 14px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: var(--e-1);
-  color: var(--brand);
-}
-
 .olp-feat-t {
   margin: 0 0 8px;
   font-family: var(--font-display);
@@ -730,7 +677,10 @@
   min-height: 0;
   margin: 0;
   padding-top: 24px;
+  /* `clip` y no `hidden`: un `hidden` se puede desplazar por código (el navegador lo
+     hacía en el móvil) y el teléfono quedaba subido, sin su borde de arriba. */
   overflow: hidden;
+  overflow: clip;
   border-radius: var(--r-lg);
   background: color-mix(in srgb, var(--brand) 9%, #fff);
 }
@@ -1462,6 +1412,38 @@
   color: rgba(255, 255, 255, 0.74);
 }
 
+.olp-promise-p + .olp-promise-p {
+  margin-top: 10px;
+}
+
+/* Los botones del cierre, en su versión sobre tinta. */
+.olp-promise-acts {
+  display: grid;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.olp-cta-light {
+  background: #fff;
+  color: var(--ink);
+}
+
+.olp-cta-light svg {
+  color: var(--brand);
+}
+
+.olp-cta-ghost {
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.32);
+  color: #fff;
+  box-shadow: none;
+}
+
+.olp-cta-ghost:hover {
+  border-color: #fff;
+  box-shadow: none;
+}
+
 .olp-foot {
   display: flex;
   flex-wrap: wrap;
@@ -1541,37 +1523,35 @@
 
   .olp-cap {
     bottom: 0;
+    max-width: 16em;
   }
 
   .olp-band {
     padding-top: 112px;
   }
 
-  /* Texto a la izquierda, teléfono a la derecha, centrados en la capa fija. */
+  /* La lista a la izquierda, el teléfono a la derecha. */
   .olp-tour-pin {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: center;
     gap: 64px;
-    padding-block: 0;
-  }
-
-  .olp-feat-t {
-    font-size: 2rem;
-  }
-
-  .olp-feat-d {
-    font-size: 1.0625rem;
   }
 
   .olp-feat-shot {
-    flex: none;
-    height: min(560px, 80svh);
     padding-top: 48px;
   }
 
   .olp-tour-manual .olp-feat-shot {
     height: 600px;
+  }
+
+  .olp-tour-manual .olp-stepper {
+    display: flex;
+  }
+
+  .olp-tour-m {
+    display: none;
   }
 
   /* La lista es más baja que el teléfono: centrada, no colgando arriba con un hueco. */
@@ -1621,6 +1601,13 @@
     width: auto;
   }
 
+  .olp-promise-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 36px;
+  }
+
   .olp-cta-note {
     margin: 0;
   }
@@ -1632,24 +1619,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .olp-dots circle {
-    animation: none;
-  }
-
-  .olp-ping {
-    display: none;
-  }
-
-  .olp-hit-ring {
-    animation: none;
-    opacity: 0.5;
-  }
-
   .olp-input,
   .olp-go,
   .olp-hitrow,
   .olp-cta,
-  .olp-cta svg:last-child {
+  .olp-cta svg:last-child,
+  .olp-tour-ic,
+  .olp-tour-text,
+  .olp-scr {
     transition: none;
   }
 

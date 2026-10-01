@@ -1,0 +1,168 @@
+/*
+ * El país en ASCII (`AsciiMap.tsx`), compartido por /inicio y /organizaciones.
+ *
+ * Sólo el dibujo: las filas, las celdas vivas y lo encontrado. El encuadre de cada página
+ * (la máscara y el zoom de /inicio, el `sticky` de /organizaciones) va en su propio CSS.
+ * Colores de los tokens y de `brand.flag`; movimiento anulado con `prefers-reduced-motion`.
+ */
+
+.amap {
+  position: relative;
+  container-type: inline-size;
+}
+
+/* El envoltorio de lo que se acerca: un `transform` aquí mueve dibujo, celdas y hallazgos
+   juntos (el zoom de /inicio lo usa, alrededor de `--fx/--fy`). */
+.amap-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: var(--fx, 50%) var(--fy, 50%);
+}
+
+/* Más específico que `.olp-map svg` (orgs.css), que lo pondría con `height: auto`. */
+.amap .amap-wrap > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Letra monoespaciada del sistema: `textLength` estira cada fila al ancho exacto, así que
+   da igual cuál tenga cada teléfono. La tierra, maciza y del color de su franja (`--c`, de
+   `brand.flag`); los lugares, en tinta encima. Sin bandera, la tierra sale en la marca. */
+.amap-ascii {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-weight: 700;
+  dominant-baseline: central;
+  user-select: none;
+}
+
+.amap-land {
+  fill: var(--c, var(--brand));
+}
+
+.amap-ink {
+  fill: var(--ink);
+}
+
+/* Fila a fila, de arriba abajo, como una terminal que imprime el país. */
+.amap-row {
+  animation: amap-type 260ms steps(3, end) both;
+  animation-delay: calc(var(--r) * 26ms);
+}
+
+@keyframes amap-type {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Las celdas vivas: un carácter en HTML sobre su celda, del color de su franja, que pasa
+   por `# % & +` (casi todo el ciclo en `#`). Cambiar `content` repinta sólo ese cuadrito.
+   Cada una con su desfase (`--k`), para que el país respire en todas partes y no a la vez.
+   La letra sale del ancho del cuadro (`--fs`, en `cqw`): la misma que la del SVG. */
+.amap-tws,
+.amap-hits {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.amap-tws span {
+  position: absolute;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: calc(var(--fs) * 100cqw);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--c, var(--brand));
+  transform: translateY(-50%);
+}
+
+.amap-tws span::before {
+  content: "#";
+  animation: amap-tw 3.6s steps(1, end) infinite;
+  animation-delay: calc(var(--k) * -0.37s);
+}
+
+@keyframes amap-tw {
+  0%,
+  72% {
+    content: "#";
+  }
+  73%,
+  81% {
+    content: "%";
+  }
+  82%,
+  90% {
+    content: "&";
+  }
+  91%,
+  100% {
+    content: "+";
+  }
+}
+
+/* Lo encontrado (lo pone encima `OrgFinder`): un `@` en tinta con halo blanco, que se lee
+   sobre cualquier franja, y que late (`. o O @ O o`) como el foco de /inicio. Forma y no
+   sólo color: se distingue del resto del dibujo aunque no se vea el color. */
+.amap-hits span {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+  text-shadow:
+    0 0 1px #fff,
+    0 0 4px #fff,
+    0 0 10px #fff;
+  transform: translate(-50%, -50%);
+}
+
+.amap-hits span::before {
+  content: "@";
+  animation: amap-hit 1.4s steps(1, end) infinite;
+  animation-delay: calc(var(--i) * -0.23s);
+}
+
+@keyframes amap-hit {
+  0% {
+    content: ".";
+  }
+  16% {
+    content: "o";
+  }
+  33% {
+    content: "O";
+  }
+  50% {
+    content: "@";
+  }
+  66% {
+    content: "O";
+  }
+  83% {
+    content: "o";
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .amap-row {
+    animation: none;
+  }
+
+  /* Quietas: la celda se queda en su `#` y lo encontrado, en su `@`. */
+  .amap-tws span::before,
+  .amap-hits span::before {
+    animation: none;
+  }
+}

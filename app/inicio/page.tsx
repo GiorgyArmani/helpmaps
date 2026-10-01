@@ -7,10 +7,11 @@ import type { LocationType } from "@/domain/types";
 import { Icon } from "@/ui/icons";
 import { currentEmergency } from "@/server/emergency";
 import { CookiePrefsLink } from "@/features/consent/CookieConsent";
-import { asciiMap, dotMap, emergencyFocus, fetchDirectory } from "../organizaciones/directory";
+import AsciiMap from "../organizaciones/AsciiMap";
+import { dotMap, emergencyFocus, fetchDirectory, roundedCount } from "../organizaciones/directory";
 import FeatureTour from "../organizaciones/FeatureTour";
 import { CampaignScreen } from "../organizaciones/Mockups";
-import { JoinScreen, LevelScreen, NearScreen, NeedsScreen } from "./Mockups";
+import { GetScreen, JoinScreen, LevelScreen, NearScreen, NeedsScreen } from "./Mockups";
 import "../organizaciones/orgs.css";
 import "./inicio.css";
 
@@ -44,8 +45,9 @@ import "./inicio.css";
 
 export const metadata: Metadata = (() => {
   const t = translator(LANGUAGE.default);
-  const title = `${t("home.titleNeed")} ${t("home.titleGive")}`;
-  const description = t("home.lead", { platform: BRAND.platform, country: COUNTRY.name });
+  // El texto de la portada es el B (decidido el 2026-10-01).
+  const title = t("homeB.title");
+  const description = t("homeB.lead", { platform: BRAND.platform, country: COUNTRY.name });
   return {
     // Sin la marca: la plantilla del layout ya la añade.
     title,
@@ -55,8 +57,10 @@ export const metadata: Metadata = (() => {
   };
 })();
 
+// Primero quien necesita ayuda (encontrar y llegar), después quien quiere darla.
 const TOUR_A = [
   { k: "near", icon: Icon.target, Screen: NearScreen },
+  { k: "get", icon: Icon.directions, Screen: GetScreen },
   { k: "needs", icon: Icon.box, Screen: NeedsScreen },
   { k: "join", icon: Icon.users, Screen: JoinScreen },
   { k: "level", icon: Icon.spark, Screen: LevelScreen },
@@ -66,9 +70,10 @@ const TOUR_A = [
 const TOUR_B = [
   TOUR_A[0],
   TOUR_A[1],
-  { k: "donate", icon: Icon.heart, Screen: CampaignScreen },
   TOUR_A[2],
+  { k: "donate", icon: Icon.heart, Screen: CampaignScreen },
   TOUR_A[3],
+  TOUR_A[4],
 ] as const;
 
 export default async function EntryPage({
@@ -86,12 +91,12 @@ export default async function EntryPage({
   const t = translator(lang);
 
   // ── DOS TEXTOS PARA COMPARAR ─────────────────────────────────────────────
-  // A es la portada de siempre; B, el texto nuevo (2026-10-01). No es un experimento: nadie
-  // recibe B por sorteo ni se mide nada. `?v=b` lo enseña, y con `?v=` en la dirección
-  // aparece un selector A | B en una esquina para pasar de uno a otro.
+  // B es el texto de la portada desde el 2026-10-01; A, el anterior, queda en `?v=a` para
+  // compararlos. No es un experimento: nadie recibe uno u otro por sorteo ni se mide nada.
+  // Con `?v=` en la dirección aparece un selector A | B en una esquina.
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const forced = one(params.v);
-  const isB = forced === "b";
+  const isB = forced !== "a";
   const switcher = forced === "a" || forced === "b";
   // En B, cada `home.x` busca primero `homeB.x`; lo que B no cambia cae a A. Así las dos
   // variantes son la misma página y sólo difiere el texto (y tres detalles de estructura).
@@ -111,11 +116,8 @@ export default async function EntryPage({
 
   const emergency = await currentEmergency();
   const directory = await fetchDirectory(emergency?.id ?? null);
-  const map = dotMap(directory, COUNTRY.geo, new Set());
-  // El mapa de la portada es arte de píxel en ASCII; `dotMap` sigue dando el encuadre.
-  const flag = BRAND.flag ?? [];
-  const vb = (map?.viewBox ?? "0 0 1 1").split(" ").map(Number) as [number, number, number, number];
-  const ascii = map ? asciiMap(directory, COUNTRY.geo, map.viewBox, flag.length || 1) : null;
+  const map = dotMap(directory, COUNTRY.geo);
+  // El mapa de la portada es arte de píxel en ASCII (`AsciiMap`); `dotMap` da el encuadre.
 
   // El zoom de la portada: hasta donde está pasando la emergencia, si hay una en curso.
   // Sin emergencia (o archivada) se queda el país entero: HelpMaps es un puente de siempre
@@ -139,8 +141,18 @@ export default async function EntryPage({
     };
   })();
   const total = directory.length.toLocaleString(lang);
-  const proof =
-    directory.length >= 100 ? Math.floor(directory.length / 100) * 100 : directory.length;
+  // En B, la cifra del mapa va redondeada a la centena («+500»), como en /organizaciones.
+  const proof = roundedCount(directory.length, lang);
+
+  // La leyenda del mapa: va sobre el mapa en el teléfono y en la columna del texto en
+  // escritorio (CSS elige cuál se ve; la otra es `display: none` y no se lee dos veces).
+  const capContent = (
+    <>
+      <span className="ilp-cap-live" aria-hidden="true" />
+      <b className="ilp-cap-n">{isB ? proof : total}</b>{" "}
+      <span className="ilp-cap-l">{tv("home.mapCount")}</span>
+    </>
+  );
 
   // Only a figure we actually have: a "0" on a landing page reads as failure. Ordered by
   // the map's own type order and capped so the grid stays 2×2.
@@ -214,75 +226,13 @@ export default async function EntryPage({
           <figure className="olp-map ilp-map">
             {/* El escenario: recorta el zoom y funde los bordes. La proporción la da el
                 propio encuadre del país, así el hueco está reservado antes de pintar. */}
-            <div
+            <AsciiMap
+              entries={directory}
+              viewBox={map.viewBox}
+              label={tv("home.mapLabel", { n: total })}
               className={zoom ? "ilp-stage ilp-stage-zoom" : "ilp-stage"}
-              style={{
-                aspectRatio: map.viewBox.split(" ").slice(2).join(" / "),
-                // La letra de las celdas HTML, como fracción del ancho: la misma que en el SVG.
-                ["--fs" as string]: ascii ? (ascii.fontSize / vb[2]).toFixed(5) : 0,
-                ...zoom,
-              }}
+              style={zoom ?? undefined}
             >
-              {/* Lo que se acerca, junto: el dibujo y sus celdas vivas. El zoom es un `transform`
-                  sobre este envoltorio, alrededor del foco. */}
-              <div className="ilp-zoomwrap">
-              <svg
-                viewBox={map.viewBox}
-                role="img"
-                aria-label={tv("home.mapLabel", { n: total })}
-                preserveAspectRatio="xMidYMid meet"
-              >
-                {/* El país en caracteres, fila a fila: aparecen como en una terminal. */}
-                <g className="ilp-ascii" fontSize={ascii?.fontSize}>
-                  {ascii?.rows.map((row, i) => (
-                    <g
-                      key={row.y}
-                      className="ilp-ascii-row"
-                      // La franja de la bandera que le toca a esta fila (`brand.flag`).
-                      style={{ ["--r" as string]: i, ["--c" as string]: flag[row.band] }}
-                    >
-                      <text
-                        className="ilp-ascii-land"
-                        x={ascii.x}
-                        y={row.y}
-                        textLength={ascii.width}
-                        lengthAdjust="spacing"
-                      >
-                        {row.land}
-                      </text>
-                      <text
-                        className="ilp-ascii-ink"
-                        x={ascii.x}
-                        y={row.y}
-                        textLength={ascii.width}
-                        lengthAdjust="spacing"
-                      >
-                        {row.ink}
-                      </text>
-                    </g>
-                  ))}
-                </g>
-              </svg>
-              {/* Las celdas vivas, en HTML y no en el SVG: cada una cambia su carácter
-                  (`content`) y repinta sólo su cuadrito. Dentro del SVG, cada cambio repintaba
-                  el mapa entero, y en un teléfono modesto eso se nota. */}
-              {ascii && ascii.twinkles.length > 0 ? (
-                <div className="ilp-tws" aria-hidden="true">
-                  {ascii.twinkles.map((tw) => (
-                    <span
-                      key={`${tw.x}:${tw.y}`}
-                      style={{
-                        left: `${(((tw.x - vb[0]) / vb[2]) * 100).toFixed(2)}%`,
-                        top: `${(((tw.y - vb[1]) / vb[3]) * 100).toFixed(2)}%`,
-                        ["--k" as string]: tw.k,
-                        ["--c" as string]: flag[tw.band],
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              </div>
-
               {/* Ondas de radio desde la emergencia: anillos de `o` que salen del foco. En
                   HTML, para que el navegador las anime sin repintar el mapa. */}
               {zoom ? (
@@ -315,14 +265,11 @@ export default async function EntryPage({
                   </span>
                 </Link>
               ) : null}
-            </div>
-            {/* La leyenda: la cifra en grande y en vivo. Arriba en el teléfono (abajo la
-                tapa la tarjeta de las puertas), abajo a la izquierda en escritorio. */}
-            <figcaption className="ilp-cap">
-              <span className="ilp-cap-live" aria-hidden="true" />
-              <b className="ilp-cap-n">{total}</b>
-              <span className="ilp-cap-l">{tv("home.mapCount")}</span>
-            </figcaption>
+            </AsciiMap>
+            {/* La leyenda: la cifra en grande y en vivo. En el teléfono, sobre el mapa (abajo
+                la tapa la tarjeta de las puertas); en escritorio se oculta y la misma cifra va
+                en la columna del texto (`.ilp-cap-side`). */}
+            <figcaption className="ilp-cap">{capContent}</figcaption>
           </figure>
         ) : null}
 
@@ -352,7 +299,9 @@ export default async function EntryPage({
           <p className="olp-lead ilp-lead">
             {tv("home.lead", { platform: BRAND.platform, country: COUNTRY.name })}
           </p>
-          {isB && proof > 0 ? <p className="ilp-proof">{t("homeB.proof", { n: proof })}</p> : null}
+          {/* En escritorio, la cifra cierra la columna del texto: bajo la bajada, a la vista
+              y no perdida en una esquina del mapa. En el teléfono va sobre el mapa. */}
+          {map ? <p className="ilp-cap ilp-cap-side">{capContent}</p> : null}
         </nav>
       </section>
       </div>
