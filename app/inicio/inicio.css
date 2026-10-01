@@ -62,15 +62,26 @@
   mask-composite: intersect;
 }
 
-.ilp-stage > svg {
+/* El zoom va sobre el envoltorio (dibujo + celdas vivas), alrededor del foco. */
+.ilp-zoomwrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: var(--fx, 50%) var(--fy, 50%);
+}
+
+.ilp-zoomwrap > svg {
   display: block;
   width: 100%;
   height: 100%;
   overflow: visible;
-  transform-origin: var(--fx, 50%) var(--fy, 50%);
 }
 
-.ilp-stage-zoom > svg {
+.ilp-stage {
+  container-type: inline-size;
+}
+
+.ilp-stage-zoom .ilp-zoomwrap {
   animation: ilp-zoom 2600ms cubic-bezier(0.65, 0, 0.35, 1) 2200ms both;
 }
 
@@ -83,8 +94,10 @@
   }
 }
 
-/* El mapa en ASCII. Letra monoespaciada del sistema: `textLength` estira cada fila al ancho
-   exacto, así que da igual cuál tenga cada teléfono. La tierra, tenue; los lugares, en tinta. */
+/* El mapa en ASCII, con los colores de la bandera. Letra monoespaciada del sistema:
+   `textLength` estira cada fila al ancho exacto, así que da igual cuál tenga cada teléfono.
+   La tierra, maciza y del color de su franja (`--c`, de `brand.flag`); los lugares, en tinta
+   encima. Sin bandera configurada, la tierra sale en el color de marca. */
 .ilp-ascii {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   font-weight: 700;
@@ -93,11 +106,100 @@
 }
 
 .ilp-ascii-land {
-  fill: color-mix(in srgb, var(--ink) 20%, transparent);
+  fill: var(--c, var(--brand));
 }
 
 .ilp-ascii-ink {
   fill: var(--ink);
+}
+
+/* Las celdas vivas: un carácter en HTML sobre su celda, del color de su franja, que pasa
+   por `# % & +` (casi todo el ciclo en `#`). Cambiar `content` repinta sólo ese cuadrito.
+   Cada una con su desfase (`--k`), para que el país respire en todas partes y no a la vez.
+   La letra sale del ancho del cuadro (`--fs`, en `cqw`): la misma que la del SVG. */
+.ilp-tws {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ilp-tws span {
+  position: absolute;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: calc(var(--fs) * 100cqw);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--c, var(--brand));
+  transform: translateY(-50%);
+}
+
+.ilp-tws span::before {
+  content: "#";
+  animation: ilp-tw 3.6s steps(1, end) infinite;
+  animation-delay: calc(var(--k) * -0.37s);
+}
+
+@keyframes ilp-tw {
+  0%,
+  72% {
+    content: "#";
+  }
+  73%,
+  81% {
+    content: "%";
+  }
+  82%,
+  90% {
+    content: "&";
+  }
+  91%,
+  100% {
+    content: "+";
+  }
+}
+
+/* Las ondas: un anillo de `o` que crece desde el foco y se apaga; dos, desfasados. Sólo
+   `transform` y `opacity`, que el navegador anima en la GPU. */
+.ilp-waves {
+  position: absolute;
+  left: var(--fx);
+  top: var(--fy);
+  z-index: 1;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.ilp-wave {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: ilp-wave 2.6s ease-out infinite;
+  animation-delay: calc(4.8s + var(--w) * 1.3s);
+}
+
+.ilp-wave i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--danger);
+  transform: translate(-50%, -50%) rotate(var(--a)) translateY(-18px);
+}
+
+@keyframes ilp-wave {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(3.4);
+    opacity: 0;
+  }
 }
 
 /* Fila a fila, de arriba abajo, como una terminal que imprime el país. */
@@ -125,8 +227,8 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  /* El anillo (16px) centrado en el foco; la etiqueta, debajo. */
-  margin-top: -8px;
+  /* El carácter (28px) centrado en el foco; la etiqueta, debajo. */
+  margin-top: -14px;
   color: var(--ink);
   text-decoration: none;
   opacity: 0;
@@ -145,38 +247,48 @@
   }
 }
 
-.ilp-focus-ring {
-  position: relative;
-  width: 16px;
-  height: 16px;
-  border: 3px solid #fff;
-  border-radius: 50%;
-  background: var(--danger);
-  box-shadow: var(--e-2);
+/* El foco, en ASCII: un carácter del color de peligro que cambia en bucle (`. o O @ O o`),
+   como un punto que late dentro del dibujo. `content` se anima a saltos en todos los
+   navegadores actuales; donde no, se queda en `@`, que también se lee. */
+.ilp-focus-glyph {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--danger);
+  text-shadow:
+    0 0 1px #fff,
+    0 0 6px #fff,
+    0 0 12px color-mix(in srgb, var(--danger) 45%, transparent);
 }
 
-.ilp-focus-ring::before,
-.ilp-focus-ring::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 2px solid var(--danger);
-  animation: ilp-ring 2s ease-out infinite;
+.ilp-focus-glyph::before {
+  content: "@";
+  animation: ilp-glyph 1.4s steps(1, end) infinite;
 }
 
-.ilp-focus-ring::after {
-  animation-delay: 1s;
-}
-
-@keyframes ilp-ring {
-  from {
-    transform: scale(1);
-    opacity: 0.8;
+@keyframes ilp-glyph {
+  0% {
+    content: ".";
   }
-  to {
-    transform: scale(4.2);
-    opacity: 0;
+  16% {
+    content: "o";
+  }
+  33% {
+    content: "O";
+  }
+  50% {
+    content: "@";
+  }
+  66% {
+    content: "O";
+  }
+  83% {
+    content: "o";
   }
 }
 
@@ -1523,7 +1635,7 @@
   }
 
   /* Sin movimiento, el mapa abre ya acercado y rotulado: la información es la misma. */
-  .ilp-stage-zoom > svg {
+  .ilp-stage-zoom .ilp-zoomwrap {
     animation: none;
     transform: scale(var(--zs));
   }
@@ -1538,16 +1650,24 @@
     animation: none;
   }
 
+  /* Quietas: la celda se queda en su `#` y las ondas no salen. */
+  .ilp-tws span::before {
+    animation: none;
+  }
+
+  .ilp-waves {
+    display: none;
+  }
+
   .ilp-focus {
     animation: none;
     opacity: 1;
     transform: translateX(-50%);
   }
 
-  .ilp-focus-ring::before,
-  .ilp-focus-ring::after {
+  .ilp-focus-glyph::before {
     animation: none;
-    opacity: 0;
+    content: "@";
   }
 
   .ilp-cap-live::after {

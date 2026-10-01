@@ -184,6 +184,15 @@ export interface BrandConfig {
   /** Emoji fallback used for the favicon and small badges. */
   emoji: string;
   colors: BrandColors;
+  /**
+   * Los colores de la bandera, franja a franja de arriba abajo. Opcional.
+   *
+   * Lo usa el mapa en ASCII de la portada (`/inicio`): cada fila de caracteres toma el
+   * color de la franja que le toca por su altura en el país. Sin él, el mapa sale en el
+   * color de marca. Es configuración y no CSS por la regla de siempre: re-marcar un país es
+   * editar su preset.
+   */
+  flag?: string[];
   /** Corner radius scale in px — the cheapest lever on how the UI "feels". */
   radius: { sm: number; md: number; lg: number };
   /** CSS font stacks. Keep a system stack unless you self-host the font. */
@@ -222,6 +231,8 @@ export interface BrandOverrides {
   favicon?: string | null;
   emoji?: string;
   colors?: Partial<BrandColors>;
+  /** Las franjas de la bandera, de arriba abajo (ver `BrandConfig.flag`). */
+  flag?: string[];
   radius?: Partial<BrandConfig["radius"]>;
   font?: Partial<BrandConfig["font"]>;
   contact?: Partial<BrandConfig["contact"]>;

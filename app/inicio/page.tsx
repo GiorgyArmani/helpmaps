@@ -84,7 +84,9 @@ export default async function EntryPage({
   const directory = await fetchDirectory(emergency?.id ?? null);
   const map = dotMap(directory, COUNTRY.geo, new Set());
   // El mapa de la portada es arte de píxel en ASCII; `dotMap` sigue dando el encuadre.
-  const ascii = map ? asciiMap(directory, COUNTRY.geo, map.viewBox) : null;
+  const flag = BRAND.flag ?? [];
+  const vb = (map?.viewBox ?? "0 0 1 1").split(" ").map(Number) as [number, number, number, number];
+  const ascii = map ? asciiMap(directory, COUNTRY.geo, map.viewBox, flag.length || 1) : null;
 
   // El zoom de la portada: hasta donde está pasando la emergencia, si hay una en curso.
   // Sin emergencia (o archivada) se queda el país entero: HelpMaps es un puente de siempre
@@ -166,8 +168,16 @@ export default async function EntryPage({
                 propio encuadre del país, así el hueco está reservado antes de pintar. */}
             <div
               className={zoom ? "ilp-stage ilp-stage-zoom" : "ilp-stage"}
-              style={{ aspectRatio: map.viewBox.split(" ").slice(2).join(" / "), ...zoom }}
+              style={{
+                aspectRatio: map.viewBox.split(" ").slice(2).join(" / "),
+                // La letra de las celdas HTML, como fracción del ancho: la misma que en el SVG.
+                ["--fs" as string]: ascii ? (ascii.fontSize / vb[2]).toFixed(5) : 0,
+                ...zoom,
+              }}
             >
+              {/* Lo que se acerca, junto: el dibujo y sus celdas vivas. El zoom es un `transform`
+                  sobre este envoltorio, alrededor del foco. */}
+              <div className="ilp-zoomwrap">
               <svg
                 viewBox={map.viewBox}
                 role="img"
@@ -177,7 +187,12 @@ export default async function EntryPage({
                 {/* El país en caracteres, fila a fila: aparecen como en una terminal. */}
                 <g className="ilp-ascii" fontSize={ascii?.fontSize}>
                   {ascii?.rows.map((row, i) => (
-                    <g key={row.y} className="ilp-ascii-row" style={{ ["--r" as string]: i }}>
+                    <g
+                      key={row.y}
+                      className="ilp-ascii-row"
+                      // La franja de la bandera que le toca a esta fila (`brand.flag`).
+                      style={{ ["--r" as string]: i, ["--c" as string]: flag[row.band] }}
+                    >
                       <text
                         className="ilp-ascii-land"
                         x={ascii.x}
@@ -200,12 +215,48 @@ export default async function EntryPage({
                   ))}
                 </g>
               </svg>
+              {/* Las celdas vivas, en HTML y no en el SVG: cada una cambia su carácter
+                  (`content`) y repinta sólo su cuadrito. Dentro del SVG, cada cambio repintaba
+                  el mapa entero, y en un teléfono modesto eso se nota. */}
+              {ascii && ascii.twinkles.length > 0 ? (
+                <div className="ilp-tws" aria-hidden="true">
+                  {ascii.twinkles.map((tw) => (
+                    <span
+                      key={`${tw.x}:${tw.y}`}
+                      style={{
+                        left: `${(((tw.x - vb[0]) / vb[2]) * 100).toFixed(2)}%`,
+                        top: `${(((tw.y - vb[1]) / vb[3]) * 100).toFixed(2)}%`,
+                        ["--k" as string]: tw.k,
+                        ["--c" as string]: flag[tw.band],
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              </div>
+
+              {/* Ondas de radio desde la emergencia: anillos de `o` que salen del foco. En
+                  HTML, para que el navegador las anime sin repintar el mapa. */}
+              {zoom ? (
+                <div className="ilp-waves" aria-hidden="true">
+                  {[0, 1].map((w) => (
+                    <span key={w} className="ilp-wave" style={{ ["--w" as string]: w }}>
+                      {Array.from({ length: 16 }, (_, i) => (
+                        <i key={i} style={{ ["--a" as string]: `${i * 22.5}deg` }}>
+                          o
+                        </i>
+                      ))}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
 
               {/* Al terminar el zoom: el foco late en el centro y se rotula. Va en HTML y
                   no dentro del SVG para que no crezca con el zoom. */}
               {zoom && emergency ? (
                 <Link href={app()} className="ilp-focus">
-                  <span className="ilp-focus-ring" aria-hidden="true" />
+                  {/* El foco es un carácter más del mapa, que va cambiando: late en ASCII. */}
+                  <span className="ilp-focus-glyph" aria-hidden="true" />
                   <span className="ilp-focus-tag">
                     <span className="ilp-focus-live" aria-hidden="true" />
                     <span className="ilp-focus-txt">

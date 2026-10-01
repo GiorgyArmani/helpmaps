@@ -148,6 +148,8 @@ const venezuela: CountryConfig = {
     // `rx="253.78"` y el cuadro tiene que ir a sangre, porque la máscara de la PWA recorta
     // ella y una esquina transparente deja borde.
     favicon: "/favicon-venezuela.png",
+    // La bandera, para el mapa en ASCII de la portada: amarillo, azul y rojo.
+    flag: ["#ffcc00", "#00247d", "#cf142b"],
     font: {
       sans: "var(--font-dm-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif",
       display: "var(--font-outfit), var(--font-dm-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif",

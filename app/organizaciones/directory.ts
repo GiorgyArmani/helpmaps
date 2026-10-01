@@ -357,13 +357,21 @@ export function emergencyFocus(
  * Usa el encuadre de `dotMap` (`viewBox`) y su proyección, así que todo lo que se apoya en
  * él —el zoom hacia el foco, el rótulo, la leyenda— cae en el mismo sitio.
  *
- * Una rejilla de celdas de ~14 × 22 km. La tierra sin lugares es un `:` tenue; con lugares,
- * la densidad sube por `+ * # @` (1, 2–3, 4–8, 9 o más). Dos capas por fila —la tierra y la
- * tinta— para que cada una lleve su color sin un `<tspan>` por carácter. Los huecos son
- * espacios de no separación: un espacio normal lo colapsa el SVG y descuadra la fila.
+ * Una rejilla de celdas de ~14 × 22 km. La tierra es un `#` macizo, del color de la franja
+ * de la bandera que le toca a su fila (`band`, de 0 a `bands - 1`, por su altura en el
+ * país); los lugares van encima en tinta, con la densidad por `+ * # @` (1, 2–3, 4–8, 9 o
+ * más). Dos capas por fila —la tierra y la tinta— para que cada una lleve su color sin un
+ * `<tspan>` por carácter. Los huecos son espacios de no separación: un espacio normal lo
+ * colapsa el SVG y descuadra la fila.
  */
 export interface AsciiMap {
-  rows: { y: number; land: string; ink: string }[];
+  rows: { y: number; band: number; land: string; ink: string }[];
+  /**
+   * Celdas de tierra que «titilan» (`#` → `%` → `&` → `+`): ~3 % de la tierra, elegidas por
+   * hash, así que son las mismas en cada carga y servidor y navegador pintan igual. En su
+   * fila quedan en blanco y se dibujan aparte, cada una con su desfase `k` (0–9).
+   */
+  twinkles: { x: number; y: number; band: number; k: number }[];
   x: number;
   width: number;
   fontSize: number;
@@ -386,6 +394,8 @@ export function asciiMap(
     outline?: [number, number][];
   },
   viewBox: string,
+  /** Cuántas franjas tiene la bandera: 3 en Venezuela. Con 1, todo el país de un color. */
+  bands = 1,
 ): AsciiMap {
   const [minX, minY, w, h] = viewBox.split(" ").map(Number) as [number, number, number, number];
   const [[, w0], [n0]] = geo.bounds;
@@ -411,6 +421,7 @@ export function asciiMap(
   }
 
   const rows: AsciiMap["rows"] = [];
+  const twinkleCells: { c: number; rowIndex: number }[] = [];
   for (let r = 0; r < rowsN; r++) {
     let land = "";
     let ink = "";
@@ -420,12 +431,29 @@ export function asciiMap(
       const cx = minX + (c + 0.5) * cw;
       const n = counts.get(r * cols + c) ?? 0;
       const onLand = poly ? inside(cx, cy, poly) : n > 0;
-      land += onLand && n === 0 ? ":" : BLANK;
+      const twinkle = onLand && n === 0 && hash2(c * 7 + 3, r * 13 + 1) % 33 === 0;
+      if (twinkle) twinkleCells.push({ c, rowIndex: rows.length });
+      land += onLand && n === 0 && !twinkle ? "#" : BLANK;
       ink += densityChar(n);
       if (onLand || n > 0) any = true;
     }
-    if (any) rows.push({ y: +cy.toFixed(2), land, ink });
+    if (!any) continue;
+    // La franja por la altura de la fila dentro del país dibujado, no del encuadre.
+    rows.push({ y: +cy.toFixed(2), band: 0, land, ink });
   }
 
-  return { rows, x: minX, width: w, fontSize: +(ch * 0.95).toFixed(2) };
+  const first = rows[0]?.y ?? 0;
+  const span = Math.max((rows[rows.length - 1]?.y ?? 0) - first, 1);
+  const k = Math.max(1, Math.floor(bands));
+  for (const row of rows) row.band = Math.min(k - 1, Math.floor(((row.y - first) / span) * k));
+
+  const twinkles = twinkleCells
+    .filter((t) => rows[t.rowIndex])
+    .map((t) => {
+      const row = rows[t.rowIndex]!;
+      // `x` es el comienzo de la celda: el carácter se ancla al inicio, como en la fila.
+      return { x: +(minX + t.c * cw).toFixed(2), y: row.y, band: row.band, k: hash2(t.c, t.rowIndex) % 10 };
+    });
+
+  return { rows, twinkles, x: minX, width: w, fontSize: +(ch * 0.95).toFixed(2) };
 }
