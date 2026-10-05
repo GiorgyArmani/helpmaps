@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { LocationType } from "@/domain/types";
 import { Icon } from "@/ui/icons";
 import { searchDirectory } from "./search";
+import OrgRegister from "./OrgRegister";
+
+// El mapa de verdad (Leaflet) llega aparte: mientras, su hueco exacto en esqueleto.
+const OrgMap = dynamic(() => import("./OrgMap"), {
+  ssr: false,
+  loading: () => <div className="olp-rmap skel" aria-hidden="true" />,
+});
 
 /** Un lugar, ya listo para pintarse: el texto lo prepara el servidor en su idioma. */
 export interface FinderEntry {
@@ -11,13 +20,14 @@ export interface FinderEntry {
   name: string;
   /** «Centro de acopio, Chacao, Miranda». */
   desc: string;
-  /** Dónde cae en el dibujo, en % (`mapSpots`); sin él, no se enciende en el mapa. */
-  spot: { l: number; t: number } | null;
+  type: LocationType;
+  /** Dónde está; sin él (una iniciativa digital), no va en el mapa. */
+  at: [number, number] | null;
 }
 
 export interface FinderLabels {
-  mapHits: string;
-  mapCaption: string;
+  mapLabel: string;
+  close: string;
   findTitle: string;
   findHint: string;
   findLabel: string;
@@ -47,15 +57,12 @@ export interface FinderLabels {
 export default function OrgFinder({
   entries,
   initialQuery,
-  map,
   labels,
   missingHref,
   lang,
 }: {
   entries: FinderEntry[];
   initialQuery: string;
-  /** El país en ASCII (`AsciiMap`), pintado en el servidor. */
-  map: React.ReactNode;
   labels: FinderLabels;
   missingHref: string;
   /** El idioma, si no es el de siempre: viaja en el formulario cuando no hay JavaScript. */
@@ -66,6 +73,14 @@ export default function OrgFinder({
   const hits = useMemo(() => searchDirectory(entries, q), [entries, q]);
   const searching = q.length >= 2;
   const input = useRef<HTMLInputElement>(null);
+  // El alta, abierta a mano desde «¿No aparece?». Sin resultados se abre sola.
+  const [registering, setRegistering] = useState(false);
+  const notFound = searching && hits.length === 0;
+  const showRegister = registering || notFound;
+  const placed = useMemo(
+    () => entries.flatMap((e) => (e.at ? [{ id: e.id, name: e.name, desc: e.desc, type: e.type, lat: e.at[0], lng: e.at[1] }] : [])),
+    [entries],
+  );
 
   // La dirección acompaña a lo escrito, sin recargar y sin llenar el historial.
   useEffect(() => {
@@ -82,22 +97,14 @@ export default function OrgFinder({
     <>
       <figure className="olp-map">
         <div className="olp-map-box">
-          {map}
-          {/* Lo encontrado «late» en ASCII sobre su sitio (`.amap-hits`, ascii-map.css). */}
-          {hits.length > 0 ? (
-            <div className="amap-hits" aria-hidden="true">
-              {hits.map((h, i) =>
-                h.spot ? (
-                  <span
-                    key={h.id}
-                    style={{ left: `${h.spot.l}%`, top: `${h.spot.t}%`, ["--i" as string]: i % 6 }}
-                  />
-                ) : null,
-              )}
-            </div>
-          ) : null}
+          <OrgMap
+            entries={placed}
+            hits={searching ? hits.map((h) => h.id) : null}
+            label={labels.mapLabel}
+            mine={labels.mine}
+            close={labels.close}
+          />
         </div>
-        <figcaption className="olp-cap">{hits.length > 0 ? labels.mapHits : labels.mapCaption}</figcaption>
       </figure>
 
       {/* El buscador: la acción de la página. En el teléfono se monta sobre el borde del
@@ -177,9 +184,29 @@ export default function OrgFinder({
           ) : null}
         </div>
 
-        <p className="olp-missing">
-          {labels.missing} <Link href={missingHref}>{labels.missingCta}</Link>
-        </p>
+        {/* El alta, aquí mismo: con el nombre que se acaba de buscar. Se monta de nuevo si
+            cambia la búsqueda, para que el nombre siga a lo escrito. */}
+        {showRegister ? (
+          <OrgRegister
+            key={notFound ? q : "manual"}
+            initialName={q}
+            onCancel={notFound ? undefined : () => setRegistering(false)}
+          />
+        ) : (
+          <p className="olp-missing">
+            {labels.missing}{" "}
+            {/* Sin JavaScript, el enlace lleva al formulario de la app, como antes. */}
+            <a
+              href={missingHref}
+              onClick={(e) => {
+                e.preventDefault();
+                setRegistering(true);
+              }}
+            >
+              {labels.missingCta}
+            </a>
+          </p>
+        )}
       </section>
     </>
   );

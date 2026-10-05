@@ -1,0 +1,560 @@
+/*
+ * Crear una cuenta (`/registro`, `RegisterStepper`).
+ *
+ * La barra, el titular y la bajada son los de las portadas (`orgs.css`: `.olp-top`,
+ * `.olp-h1`, `.olp-lead`). Aquí sólo la columna, la tarjeta y el recorrido en pasos.
+ * Colores de los tokens; elevación de `--e-*`; movimiento con `--t-*` y anulado con
+ * `prefers-reduced-motion`.
+ */
+
+/* Una columna estrecha y centrada: es un formulario, no una portada. */
+.rgp-in {
+  width: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+  padding: 16px var(--olp-gut) 48px;
+}
+
+/* Un titular de bienvenida, no el de una portada: algo menos grande y con aire entre
+   renglones. El `0.98` de `.olp-h1` funciona en dos líneas cortas; en tres se pega. */
+.rgp-h1 {
+  font-size: clamp(2.125rem, 8.6vw, 2.75rem);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+}
+
+.rgp-lead {
+  margin-top: 16px;
+}
+
+.rgp-card {
+  margin-top: 24px;
+  padding: 20px 18px;
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--e-3);
+}
+
+.rgp-legal {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.rgp-legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 8px;
+  font-size: 13px;
+  color: var(--mut-track);
+}
+
+/* ── El recorrido ──────────────────────────────────────────────────────── */
+
+.rg-bars {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 6px;
+}
+
+.rg-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.rg-bar::after {
+  content: "";
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--t-ui) var(--ease);
+}
+
+.rg-bar-on::after {
+  transform: scaleX(1);
+}
+
+.rg-count {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--mut-track);
+}
+
+.rg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+  animation: rg-in var(--t-ui) var(--ease) both;
+}
+
+@keyframes rg-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rg-h {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  outline: none;
+}
+
+.rg-p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+.rg-p-ink {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.rg-note {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--mut-track);
+}
+
+/* «¿Qué te trae?»: tres tarjetas que se tocan; tocar ya responde y avanza. */
+.rg-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.rg-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 12px 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--t-tap) var(--ease),
+    background-color var(--t-tap) var(--ease),
+    transform var(--t-tap) var(--ease);
+}
+
+.rg-opt:hover {
+  border-color: color-mix(in srgb, var(--ink) 30%, var(--line));
+}
+
+.rg-opt:active {
+  transform: scale(0.98);
+}
+
+.rg-opt-ic {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--ink);
+  transition:
+    background-color var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease);
+}
+
+.rg-opt-txt {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.rg-opt-txt b {
+  font-size: 15px;
+}
+
+.rg-opt-txt span {
+  font-size: 13px;
+  color: var(--mut-track);
+}
+
+.rg-opt-go {
+  flex: 0 0 auto;
+  color: var(--mut-track);
+}
+
+.rg-opt-on {
+  border-color: var(--ink);
+}
+
+.rg-opt-on .rg-opt-ic {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* La contraseña con su ojo dentro del campo: 44px de toque, sin tapar el texto. */
+.rg-pass {
+  position: relative;
+  display: block;
+}
+
+.rg-pass .finput {
+  width: 100%;
+  padding-right: 52px;
+}
+
+.rg-eye {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--mut-track);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.rg-eye[aria-pressed="true"] {
+  color: var(--ink);
+}
+
+/* La regla de la contraseña: un círculo vacío que se llena al cumplirse. */
+.rg-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 0;
+  font-size: 13px;
+  color: var(--mut-track);
+}
+
+.rg-rule-ic {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  color: transparent;
+  transition:
+    background-color var(--t-ui) var(--ease),
+    border-color var(--t-ui) var(--ease);
+}
+
+.rg-rule-ok {
+  color: var(--ink);
+}
+
+.rg-rule-ok .rg-rule-ic {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #fff;
+}
+
+.rg-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.rg-go {
+  min-width: 148px;
+}
+
+.rg-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 10px 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--mut-track);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rg-back:hover {
+  color: var(--ink);
+}
+
+.rg-opt:focus-visible,
+.rg-back:focus-visible,
+.rg-eye:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rg-have {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--mut-track);
+}
+
+.rg-have .linkish {
+  align-self: auto;
+  min-height: 44px;
+}
+
+/* Listo: el sobre, qué pasa ahora y a dónde lleva el enlace. */
+.rg-done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.rg-done-ic {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  animation: rg-pop 320ms var(--ease) both;
+}
+
+@keyframes rg-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* El titular de la página cambia con el camino elegido: entra de nuevo, sin saltos (el
+   hueco lo mantiene la tarjeta de abajo). */
+.rgp-hero {
+  animation: rg-fade var(--t-ui) var(--ease) both;
+}
+
+@keyframes rg-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Lo elegido, arriba de la tarjeta, con la puerta para cambiarlo. */
+.rg-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -6px 0 12px;
+}
+
+.rg-path-ic {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+}
+
+.rg-path-n {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.rg-path-x {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--mut-track);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.rg-path-x:hover {
+  color: var(--ink);
+}
+
+/* La organización: resultados que se eligen tocando, y «no aparece» siempre a mano. */
+.rg-orgs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rg-orgs:empty {
+  display: none;
+}
+
+.rg-org {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 12px 10px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--t-tap) var(--ease),
+    transform var(--t-tap) var(--ease);
+}
+
+.rg-org:active {
+  transform: scale(0.98);
+}
+
+.rg-org-txt {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.rg-org-txt b {
+  font-size: 14.5px;
+}
+
+.rg-org-txt span {
+  font-size: 12.5px;
+  color: var(--mut-track);
+}
+
+/* La marca de elegido: un círculo que se llena, no sólo el color del borde. */
+.rg-org-mark {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  color: #fff;
+}
+
+.rg-org-on {
+  border-color: var(--ink);
+}
+
+.rg-org-on .rg-org-mark {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.rg-org-new {
+  border-style: dashed;
+}
+
+.rg-org-new.rg-org-on {
+  border-style: solid;
+}
+
+.rg-org:focus-visible,
+.rg-path-x:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rg-org-skel {
+  display: block;
+  height: 56px;
+  border-radius: var(--r-md);
+}
+
+@media (min-width: 960px) {
+  /* Un poco más ancha que el teléfono: el titular cabe en dos renglones equilibrados. */
+  .rgp-in {
+    max-width: 600px;
+    padding-top: 56px;
+  }
+
+  .rgp-card {
+    margin-top: 32px;
+  }
+
+  .rgp-card {
+    padding: 28px 28px 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rg-body,
+  .rg-done-ic,
+  .rgp-hero {
+    animation: none;
+  }
+
+  .rg-org {
+    transition: none;
+  }
+
+  .rg-bar::after,
+  .rg-opt,
+  .rg-opt-ic,
+  .rg-rule-ic {
+    transition: none;
+  }
+
+  .rg-opt:active {
+    transform: none;
+  }
+}

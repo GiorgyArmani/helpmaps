@@ -115,6 +115,8 @@ export default function AccountMenu({
   const staffPending = signedIn && !staff.checked && wasStaff;
   const savedCount = account.favourites.size;
   const hasCookies = Boolean(site.integrations.analytics.ga);
+  // Las portadas leen el idioma de `?lang=`: el que se eligió aquí viaja con el enlace.
+  const withLang = (path: string) => (lang === site.language.default ? path : `${path}?lang=${lang}`);
 
   const pick = useCallback(
     (run: () => void) => () => {
@@ -299,6 +301,28 @@ export default function AccountMenu({
                     <Icon.plus />
                   </span>
                   <span className="useritem-txt">{t("account.createAccount")}</span>
+                </Link>
+              </div>
+
+              {/* Quien llegó al mapa desde la portada o desde la página para organizaciones
+                  tiene que poder volver: sin cuenta, el mapa no tiene otra salida. */}
+              <div className="usermenu-list">
+                <Link className="useritem" role="menuitem" href={withLang("/inicio")} onClick={() => onOpenChange(false)}>
+                  <span className="useritem-ic">
+                    <Icon.globe />
+                  </span>
+                  <span className="useritem-txt">{t("account.home")}</span>
+                </Link>
+                <Link
+                  className="useritem"
+                  role="menuitem"
+                  href={withLang("/organizaciones")}
+                  onClick={() => onOpenChange(false)}
+                >
+                  <span className="useritem-ic">
+                    <Icon.users />
+                  </span>
+                  <span className="useritem-txt">{t("home.footOrgs")}</span>
                 </Link>
               </div>
 

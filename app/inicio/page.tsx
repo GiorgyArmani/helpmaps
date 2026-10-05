@@ -7,6 +7,7 @@ import type { LocationType } from "@/domain/types";
 import { Icon } from "@/ui/icons";
 import { currentEmergency } from "@/server/emergency";
 import { CookiePrefsLink } from "@/features/consent/CookieConsent";
+import LangSwitch from "@/ui/LangSwitch";
 import AsciiMap from "../organizaciones/AsciiMap";
 import { dotMap, emergencyFocus, fetchDirectory, roundedCount } from "../organizaciones/directory";
 import FeatureTour from "../organizaciones/FeatureTour";
@@ -201,10 +202,13 @@ export default async function EntryPage({
           </span>
           <span className="olp-brand-n">{BRAND.name}</span>
         </Link>
-        <Link href={withLang("/login")} className="olp-toplink ilp-login">
-          <Icon.user width={16} height={16} />
-          {tv("home.login")}
-        </Link>
+        <div className="olp-top-end">
+          <LangSwitch current={lang} />
+          <Link href={withLang("/login")} className="olp-toplink ilp-login">
+            <Icon.user width={16} height={16} />
+            {tv("home.login")}
+          </Link>
+        </div>
       </header>
 
       {/* La franja de la portada: de borde a borde y recorta lo que el zoom derrama, para

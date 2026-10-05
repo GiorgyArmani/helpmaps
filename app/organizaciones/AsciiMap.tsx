@@ -4,13 +4,12 @@ import { asciiMap, type DirectoryEntry } from "./directory";
 import "./ascii-map.css";
 
 /**
- * El país en ASCII, con los colores de la bandera: el mapa de `/inicio` y de
- * `/organizaciones`. Uno solo, para que las dos portadas dibujen el mismo país.
+ * El país en ASCII, con los colores de la bandera: el mapa de la portada de `/inicio`.
+ * (`/organizaciones` muestra el mapa de verdad, `OrgMap`.)
  *
  * Lo pinta el servidor: las filas en un SVG y las celdas vivas en HTML. `viewBox` es el
  * encuadre de `dotMap`. Lo que cada página pone encima (el zoom y el foco de la emergencia
- * en `/inicio`) entra por `className`, `style` y `children`. Lo encontrado al buscar en
- * `/organizaciones` lo pone encima el buscador (`OrgFinder`), en el cliente.
+ * en `/inicio`) entra por `className`, `style` y `children`.
  */
 export default function AsciiMap({
   entries,

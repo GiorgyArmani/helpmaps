@@ -5,8 +5,8 @@ import { resolveLang, translator, type DictKey } from "@/i18n";
 import { Icon } from "@/ui/icons";
 import { currentEmergencyId } from "@/server/emergency";
 import { CookiePrefsLink } from "@/features/consent/CookieConsent";
-import AsciiMap from "./AsciiMap";
-import { dotMap, fetchDirectory, mapSpots, roundedCount } from "./directory";
+import LangSwitch from "@/ui/LangSwitch";
+import { fetchDirectory, roundedCount } from "./directory";
 import OrgFinder from "./OrgFinder";
 import FeatureTour from "./FeatureTour";
 import { AgendaScreen, CampaignScreen, PostsScreen, ProfileScreen } from "./Mockups";
@@ -22,12 +22,13 @@ import "./orgs.css";
  * organización ya está aquí, encuéntrala». Tocar la suya lleva a su ficha con
  * `?gestionar=1`, que abre la solicitud (`ManageRequest`, `db/15_gestion.sql`).
  *
- * ── LA PORTADA ES EL MAPA, HECHO CON LOS PUNTOS ─────────────────────────────
+ * ── LA PORTADA ES EL MAPA DE VERDAD ────────────────────────────────────────
  *
- * Ni foto ni degradado: el país en ASCII, el mismo de `/inicio` (`AsciiMap`), con los
- * lugares publicados de verdad en tinta. La frase «ya está en el mapa» se VE antes de
- * leerse. Y al buscar, lo encontrado late en ese mismo dibujo, en respuesta a lo que hizo
- * la persona. Lo pinta el servidor, sin teselas ni Leaflet: unas filas de texto en un SVG.
+ * Ni foto ni dibujo: el mismo mapa que se ve en la app (`OrgMap`), con los lugares
+ * publicados de verdad. La frase «ya está en el mapa» se VE antes de leerse: abre con el
+ * país, vuela a donde hay más lugares y rotula unos pocos con su nombre. Al buscar, el
+ * mapa se queda con lo encontrado, en respuesta a lo que hizo la persona. Leaflet llega
+ * aparte, con su hueco en esqueleto; el resto de la página no lo espera.
  *
  * ── POR QUÉ ES UNA RUTA Y NO UNA VISTA DEL PANEL ────────────────────────────
  *
@@ -73,15 +74,14 @@ export default async function OrgsPage({
   const query = (one(params.q) ?? "").slice(0, 80).trim();
 
   const directory = await fetchDirectory(await currentEmergencyId());
-  const map = dotMap(directory, COUNTRY.geo);
   // Todo el directorio va al buscador, que filtra en el teléfono mientras se escribe
-  // (`OrgFinder`). Sólo lo que pinta: nombre, una línea de texto y su sitio en el dibujo.
-  const spots = map ? mapSpots(directory, COUNTRY.geo, map.viewBox) : new Map();
+  // (`OrgFinder`), y al mapa. Sólo lo que pinta: nombre, una línea de texto, tipo y sitio.
   const finderEntries = directory.map((d) => ({
     id: d.id,
     name: d.name,
     desc: [t(`type.${d.type}` as DictKey), d.municipality, regionLabel(d.region)].filter(Boolean).join(", "),
-    spot: spots.get(d.id) ?? null,
+    type: d.type,
+    at: d.lat !== null && d.lng !== null ? ([d.lat, d.lng] as [number, number]) : null,
   }));
   const total = directory.length.toLocaleString(lang);
 
@@ -102,10 +102,13 @@ export default async function OrgsPage({
           </span>
           <span className="olp-brand-n">{BRAND.name}</span>
         </Link>
-        <Link href={withLang("/")} className="olp-toplink">
-          {t("orgs.toMap")}
-          <Icon.chevron width={16} height={16} />
-        </Link>
+        <div className="olp-top-end">
+          <LangSwitch current={lang} />
+          <Link href={withLang("/")} className="olp-toplink">
+            {t("orgs.toMap")}
+            <Icon.chevron width={16} height={16} />
+          </Link>
+        </div>
       </header>
 
       <section className="olp-hero">
@@ -120,15 +123,9 @@ export default async function OrgsPage({
         <OrgFinder
           entries={finderEntries}
           initialQuery={query}
-          map={
-            map ? (
-              // El mismo país en ASCII que la portada de /inicio.
-              <AsciiMap entries={directory} viewBox={map.viewBox} label={t("orgs.mapLabel", { n: total })} />
-            ) : null
-          }
           labels={{
-            mapHits: t("orgs.mapHits"),
-            mapCaption: t("orgs.mapCaption"),
+            mapLabel: t("orgs.mapLabel", { n: total }),
+            close: t("common.close"),
             findTitle: t("orgs.findTitle"),
             findHint: t("orgs.findHint"),
             findLabel: t("orgs.findLabel"),

@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import RegisterForm from "@/features/account/RegisterForm";
+import RegisterStepper, { type Purpose } from "@/features/account/RegisterStepper";
 import { useI18n } from "@/i18n/context";
+import type { DictKey } from "@/i18n";
 import { useSite } from "@/features/app/SiteProvider";
-import "../inicio/entry.css";
-import "../auth.css";
 import { Icon } from "@/ui/icons";
 import { safeNext } from "@/lib/safeNext";
+import LangSwitch from "@/ui/LangSwitch";
+import "../organizaciones/orgs.css";
+import "./registro.css";
 
 /**
  * Crear una cuenta, como página propia.
@@ -22,13 +24,11 @@ import { safeNext } from "@/lib/safeNext";
  *
  * ── EL ASPECTO ──────────────────────────────────────────────────────────────
  *
- * Reusa el frente oscuro de `/inicio` importando su hoja tal cual. Antes esta pantalla
- * era un formulario en blanco pegado al canto, sin logo y sin nombre: quien llegaba desde
- * el enlace de un correo no tenía forma de saber en qué sitio estaba metiendo su
- * contraseña, que es exactamente la pregunta que hay que responder ahí.
- *
- * El logo es lo primero y es también el enlace de vuelta al mapa, así que la salida deja
- * de estar escondida al final de la página.
+ * El de las portadas (`/inicio`, `/organizaciones`): su barra con el logo —que dice en
+ * qué sitio se está metiendo la contraseña, la pregunta que hay que responder aquí— y su
+ * titular. No es «crear una cuenta» cualquiera: es la bienvenida a la plataforma, y lo
+ * primero es preguntar cómo la quiere usar la persona. Desde ahí el recorrido
+ * (`RegisterStepper`) y el titular de la página son los de su camino.
  */
 export default function RegisterPage() {
   return (
@@ -45,45 +45,53 @@ function RegisterBody() {
   // Quien llega desde una invitación trae su vuelta en el `next`; perderlo aquí era
   // perder la invitación.
   const next = safeNext(useSearchParams().get("next"));
+  // El titular cambia con lo que la persona elige: la página pasa a hablarle a ella.
+  const [purpose, setPurpose] = useState<Purpose | null>(null);
+  const hero = purpose ?? "welcome";
 
   return (
-    <main className="entry auth">
-      <div className="entry-card">
-        <header className="entry-head">
-          <Link className="entry-logo" href="/" aria-label={site.brand.name}>
+    <main className="olp rgp">
+      <header className="olp-top">
+        <Link href="/" className="olp-brand">
+          <span className="olp-logo" aria-hidden="true">
             {site.brand.logo ? (
               // eslint-disable-next-line @next/next/no-img-element -- un asset estático
               <img src={site.brand.logo} alt="" />
             ) : (
               site.brand.emoji || site.country.code.slice(0, 1)
             )}
+          </span>
+          <span className="olp-brand-n">{site.brand.name}</span>
+        </Link>
+        <div className="olp-top-end">
+          <LangSwitch />
+          <Link href="/" className="olp-toplink">
+            {t("orgs.toMap")}
+            <Icon.chevron width={16} height={16} />
           </Link>
-          <div className="entry-brand">{site.country.host}</div>
-          <h1 className="entry-h1">{t("register.title")}</h1>
-          <p className="entry-lead">{t("register.subtitle")}</p>
-        </header>
+        </div>
+      </header>
 
-        <div className="auth-card">
-          <RegisterForm
+      <section className="rgp-in">
+        {/* `key`: al cambiar de camino, el titular entra de nuevo. */}
+        <div key={hero} className="rgp-hero">
+          <h1 className="olp-h1 rgp-h1">{t(`register.hero.${hero}.title` as DictKey, { platform: site.brand.platform })}</h1>
+          <p className="olp-lead rgp-lead">{t(`register.hero.${hero}.lead` as DictKey, { platform: site.brand.platform })}</p>
+        </div>
+
+        <div className="rgp-card">
+          <RegisterStepper
             next={next}
-            onSignIn={() =>
-              router.push(next ? `/login?next=${encodeURIComponent(next)}` : "/login")
-            }
+            onPurpose={setPurpose}
+            onSignIn={() => router.push(next ? `/login?next=${encodeURIComponent(next)}` : "/login")}
           />
         </div>
 
-        <nav className="auth-legal">
+        <nav className="rgp-legal">
           <Link href="/docs/privacidad">{t("footer.privacy")}</Link>
           <Link href="/docs/terminos">{t("footer.terms")}</Link>
         </nav>
-
-        <p className="auth-foot">
-          <Link className="auth-back" href="/">
-            <Icon.back />
-            {t("register.backToMap", { name: site.brand.name })}
-          </Link>
-        </p>
-      </div>
+      </section>
     </main>
   );
 }

@@ -9,6 +9,7 @@ import { cleanDisplayName, displayNameInvalid } from "@/domain/account";
 import { sendAccountConfirm } from "@/lib/email";
 import { isKnownRegion } from "@/config";
 import { safeNext } from "@/lib/safeNext";
+import { toAvailability, toSkills } from "@/domain/volunteer";
 
 /**
  * Crear una cuenta de persona. Pública, sin invitación.
@@ -68,6 +69,11 @@ export async function POST(req: Request) {
   // `redirectTo` y lo aplica `/cuenta`. Si Supabase descarta el destino (lo hace, ver
   // `RecoveryRedirect.tsx`), la invitación la rescata `PendingInviteRedirect`.
   const next = safeNext(raw.next);
+  // Quien se registra para ayudar dice ya qué sabe hacer y cuándo puede (`/registro`). Es
+  // lo mismo que guardaría en «Cómo puedes ayudar» de su cuenta, filtrado al catálogo
+  // (`src/domain/volunteer.ts`): nada que no esté en la lista entra a la base.
+  const skills = toSkills(raw.skills);
+  const availability = toAvailability(raw.availability);
 
   if (!isEmail(email)) {
     return NextResponse.json({ error: "invalid_email" }, { status: 400 });
@@ -120,12 +126,17 @@ export async function POST(req: Request) {
   // El perfil se crea acá y no con un trigger sobre `auth.users`: un trigger en el
   // esquema `auth` es invisible desde este repo —no está en ninguna migración que alguien
   // pueda leer— y se pierde en la próxima base que se levante desde `db/`.
-  const { error: profileError } = await admin
+  const base = { user_id: data.user.id, display_name: displayName, region };
+  const volunteer = skills.length > 0 || availability.length > 0 ? { skills, availability } : null;
+  let { error: profileError } = await admin
     .from("profiles")
-    .upsert(
-      { user_id: data.user.id, display_name: displayName, region },
-      { onConflict: "user_id" },
-    );
+    .upsert(volunteer ? { ...base, ...volunteer } : base, { onConflict: "user_id" });
+  // Una base sin `db/16_voluntariado.sql` no tiene esas columnas: el perfil se crea igual,
+  // sin ellas. Perder los oficios es un retoque en la cuenta; perder el perfil, no poder
+  // entrar con nombre.
+  if (profileError && volunteer) {
+    ({ error: profileError } = await admin.from("profiles").upsert(base, { onConflict: "user_id" }));
+  }
   if (profileError) {
     console.error("[register] no se pudo crear el perfil:", profileError.message);
   }

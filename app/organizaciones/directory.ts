@@ -92,31 +92,6 @@ export function roundedCount(n: number, lang: string): string {
   return lang === "en" ? `${r}+` : `+${r}`;
 }
 
-/**
- * Dónde cae cada lugar dentro del dibujo, en % del cuadro: para que el buscador, en el
- * cliente, encienda lo encontrado sin volver a proyectar nada. Misma proyección que
- * `dotMap` y su posición EXACTA (la respuesta a «¿dónde está la mía?»). Sin coordenadas,
- * o fuera del país, no tiene sitio en el dibujo.
- */
-export function mapSpots(
-  entries: DirectoryEntry[],
-  geo: { bounds: [[number, number], [number, number]] },
-  viewBox: string,
-): Map<string, { l: number; t: number }> {
-  const [[s0, w0], [n0, e0]] = geo.bounds;
-  const [minX, minY, w, h] = viewBox.split(" ").map(Number) as [number, number, number, number];
-  const out = new Map<string, { l: number; t: number }>();
-  for (const e of entries) {
-    if (e.lat === null || e.lng === null) continue;
-    if (e.lat < s0 || e.lat > n0 || e.lng < w0 || e.lng > e0) continue;
-    out.set(e.id, {
-      l: +((((e.lng - w0) * SCALE - minX) / w) * 100).toFixed(2),
-      t: +((((n0 - e.lat) * SCALE - minY) / h) * 100).toFixed(2),
-    });
-  }
-  return out;
-}
-
 export interface DotMap {
   viewBox: string;
   /** La silueta del país como trazado SVG, o null si el preset no la trae. */

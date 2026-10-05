@@ -95,12 +95,87 @@
   color: var(--ink);
 }
 
+/* Lo de la derecha de la barra: el idioma y el enlace. */
+.olp-top-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* El idioma (`LangSwitch`): la pista hundida y la pastilla blanca del menú del mapa
+   (`.userlang-seg`), en pequeño. Cada opción conserva 44px de toque. */
+.lsw {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 6%, var(--soft));
+}
+
+.lsw-opt {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mut-track);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background-color var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease);
+}
+
+.lsw-opt:hover {
+  color: var(--ink);
+}
+
+.lsw-on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-1);
+}
+
+.lsw-opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* En un teléfono estrecho no caben el logo, las dos opciones y el enlace: queda sólo el
+   idioma al que se puede cambiar («EN»), como una pastilla más de la barra. */
+@media (max-width: 419px) {
+  .lsw {
+    padding: 0;
+    background: none;
+  }
+
+  .lsw-on {
+    display: none;
+  }
+
+  .lsw-opt {
+    min-height: 44px;
+    background: #fff;
+    box-shadow: var(--e-1);
+    color: var(--ink);
+  }
+}
+
 /* ── Portada ─────────────────────────────────────────────────────────────
    Teléfono: titular, mapa y buscador montado sobre el borde del mapa.
    Escritorio: titular y buscador a la izquierda, el mapa grande a la derecha. */
 
 .olp-hero {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
     "copy"
     "map"
@@ -145,35 +220,345 @@
   color: var(--ink);
 }
 
-/* El mapa: el país en ASCII (`AsciiMap`, `ascii-map.css`). `aspect-ratio` reserva el
-   hueco antes de que el SVG se pinte (sin salto al cargar). */
+/* El mapa: el de la app (`OrgMap`). `.olp-rmap` reserva el hueco con `aspect-ratio`
+   antes de que llegue Leaflet (sin salto al cargar). */
 .olp-map {
   grid-area: map;
   margin: 8px 0 0;
   position: relative;
 }
 
-/* La caja del dibujo: lo encontrado (`.amap-hits`) se monta encima, del mismo tamaño. */
+/* La caja del mapa. */
 .olp-map-box {
   position: relative;
 }
 
-.olp-map svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
+/* El mapa de verdad (`OrgMap`): el de la app, en una tarjeta. `isolation` encierra los
+   `z-index` de Leaflet (400–1000) para que la tarjeta del pin quede encima. */
+.olp-rmap {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  background: var(--soft);
+  box-shadow: var(--e-1);
 }
 
-.olp-cap {
+.olp-rmap-map,
+.olp-rmap-skel {
   position: absolute;
-  left: 0;
-  bottom: 44px;
-  /* Estrecha: cabe en el hueco que deja el país abajo a la izquierda, sin tapar el sur. */
-  max-width: 10em;
+  inset: 0;
+}
+
+.olp-rmap-map {
+  z-index: 0;
+  font-family: inherit;
+}
+
+.olp-rmap-skel {
+  z-index: 1;
+  border-radius: 0;
+}
+
+/* El pin tocado: su nombre, de qué es y «Es mi organización». Arriba, porque abajo monta
+   el buscador en el teléfono. */
+.olp-rcard {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 6px 10px 14px;
+  border-radius: var(--r-md);
+  background: #fff;
+  box-shadow: var(--e-3);
+}
+
+.olp-rcard-txt {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.olp-rcard-txt b {
+  font-size: 14px;
+  color: var(--ink);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.olp-rcard-txt span {
+  font-size: 12.5px;
+  color: var(--mut);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.olp-rcard-go {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
   font-size: 13px;
-  line-height: 1.4;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform var(--t-tap) var(--ease);
+}
+
+.olp-rcard-go:active {
+  transform: scale(0.97);
+}
+
+.olp-rcard-x {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--mut);
+  cursor: pointer;
+}
+
+.olp-rcard-go:focus-visible,
+.olp-rcard-x:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── El alta, en tres pasos (`OrgRegister`) ────────────────────────────── */
+
+.olp-reg {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.olp-reg-kicker {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--mut-track);
+}
+
+/* El avance: tres tramos que se llenan de izquierda a derecha. */
+.olp-regbars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.olp-regbar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.olp-regbar::after {
+  content: "";
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--t-ui) var(--ease);
+}
+
+.olp-regbar-on::after {
+  transform: scaleX(1);
+}
+
+.olp-reg-count {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--mut-track);
+}
+
+.olp-reg-h {
+  margin: 4px 0 14px;
+  font-family: var(--font-display);
+  font-size: 1.3125rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  outline: none;
+}
+
+.olp-reg-p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+/* Cada paso entra desde un poco a la derecha: se nota que se avanzó. */
+.olp-reg-body {
+  animation: olp-reg-in var(--t-ui) var(--ease) both;
+}
+
+@keyframes olp-reg-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* El tipo: tarjetas que se tocan, con el icono y el color que tendrá en el mapa. */
+.olp-types {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.olp-types-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.olp-type {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--t-tap) var(--ease),
+    background-color var(--t-tap) var(--ease),
+    transform var(--t-tap) var(--ease);
+}
+
+.olp-type:active {
+  transform: scale(0.98);
+}
+
+.olp-type-ic {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: var(--tc);
+  background: color-mix(in srgb, var(--tc) 12%, #fff);
+  transition:
+    background-color var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease);
+}
+
+.olp-type-on {
+  border-color: var(--tc);
+  background: color-mix(in srgb, var(--tc) 6%, #fff);
+}
+
+.olp-type-on .olp-type-ic {
+  color: #fff;
+  background: var(--tc);
+}
+
+.olp-type:focus-visible,
+.olp-reg-back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Atrás a la izquierda, discreto; seguir a la derecha, el botón fuerte. */
+.olp-reg-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.olp-reg-go {
+  min-width: 148px;
+}
+
+.olp-reg-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 10px 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--mut-track);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.olp-reg-back:hover {
+  color: var(--ink);
+}
+
+/* Listo: el visto, el nombre y qué pasa ahora. */
+.olp-reg-done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.olp-reg-ok {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: var(--ok);
+  color: #fff;
+  animation: olp-reg-pop 320ms var(--ease) both;
+}
+
+@keyframes olp-reg-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ── El buscador ─────────────────────────────────────────────────────── */
@@ -1491,14 +1876,27 @@
     --olp-gut: 40px;
   }
 
+  /* La portada ES el mapa: de borde a borde, y el texto y el buscador encima, en una
+     columna a la izquierda. El canalón se calcula para que esa columna siga alineada con
+     el resto de la página (`--olp-max`). */
   .olp-hero {
-    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    position: relative;
+    max-width: none;
+    min-height: min(900px, calc(100dvh - 72px));
+    grid-template-columns: minmax(0, 520px);
     grid-template-areas:
-      "copy map"
-      "find map";
-    column-gap: 48px;
-    align-items: start;
-    padding-top: 56px;
+      "copy"
+      "find";
+    align-content: start;
+    padding-top: 64px;
+    padding-bottom: 64px;
+    padding-inline: max(var(--olp-gut), calc((100% - var(--olp-max)) / 2 + var(--olp-gut)));
+  }
+
+  .olp-copy,
+  .olp-find {
+    position: relative;
+    z-index: 1;
   }
 
   /* Tres líneas y no cuatro: a este ancho de columna, el tamaño del teléfono partía
@@ -1512,18 +1910,57 @@
     max-width: 520px;
   }
 
-  /* Pegado arriba: con una lista larga de resultados, lo encontrado sigue a la vista
-     mientras se recorre. */
+  /* El mapa, de fondo de toda la sección. */
   .olp-map {
-    position: sticky;
-    top: 32px;
-    align-self: start;
-    margin: 24px 0 0;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    margin: 0;
   }
 
-  .olp-cap {
-    bottom: 0;
-    max-width: 16em;
+  /* Pegado a la pantalla: con una lista larga de resultados (o el alta abierta) la
+     sección crece más que la ventana, y el mapa —con sus controles— sigue
+     a la vista mientras se recorre. */
+  .olp-map-box {
+    position: sticky;
+    top: 0;
+    height: min(100%, 100dvh);
+  }
+
+  /* `--map-inset`: la parte del ancho que tapa la columna del texto. `OrgMap` la lee para
+     encuadrar el país (y lo encontrado) en lo que queda a la vista, a la derecha. */
+  .olp-rmap {
+    --map-inset: 0.46;
+    height: 100%;
+    aspect-ratio: auto;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* El velo: funde el mapa hacia el fondo de la página bajo la columna del texto, para que
+     se lea encima, y lo deja limpio a la derecha. No atrapa los toques. */
+  .olp-rmap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        to right,
+        var(--soft) 0%,
+        color-mix(in srgb, var(--soft) 88%, transparent) 34%,
+        color-mix(in srgb, var(--soft) 0%, transparent) 58%
+      ),
+      linear-gradient(to bottom, transparent 85%, var(--soft));
+  }
+
+  /* El pin tocado: una tarjeta a la derecha, lejos del texto. */
+  .olp-rcard {
+    left: auto;
+    right: var(--olp-gut);
+    top: 24px;
+    width: 400px;
   }
 
   .olp-band {
@@ -1619,6 +2056,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .lsw-opt {
+    transition: none;
+  }
+
+  .olp-reg-body,
+  .olp-reg-ok {
+    animation: none;
+  }
+
+  .olp-regbar::after,
+  .olp-type,
+  .olp-type-ic,
   .olp-input,
   .olp-go,
   .olp-hitrow,

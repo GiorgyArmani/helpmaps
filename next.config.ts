@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   turbopack: { root: import.meta.dirname },
+  // Sólo en desarrollo: abrir el servidor local por 127.0.0.1 (otro origen que
+  // `localhost`, p. ej. para probar sin el zoom que el navegador guarda por sitio). Sin
+  // esto Next bloquea sus recursos de desarrollo y la página no llega a funcionar.
+  allowedDevOrigins: ["127.0.0.1"],
   experimental: {
     // Don't preload every route's modules at startup — keeps the dev server's JS heap
     // flat (the single-country app OOMed without this).
