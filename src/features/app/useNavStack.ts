@@ -83,6 +83,13 @@ export function useNavStack<V extends string>({
   // reconocía y RECARGABA la página entera. (No se cancela en el desmontaje: en modo
   // estricto el segundo montaje sale por `seeded` y la escritura no ocurriría nunca.)
   const seeded = useRef(false);
+  // Hasta que corre ese turno, el historial NO tiene nuestras entradas: sólo la de la carga.
+  // Un `history.back()` / `go(-n)` en ese hueco no retrocede dentro de la app sino FUERA de
+  // ella — a la página de la que venía la persona, o a `about:blank` en una pestaña nueva.
+  // Pasaba con un enlace compartido (`?c=`) abierto por primera vez: el tutorial arranca,
+  // su primer paso cierra las vistas y la persona nunca llegaba a ver el punto. Mientras
+  // tanto, atrás/reiniciar sólo cambian la pila: la siembra escribe lo que haya al correr.
+  const written = useRef(false);
   useEffect(() => {
     if (seeded.current) return;
     seeded.current = true;
@@ -90,6 +97,7 @@ export function useNavStack<V extends string>({
       const s = stackRef.current;
       write("replace", s.slice(0, 1));
       for (let i = 1; i < s.length; i++) write("push", s.slice(0, i + 1));
+      written.current = true;
     }, 0);
   }, [write]);
 
@@ -118,7 +126,7 @@ export function useNavStack<V extends string>({
     (entry: NavEntry<V>) => {
       const next = [...stackRef.current, entry];
       commit(next);
-      write("push", next);
+      if (written.current) write("push", next);
     },
     [commit, write],
   );
@@ -132,7 +140,7 @@ export function useNavStack<V extends string>({
       }
       const next = [...s.slice(0, -1), entry];
       commit(next);
-      write("replace", next);
+      if (written.current) write("replace", next);
     },
     [commit, write, push],
   );
@@ -143,6 +151,7 @@ export function useNavStack<V extends string>({
       const target = [s[0] ?? baseRef.current, entry];
       const depth = s.length - 1;
       commit(target);
+      if (!written.current) return;
       if (depth === 0) write("push", target);
       else if (depth === 1) write("replace", target);
       else {
@@ -157,14 +166,14 @@ export function useNavStack<V extends string>({
     const s = stackRef.current;
     if (s.length <= 1) return;
     commit(s.slice(0, -1));
-    window.history.back();
+    if (written.current) window.history.back();
   }, [commit]);
 
   const reset = useCallback(() => {
     const s = stackRef.current;
     if (s.length <= 1) return;
     commit(s.slice(0, 1));
-    window.history.go(-(s.length - 1));
+    if (written.current) window.history.go(-(s.length - 1));
   }, [commit]);
 
   const top = stack[stack.length - 1] ?? base;

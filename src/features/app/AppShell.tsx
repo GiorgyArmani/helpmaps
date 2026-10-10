@@ -431,14 +431,16 @@ export default function AppShell({
     // still greets them on a plain visit. Same for someone who just accepted a center
     // invitation (`?mine=1`): their initiative's onboarding is already on screen, and a
     // 13-step tour of the public map on top of it buries the one thing they came to do.
-    if (initialAction || initialMine) return;
+    // Lo mismo con un punto compartido (`?c=`): vino a ver ESE punto, y el primer paso del
+    // tour cierra las vistas — o sea, se lo cerraba en la cara.
+    if (initialAction || initialMine || initialCenterId) return;
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reading an external store at mount
       if (!window.localStorage.getItem(TOUR_KEY)) setTourOpen(true);
     } catch {
       /* private mode: no tour rather than a tour on every load */
     }
-  }, [initialAction, initialMine]);
+  }, [initialAction, initialMine, initialCenterId]);
 
   // First time a staff member opens the panel, walk them through it. This IS the
   // onboarding: the welcome email links to the written manual, but somebody who just got
