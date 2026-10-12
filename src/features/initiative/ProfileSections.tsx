@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { toCenterStatus, type Center } from "@/domain/types";
-import { saveCenterProfile, type CenterProfile } from "@/data/initiatives";
+import { saveCenterProfile, saveOffers, type CenterProfile } from "@/data/initiatives";
+import { OFFERS_EXPIRE_DAYS, daysSince, offersState } from "@/domain/center";
 import { hasHours } from "@/domain/hours";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
@@ -11,6 +12,7 @@ import { BRAND } from "@/config";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
 import HoursPicker from "@/features/centers/HoursPicker";
 import HoursView, { scheduleText } from "@/features/centers/HoursView";
+import OffersView from "@/features/centers/OffersView";
 import SupplyPicker from "@/features/centers/SupplyPicker";
 import SupplyQuickAdd from "@/features/centers/SupplyQuickAdd";
 import { instagramUrl } from "@/features/centers/coverage";
@@ -33,7 +35,7 @@ import { Field } from "./forms";
  * de `center_info` a partir de lo último leído. Dos bloques abiertos a la vez podían pisarse.
  */
 
-export type SectionId = "needs" | "about" | "hours" | "receives" | "contact" | "donate";
+export type SectionId = "needs" | "offers" | "about" | "hours" | "receives" | "contact" | "donate";
 
 interface SectionProps {
   profile: CenterProfile;
@@ -50,6 +52,11 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
 
   const place = [center.municipality, helpers.regionLabel(center.region)].filter(Boolean).join(", ");
   const hayContacto = Boolean(profile.contact_name || profile.website || profile.instagram);
+  // Al público sólo lo que sigue en pie; quien gestiona ve también lo caducado, para poder
+  // confirmarlo. Un punto cerrado no entrega nada, diga lo que diga su lista.
+  const offers = profile.offers ?? [];
+  const offersVivas =
+    offersState(profile.offers_confirmed_at) !== "expired" && profile.status !== "cerrado";
 
   return (
     <div className="ecards">
@@ -66,6 +73,23 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
         }
         form={(done) => <NeedsForm profile={profile} onDone={done} />}
       />
+
+      {profile.offers !== null ? (
+        <EditableCard
+          id="offers"
+          title={t("pedit.secOffers")}
+          empty={offers.length === 0 || (!editable && !offersVivas)}
+          emptyLabel={t("pedit.emptyOffers")}
+          {...p}
+          view={
+            <>
+              <OffersView offers={offers} confirmedAt={profile.offers_confirmed_at} manage={editable} />
+              {editable ? <ConfirmOffers profile={profile} onSaved={p.onSaved} /> : null}
+            </>
+          }
+          form={(done) => <OffersForm profile={profile} onDone={done} />}
+        />
+      ) : null}
 
       <EditableCard
         id="about"
@@ -426,6 +450,89 @@ function ReceivesForm({ profile, onDone }: FormProps) {
     <div className="stack">
       <SupplyPicker value={receives} onChange={setReceives} />
       <FormActions {...s} onSave={() => void s.save({ receives })} onCancel={() => onDone(false)} />
+    </div>
+  );
+}
+
+/**
+ * «Sigue disponible», en un toque.
+ *
+ * Es lo que mantiene viva la lista: sin esto, confirmar que nada cambió obligaba a abrir el
+ * editor y guardar lo mismo, y nadie hace eso cada semana. Se esconde el día en que ya se
+ * confirmó — un botón que no cambia nada al tocarlo enseña a no tocarlo.
+ */
+function ConfirmOffers({ profile, onSaved }: { profile: CenterProfile; onSaved: () => void }) {
+  const { t } = useI18n();
+  const [guardando, setGuardando] = useState(false);
+  const [fallo, setFallo] = useState(false);
+
+  const offers = profile.offers ?? [];
+  const hoy = daysSince(profile.offers_confirmed_at) === 0;
+  if (offers.length === 0 || hoy) return null;
+
+  async function confirmar() {
+    const sb = getSupabase();
+    if (!sb) return;
+    setGuardando(true);
+    setFallo(false);
+    try {
+      await saveOffers(sb, profile.location_id, offers);
+      onSaved();
+    } catch {
+      setFallo(true);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <>
+      <button type="button" className="btng doffer-confirm" onClick={() => void confirmar()} disabled={guardando}>
+        <Icon.check />
+        {guardando ? t("common.saving") : t("offers.stillAvailable")}
+      </button>
+      {fallo ? (
+        <p className="onb-err" role="status">
+          {t("error.generic")}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function OffersForm({ profile, onDone }: FormProps) {
+  const { t } = useI18n();
+  const [offers, setOffers] = useState(profile.offers ?? []);
+  const [guardando, setGuardando] = useState(false);
+  const [fallo, setFallo] = useState(false);
+
+  // No pasa por `useSave`: aquél escribe la ficha entera, y esto va por su propio camino
+  // para que la fecha de confirmación sólo se mueva cuando se toca ESTE bloque.
+  async function guardar() {
+    const sb = getSupabase();
+    if (!sb) return;
+    setGuardando(true);
+    setFallo(false);
+    try {
+      await saveOffers(sb, profile.location_id, offers);
+      onDone(true);
+    } catch {
+      setFallo(true);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div className="stack">
+      <SupplyPicker value={offers} onChange={setOffers} hint={t("offers.pickerHint")} />
+      <p className="fhint">{t("offers.editNote", { n: OFFERS_EXPIRE_DAYS })}</p>
+      <FormActions
+        guardando={guardando}
+        fallo={fallo}
+        onSave={() => void guardar()}
+        onCancel={() => onDone(false)}
+      />
     </div>
   );
 }

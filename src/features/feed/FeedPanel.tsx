@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { currentOffers } from "@/domain/center";
 import type { FeedItem, FeedMode } from "@/domain/feed";
 import { formatKm } from "@/domain/nearby";
 import { Icon } from "@/ui/icons";
@@ -200,13 +201,14 @@ export default function FeedPanel({
           ) : null}
 
           {/* Lo que este punto OFRECE, para quien viene buscando ayuda: el tipo, si está
-              abierto, y qué recibe. Nada de lo que pide — eso es la otra cara. */}
+              abierto, y qué tiene para entregar. Aquí iba `receives`, que es lo que el
+              punto ACEPTA como donativo: a quien busca agua le decía dónde llevarla. */}
           {item.kind === "open" ? (
             <p className="fitem-open">
               <span className="fitem-tag fitem-tag-open">{t("status.abierto")}</span>
               {t(`type.${item.center.type}` as DictKey)}
-              {item.center.info && item.center.info.receives.length > 0
-                ? ` · ${item.center.info.receives.slice(0, 4).join(", ")}`
+              {currentOffers(item.center).length > 0
+                ? ` · ${t("offers.inline", { list: currentOffers(item.center).slice(0, 4).join(", ") })}`
                 : ""}
             </p>
           ) : null}

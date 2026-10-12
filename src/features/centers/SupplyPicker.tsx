@@ -33,9 +33,12 @@ import { useI18n } from "@/i18n/context";
 export default function SupplyPicker({
   value,
   onChange,
+  hint,
 }: {
   value: string[];
   onChange: (next: string[]) => void;
+  /** La frase de arriba. Por defecto la de «qué reciben»; «qué entregan» trae la suya. */
+  hint?: string;
 }) {
   const { t } = useI18n();
   const [draft, setDraft] = useState("");
@@ -69,7 +72,7 @@ export default function SupplyPicker({
 
   return (
     <div className="sup">
-      <p className="fhint sup-hint">{t("supply.pickerHint")}</p>
+      <p className="fhint sup-hint">{hint ?? t("supply.pickerHint")}</p>
 
       <div className="sup-chips">
         {presets.map(({ key, label }) => {

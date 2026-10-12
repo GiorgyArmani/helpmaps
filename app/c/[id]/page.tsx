@@ -5,6 +5,7 @@ import { supabasePublic } from "@/lib/supabase/server";
 import { fetchCenter } from "@/data/centers";
 import { EMPTY_PROFILE, fetchInitiativeProfile } from "@/data/initiatives";
 import {
+  currentOffers,
   daysSince,
   directionsUrl,
   hasCoords,
@@ -27,6 +28,7 @@ import {
 } from "@/features/centers/InitiativeSections";
 import ProfileTabs, { type ProfileTab } from "@/features/centers/ProfileTabs";
 import HoursView from "@/features/centers/HoursView";
+import OffersView from "@/features/centers/OffersView";
 import PointActions from "@/features/account/PointActions";
 import ShareRow from "@/features/share/ShareRow";
 import ManageRequest from "@/features/initiative/ManageRequest";
@@ -143,6 +145,7 @@ export default async function CenterPage({ params, searchParams }: Params) {
   const inicial = alPost ? "posts" : one(query.tab);
 
   const info = center.info;
+  const offers = currentOffers(center);
 
   const tabs: ProfileTab[] = [
     {
@@ -156,6 +159,15 @@ export default async function CenterPage({ params, searchParams }: Params) {
               <span className="dneed-l">{t("center.needsTitle")}</span>
               <p className="dneed-t">{info.needs}</p>
             </div>
+          ) : null}
+
+          {/* Igual que en la ficha del mapa: lo que hay para quien viene a buscar, antes
+              de lo que se recibe de quien viene a traer. */}
+          {offers.length > 0 ? (
+            <>
+              <h3 className="dsection">{t("center.offersTitle")}</h3>
+              <OffersView offers={offers} confirmedAt={info?.offers_confirmed_at ?? null} />
+            </>
           ) : null}
 
           {info?.description ? <p className="sdesc">{info.description}</p> : null}
@@ -350,7 +362,7 @@ export default async function CenterPage({ params, searchParams }: Params) {
           {/* Lo que se hace con el punto: primero llegar y contactar, debajo guardar, avisar y
               «estoy aquí» — el mismo orden que la ficha del mapa. En escritorio van juntos a
               la derecha del nombre. */}
-          <div className="prof-do">
+          <div className="prof-do" style={{ ["--tc" as string]: style.color }}>
             <div className="dactions">
               {hasCoords(center) && !digital ? (
                 <a
@@ -365,7 +377,7 @@ export default async function CenterPage({ params, searchParams }: Params) {
               ) : null}
               {center.whatsapp ? (
                 <a
-                  className="btng"
+                  className="btng act-wa"
                   href={whatsappHref(center.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -375,14 +387,14 @@ export default async function CenterPage({ params, searchParams }: Params) {
                 </a>
               ) : null}
               {center.phone ? (
-                <a className="btng" href={telHref(center.phone)}>
+                <a className="btng act-call" href={telHref(center.phone)}>
                   <Icon.phone />
                   {t("center.call")}
                 </a>
               ) : null}
               {/* Al mapa, con este punto ya abierto: quien llegó por un enlace y quiere ver
                   qué hay alrededor no debería tener que buscarlo otra vez. */}
-              <Link className="btng" href={`/?c=${center.id}`}>
+              <Link className="btng act-map" href={`/?c=${center.id}`}>
                 <Icon.target />
                 {t("entry.enter")}
               </Link>

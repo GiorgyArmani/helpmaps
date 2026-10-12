@@ -118,6 +118,11 @@ const pt: Partial<Dict> = {
 
   "center.needsTitle": "Precisa agora",
   "center.receivesTitle": "Recebe",
+  "center.offersTitle": "Disponível agora",
+  "offers.forWhom": "Para quem precisa.",
+  "offers.callFirst": "Ligue antes de ir: pode ter acabado.",
+  "offers.stillAvailable": "Continua disponível",
+  "offers.inline": "Disponível: {list}",
   "center.helpTitle": "Como ajudar",
   "center.profilePage": "Ver página",
   "center.scheduleTitle": "Horário",

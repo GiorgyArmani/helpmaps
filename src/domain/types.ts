@@ -105,6 +105,14 @@ export interface CenterInfo {
   status: CenterStatus | null;
   /** Donation types the point accepts. */
   receives: string[];
+  /**
+   * What the point HANDS OUT to people who need it (`db/17_disponible.sql`). The other half
+   * of `receives`, and never to be confused with it: one is for donors, this is for whoever
+   * arrives asking. Read it through `currentOffers`, which knows when it has expired.
+   */
+  offers: string[];
+  /** When someone last said `offers` is still true. Stamped by the database. */
+  offers_confirmed_at: string | null;
   /** Free text: what they need right now. */
   needs: string | null;
   /** Non-monetary ways to help (initiatives especially). */

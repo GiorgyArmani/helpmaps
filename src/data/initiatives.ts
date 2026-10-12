@@ -668,12 +668,23 @@ export async function acceptInvite(sb: SupabaseClient, token: string): Promise<s
  */
 export interface CenterProfile extends CenterProfileDraft {
   onboarded_at: string | null;
+  /**
+   * Lo que el punto tiene para entregar. `null` = la base no tiene `db/17_disponible.sql`
+   * y el bloque no se dibuja. No está en el borrador a propósito: se guarda aparte, con
+   * `saveOffers`, para que corregir el horario no pueda pisarlo ni confirmarlo.
+   */
+  offers: string[] | null;
+  offers_confirmed_at: string | null;
 }
 
 const PROFILE_COLUMNS =
   "location_id,status,description,category,schedule,hours,contact_name,needs,receives,website,instagram,donate_info,donate_url,onboarded_at";
+const PROFILE_COLUMNS_CON_DISPONIBLE = `${PROFILE_COLUMNS},offers,offers_confirmed_at`;
 /** Lo mismo antes de `db/12_horario.sql`. */
 const PROFILE_COLUMNS_SIN_HORARIO = PROFILE_COLUMNS.replace("schedule,hours,", "schedule,");
+
+/** Sin `db/17_disponible.sql`, no volver a pedir sus columnas. */
+let columnasDisponibleAusentes = false;
 
 export async function fetchCenterProfile(
   sb: SupabaseClient,
@@ -682,7 +693,13 @@ export async function fetchCenterProfile(
   if (columnasCobroAusentes) return null;
   const leer = (columnas: string) =>
     sb.from("center_info").select(columnas).eq("location_id", locationId).maybeSingle();
-  let { data, error } = await leer(PROFILE_COLUMNS);
+  let { data, error } = await leer(
+    columnasDisponibleAusentes ? PROFILE_COLUMNS : PROFILE_COLUMNS_CON_DISPONIBLE,
+  );
+  if (faltaLaColumna(error) && !columnasDisponibleAusentes) {
+    columnasDisponibleAusentes = true;
+    ({ data, error } = await leer(PROFILE_COLUMNS));
+  }
   if (faltaLaColumna(error)) ({ data, error } = await leer(PROFILE_COLUMNS_SIN_HORARIO));
   if (faltaLaColumna(error)) columnasCobroAusentes = true;
   if (error || !data) return null;
@@ -704,7 +721,31 @@ export async function fetchCenterProfile(
     donate_info: text(row.donate_info),
     donate_url: text(row.donate_url),
     onboarded_at: text(row.onboarded_at),
+    offers: columnasDisponibleAusentes
+      ? null
+      : Array.isArray(row.offers)
+        ? row.offers.filter((x): x is string => typeof x === "string")
+        : [],
+    offers_confirmed_at: text(row.offers_confirmed_at),
   };
+}
+
+/**
+ * Guarda lo que el punto tiene para entregar, o confirma que sigue ahí.
+ *
+ * Es la misma llamada para las dos cosas, y a propósito: decir «sigue disponible» es volver
+ * a afirmar la lista entera, así que se manda entera. `offers_confirmed_at` va en la fila
+ * sólo para que el trigger vea que se tocó — la hora que queda es la de la base, no ésta.
+ */
+export async function saveOffers(sb: SupabaseClient, locationId: string, offers: string[]): Promise<void> {
+  const ahora = new Date().toISOString();
+  const { error } = await sb
+    .from("center_info")
+    .upsert(
+      { location_id: locationId, offers, offers_confirmed_at: ahora, updated_at: ahora },
+      { onConflict: "location_id" },
+    );
+  if (error) throw error;
 }
 
 /** Un perfil vacío para un punto que todavía no tiene fila en `center_info`. */
@@ -724,6 +765,8 @@ export function emptyProfile(locationId: string): CenterProfile {
     donate_info: null,
     donate_url: null,
     onboarded_at: null,
+    offers: columnasDisponibleAusentes ? null : [],
+    offers_confirmed_at: null,
   };
 }
 

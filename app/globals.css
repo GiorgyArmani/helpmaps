@@ -1770,6 +1770,96 @@ a {
   padding: 6px 11px;
 }
 
+/* ── Lo que el punto tiene para entregar ───────────────────────────────────
+ *
+ * Los mismos chips que «Recibe», con un visto delante y el fondo en verde: tienen que
+ * leerse como parientes —son insumos los dos— y no confundirse nunca, porque uno es para
+ * quien trae y el otro para quien viene a buscar.
+ *
+ * El verde va en el icono y en el fondo. La letra se queda en `--ink`: `--ok` sobre blanco
+ * no llega al 4,5:1 de un texto de 12px.
+ */
+.doffer {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.doffer .dtags {
+  margin-bottom: 0;
+}
+
+.dtag-have {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: color-mix(in srgb, var(--ok) 10%, #fff);
+  border-color: color-mix(in srgb, var(--ok) 30%, #fff);
+}
+
+.dtag-have svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  color: var(--ok);
+}
+
+/* La fecha, pegada a la lista: es lo que separa «hay» de «había». */
+.doffer-when {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  /* `--mut` sobre blanco se queda en 3,9:1; a 12px hace falta 4,5:1. */
+  color: var(--mut-track);
+}
+
+/* A la semana deja de ser un dato y pasa a ser un aviso. El color lo lleva el icono; la
+   frase lo dice con palabras, así que no depende de distinguir el ámbar. */
+.doffer-warn {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.doffer-warn svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--warn);
+}
+
+/* Caducada: sólo la ve quien gestiona. Apagada, para que no se lea como publicada. */
+.doffer-off .dtag-have {
+  background: var(--soft);
+  border-color: var(--line);
+  color: var(--mut-track);
+}
+
+.doffer-off .dtag-have svg {
+  color: var(--mut-track);
+}
+
+/* «Sigue disponible». No ocupa el ancho: es una confirmación, no la acción de la tarjeta. */
+.doffer-confirm {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 10px 16px;
+  transition: background var(--t-tap) var(--ease);
+}
+
+.doffer-confirm svg {
+  color: var(--ok);
+}
+
+.ecard-body .doffer {
+  margin-bottom: 0;
+}
+
 .drows {
   display: flex;
   flex-direction: column;
@@ -9787,6 +9877,275 @@ fieldset.fieldset {
   margin-top: 8px;
 }
 
+/* ── Las acciones del perfil: tres pesos, no siete botones iguales ──
+ *
+ * Eran siete cajas con el mismo borde y el mismo tamaño, y en una fila de siete iguales no
+ * se sabe cuál tocar. Ahora hay jerarquía: «Cómo llegar» es LA acción y va sola, a todo el
+ * ancho y rellena; contactar y abrir el mapa son teclas suaves; guardar, avisar y «estoy
+ * aquí» son otra fila de las mismas teclas, siempre de tres en tres para que las columnas
+ * coincidan arriba y abajo.
+ */
+.prof-do > .dactions {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.prof-do > .dactions > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.prof-do > .dactions > .btnp {
+  flex: 1 0 100%;
+  flex-direction: row;
+  gap: 8px;
+  min-height: 52px;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  box-shadow: var(--e-2);
+}
+
+/* Con una o dos teclas debajo hay ancho para la palabra al lado del icono; el icono encima
+   sólo hace falta cuando son tres y cada una mide un tercio. */
+@media (max-width: 1023px) {
+  .prof-do > .dactions:not(:has(> :nth-child(4))) > .btng {
+    flex-direction: row;
+    gap: 8px;
+    min-height: 48px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+  }
+
+  /* El icono en su ficha redonda blanca: es lo que hace que la tecla se lea como un botón
+     de app y no como una celda de tabla. Sólo cuando va encima del nombre. */
+  .prof-do .dactions .btng,
+  .prof-do > div > .dactions .btnp {
+    min-height: 84px;
+    gap: 8px;
+    border-radius: var(--r-lg);
+  }
+
+  .prof-do .dactions .btng svg,
+  .prof-do > div > .dactions .btnp svg {
+    width: 40px;
+    height: 40px;
+    padding: 10px;
+  }
+
+  .prof-do > .dactions:not(:has(> :nth-child(4))) > .btng svg {
+    width: 30px;
+    height: 30px;
+    padding: 7px;
+  }
+}
+
+.prof-do > div > .dactions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.prof-do .dactions .btnp,
+.prof-do .dactions .btng {
+  transition:
+    background var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease),
+    border-color var(--t-tap) var(--ease),
+    box-shadow var(--t-ui) var(--ease),
+    transform var(--t-tap) var(--ease);
+  touch-action: manipulation;
+}
+
+/* La pulsación se nota en el dedo: la tecla cede un poco. Con `transform`, que no mueve
+   nada de lo que tiene alrededor. */
+.prof-do .dactions .btnp:active:not(:disabled),
+.prof-do .dactions .btng:active:not(:disabled),
+.profpage .tgt:active,
+.profpage .mreq .btnp:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prof-do .dactions .btnp:active:not(:disabled),
+  .prof-do .dactions .btng:active:not(:disabled),
+  .profpage .tgt:active,
+  .profpage .mreq .btnp:active {
+    transform: none;
+  }
+}
+
+/* Sin cuenta: la invitación es una franja con su botón, no un párrafo con un enlace
+   subrayado al final. */
+.prof-do > p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 12px 0 0;
+}
+
+.prof-do > p .linkish {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--t-tap) var(--ease);
+}
+
+/* Compartir, como la hoja de compartir del teléfono: el círculo de la app y su nombre
+   debajo, sin caja alrededor. */
+/* Cinco en una fila también en el teléfono: con el mínimo de 72px el quinto caía solo a
+   una segunda línea. */
+.profpage .targets {
+  grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+}
+
+.profpage .tgt {
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 84px;
+  border-color: transparent;
+  border-radius: var(--r-lg);
+  background: transparent;
+  transition:
+    background var(--t-tap) var(--ease),
+    transform var(--t-tap) var(--ease);
+}
+
+.profpage .tgt .ti {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  box-shadow: var(--e-1);
+}
+
+.profpage .tgt .ti svg {
+  width: 20px;
+  height: 20px;
+}
+
+.profpage .tgt:hover {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.profpage .mreq .btnp {
+  min-height: 52px;
+  border-radius: 999px;
+  box-shadow: var(--e-2);
+  transition:
+    box-shadow var(--t-ui) var(--ease),
+    transform var(--t-tap) var(--ease);
+}
+
+/* Cada acción con su color, y el color dice qué es antes de leer la palabra: WhatsApp
+   verde, guardar rojo, avisar ámbar, «estoy aquí» verde de confirmado. Sale todo de los
+   tokens; el mapa toma el color del tipo de punto, el mismo de su pin. */
+.prof-do .act-wa {
+  --ac: #25d366;
+}
+
+.prof-do .act-call {
+  --ac: var(--brand);
+}
+
+.prof-do .act-map {
+  --ac: var(--tc, var(--brand));
+}
+
+.prof-do .act-save {
+  --ac: var(--danger);
+}
+
+.prof-do .act-report {
+  --ac: var(--warn);
+}
+
+.prof-do .act-here {
+  --ac: var(--ok);
+}
+
+/* La principal lleva un punto del color del tipo en el degradado: cada perfil tiene su
+   botón, sin dejar de ser el botón de la marca. */
+.prof-do > .dactions > .btnp {
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 62%, var(--tc, var(--accent)))
+  );
+}
+
+.prof-do .dactions .btng {
+  background: #fff;
+  box-shadow: var(--e-1);
+}
+
+/* El icono en su ficha teñida. Se oscurece hacia la tinta para que pase de 3:1 sobre el
+   tinte también con los colores claros (el verde de WhatsApp, el ámbar). */
+.prof-do .dactions .btng svg,
+.prof-do > div > .dactions .btnp svg {
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ac, var(--ink)) 14%, #fff);
+  color: color-mix(in srgb, var(--ac, var(--ink)) 62%, var(--ink));
+  transition:
+    background var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease);
+}
+
+/* Guardado y «ya estuve»: un estado, no otra acción principal. Se tiñe del color de la
+   propia acción, para que en la página siga habiendo un solo botón lleno. */
+.prof-do > div > .dactions .btnp {
+  background: color-mix(in srgb, var(--ac, var(--accent)) 12%, #fff);
+  color: color-mix(in srgb, var(--ac, var(--accent)) 62%, var(--ink));
+  box-shadow: none;
+}
+
+.prof-do > div > .dactions .btnp svg {
+  background: var(--ac, var(--accent));
+  color: #fff;
+}
+
+.prof-do .dactions .btnp:disabled {
+  opacity: 1;
+}
+
+
+@media (hover: hover) {
+  .prof-do .dactions .btng:hover:not(:disabled) {
+    box-shadow: var(--e-2);
+    transform: translateY(-1px);
+  }
+
+  /* Al apuntar, la ficha se llena de su color. */
+  .prof-do .dactions .btng:hover:not(:disabled) svg {
+    background: color-mix(in srgb, var(--ac, var(--ink)) 78%, var(--ink));
+    color: #fff;
+  }
+
+  .prof-do > .dactions > .btnp:hover {
+    box-shadow: var(--e-3);
+    transform: translateY(-1px);
+  }
+
+  .prof-do > p .linkish:hover,
+  .profpage .tgt:hover {
+    background: color-mix(in srgb, var(--ink) 8%, #fff);
+  }
+
+  .profpage .mreq .btnp:hover {
+    box-shadow: var(--e-3);
+  }
+}
+
 .prof-id .prof-warn {
   align-self: stretch;
 }
@@ -9845,12 +10204,13 @@ fieldset.fieldset {
      palabra al lado del icono, y apiladas bajo el nombre empujaban todo hacia abajo.
      Guardar, avisar y «estoy aquí» van en una segunda fila del mismo bloque. */
   .prof-head .prof-do {
-    flex: 0 1 560px;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 8px;
+    gap: 4px;
     min-width: 0;
+    max-width: 100%;
     margin-bottom: 4px;
     text-align: right;
   }
@@ -9872,11 +10232,18 @@ fieldset.fieldset {
     text-align: left;
   }
 
+  /* Una fila que no se parte: antes tenía un tope de 560px y el cuarto botón caía solo a
+     una segunda línea. El bloque mide lo que midan sus botones y el nombre se queda con el
+     resto. */
   .prof-head .dactions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
     margin: 0;
+  }
+
+  .prof-head .dactions > * {
+    flex: 0 0 auto;
   }
 
   .prof-head .dactions .btnp,
@@ -9884,10 +10251,61 @@ fieldset.fieldset {
     flex-direction: row;
     gap: 8px;
     min-height: 48px;
-    padding: 0 18px;
+    padding: 0 18px 0 9px;
     border-radius: 999px;
     font-size: 0.875rem;
     white-space: nowrap;
+  }
+
+  .prof-head .prof-do > .dactions > .btnp {
+    flex: 0 0 auto;
+    min-height: 48px;
+    padding: 0 22px 0 18px;
+    font-size: 0.875rem;
+  }
+
+  /* En una columna de mil píxeles los cinco círculos quedaban a 200px uno de otro: aquí
+     van juntos, a la izquierda. */
+  .prof-main .targets {
+    grid-template-columns: repeat(auto-fit, 104px);
+  }
+
+  .prof-head .prof-do > p {
+    justify-content: flex-end;
+    margin: 4px 0 0;
+  }
+
+  /* La segunda fila —guardar, avisar, «estoy aquí»— es de apoyo: sin fondo hasta que se
+     apunta, para que no compita con llegar y contactar. Sigue midiendo 44px de alto. */
+  .prof-head .prof-do > div > .dactions {
+    gap: 4px;
+  }
+
+  .prof-head .prof-do > div > .dactions .btng {
+    min-height: 44px;
+    padding: 0 14px 0 7px;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    color: var(--mut-track);
+    font-size: 0.8125rem;
+  }
+
+  .prof-head .prof-do > div > .dactions .btng:hover:not(:disabled) {
+    background: var(--soft);
+    box-shadow: none;
+    transform: none;
+    color: var(--ink);
+  }
+
+  .prof-head .prof-do > div > .dactions .btnp {
+    min-height: 44px;
+    padding: 0 14px 0 7px;
+    font-size: 0.8125rem;
+  }
+
+  .prof-head .prof-do .small {
+    max-width: 44ch;
   }
 
   .prof-grid {

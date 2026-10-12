@@ -82,6 +82,7 @@ export default function CenterForm({
     needs: info?.needs ?? "",
     // Lista, no una cadena con comas: el selector trabaja con lo que la base guarda.
     receives: info?.receives ?? [],
+    offers: info?.offers ?? [],
     help: info?.help ?? ([] as HelpKind[]),
     category: info?.category ?? "",
     description: info?.description ?? prefill?.description ?? "",
@@ -217,6 +218,7 @@ export default function CenterForm({
       info: {
         status: form.status || null,
         receives: form.receives.map((x) => x.trim()).filter(Boolean),
+        offers: form.offers.map((x) => x.trim()).filter(Boolean),
         needs: form.needs.trim() || null,
         help: form.help,
         category: form.category.trim() || null,
@@ -432,6 +434,14 @@ export default function CenterForm({
 
         <Field label={t("form.receives")}>
           <SupplyPicker value={form.receives} onChange={(next) => set("receives", next)} />
+        </Field>
+
+        <Field label={t("form.offers")}>
+          <SupplyPicker
+            value={form.offers}
+            onChange={(next) => set("offers", next)}
+            hint={t("offers.pickerHint")}
+          />
         </Field>
 
         <div>

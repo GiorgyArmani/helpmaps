@@ -31,6 +31,8 @@ export function mapCenterInfo(row: Row | null | undefined): CenterInfo | null {
     location_id: id,
     status: toCenterStatus(row.status),
     receives: strArray(row.receives),
+    offers: strArray(row.offers),
+    offers_confirmed_at: str(row.offers_confirmed_at),
     needs: str(row.needs),
     help: helpKinds(strArray(row.help)),
     category: str(row.category),
@@ -185,6 +187,41 @@ export function isOpenPoint(center: Center): boolean {
   return statusOf(center) !== "cerrado";
 }
 
+// ---------------------------------------------------------------------------
+// What a point has to hand out
+// ---------------------------------------------------------------------------
+
+/**
+ * How long a declared "we have this" stays believable.
+ *
+ * A shelf empties in hours, not weeks, so this is far stricter than `staleAfterDays`. After
+ * a week the list still shows but tells people to call first; after a month it is not shown
+ * at all, because "there was water in September" sends someone across town for nothing.
+ */
+export const OFFERS_CALL_FIRST_DAYS = 7;
+export const OFFERS_EXPIRE_DAYS = 30;
+
+export type OffersState = "fresh" | "aging" | "expired";
+
+/** No date counts as expired: an unconfirmed "available" is not information. */
+export function offersState(confirmedAt: string | null | undefined, now: number = Date.now()): OffersState {
+  const d = daysSince(confirmedAt, now);
+  if (d === null || d >= OFFERS_EXPIRE_DAYS) return "expired";
+  return d >= OFFERS_CALL_FIRST_DAYS ? "aging" : "fresh";
+}
+
+/**
+ * What this point can be said to have RIGHT NOW. Empty when it declared nothing, when the
+ * declaration expired, or when the point is closed — a shut door hands out nothing, whatever
+ * its card says. Every public surface (card, feed, search) reads offers through here.
+ */
+export function currentOffers(center: Center, now: number = Date.now()): string[] {
+  const info = center.info;
+  if (!info || info.offers.length === 0) return [];
+  if (!isOpenPoint(center)) return [];
+  return offersState(info.offers_confirmed_at, now) === "expired" ? [] : info.offers;
+}
+
 /** Does this point currently ask for something? Drives the needs bar and list. */
 export function hasNeed(center: Center): boolean {
   const info = center.info;
@@ -219,6 +256,8 @@ export function matchesQuery(center: Center, query: string): boolean {
     center.address ?? "",
     center.info?.category ?? "",
     center.info?.needs ?? "",
+    // Only what is still believable: an expired offer must not be findable either.
+    currentOffers(center).join(" "),
     center.coverage_regions.join(" "),
     center.coverage_municipalities.join(" "),
   ]

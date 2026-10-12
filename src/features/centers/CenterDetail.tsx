@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Center } from "@/domain/types";
-import { directionsUrl, hasCoords, isDigital, lastTouched } from "@/domain/center";
+import { currentOffers, directionsUrl, hasCoords, isDigital, lastTouched } from "@/domain/center";
 import { typeStyle } from "@/config";
 import { Icon, TypeGlyph } from "@/ui/icons";
 import { Badge } from "@/ui/primitives";
@@ -22,6 +22,7 @@ import {
 } from "@/features/centers/InitiativeSections";
 import ProfileTabs, { type ProfileTab } from "@/features/centers/ProfileTabs";
 import HoursView from "@/features/centers/HoursView";
+import OffersView from "@/features/centers/OffersView";
 import { EMPTY_PROFILE, type InitiativeProfile } from "@/data/initiatives";
 import ManageRequest from "@/features/initiative/ManageRequest";
 
@@ -60,6 +61,7 @@ export default function CenterDetail({
   const served = digital ? coverageNames(center, regionLabel) : [];
   const touched = lastTouched(center);
   const confirmed = info?.last_confirmed_at;
+  const offers = currentOffers(center);
 
   // Qué pestañas tiene ESTE punto. Se construyen con lo que hay: ver la nota larga en
   // `ProfileTabs`. Un acopio importado sin nada de esto no recibe ninguna y la ficha se
@@ -79,6 +81,16 @@ export default function CenterDetail({
                   <span className="dneed-l">{t("center.needsTitle")}</span>
                   <p className="dneed-t">{info.needs}</p>
                 </div>
+              ) : null}
+
+              {/* Justo debajo de lo que pide y antes de «Recibe», a propósito: son las dos
+                  mitades que más se confunden. Ésta es para quien llega a buscar; aquélla,
+                  para quien llega a traer. */}
+              {offers.length > 0 ? (
+                <>
+                  <h3 className="dsection">{t("center.offersTitle")}</h3>
+                  <OffersView offers={offers} confirmedAt={info?.offers_confirmed_at ?? null} />
+                </>
               ) : null}
 
               {digital ? (

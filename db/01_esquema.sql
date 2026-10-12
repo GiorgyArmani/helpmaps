@@ -3906,3 +3906,53 @@ create trigger trg_activity_attendees_reward
   for each row execute function public.reward_attendance();
 
 notify pgrst, 'reload schema';
+
+
+-- ###########################################################################
+-- ### 021_disponible
+-- ###########################################################################
+-- Lo que un punto TIENE para entregar, con la fecha en que se confirmó. Copia literal de
+-- db/17_disponible.sql, que explica por qué la fecha la pone la base. Si cambias uno,
+-- cambia el otro.
+-- ===========================================================================
+
+alter table public.center_info
+  add column if not exists offers text[] not null default '{}',
+  add column if not exists offers_confirmed_at timestamptz;
+
+-- Sólo el tamaño. Es una lista de chips, no un inventario.
+alter table public.center_info drop constraint if exists center_info_offers_size;
+alter table public.center_info add constraint center_info_offers_size
+  check (cardinality(offers) <= 40);
+
+create or replace function public.stamp_offers_confirmed()
+returns trigger
+language plpgsql
+set search_path = public
+as $offers$
+begin
+  if cardinality(new.offers) = 0 then
+    -- Sin nada que entregar no hay nada que confirmar.
+    new.offers_confirmed_at := null;
+  elsif tg_op = 'INSERT'
+     or new.offers is distinct from old.offers
+     or new.offers_confirmed_at is distinct from old.offers_confirmed_at then
+    new.offers_confirmed_at := now();
+  end if;
+  return new;
+end
+$offers$;
+
+drop trigger if exists trg_center_info_offers on public.center_info;
+create trigger trg_center_info_offers
+  before insert or update on public.center_info
+  for each row execute function public.stamp_offers_confirmed();
+
+comment on column public.center_info.offers is
+  'Lo que el punto entrega a quien lo necesita. Texto libre. No confundir con `receives`, '
+  'que es lo que acepta como donativo.';
+comment on column public.center_info.offers_confirmed_at is
+  'Última vez que alguien confirmó `offers`. La sella el trigger `trg_center_info_offers`; '
+  'el valor que mande el cliente se ignora.';
+
+notify pgrst, 'reload schema';

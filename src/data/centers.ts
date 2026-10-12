@@ -12,10 +12,17 @@ const LOCATION_COLUMNS =
   "coverage_regions,coverage_municipalities";
 
 const INFO_COLUMNS =
-  "location_id,status,receives,needs,help,category,description,schedule,hours,contact_name," +
-  "social_url,website,instagram,is_animal,last_confirmed_at,updated_at,source,external_id";
+  "location_id,status,receives,offers,offers_confirmed_at,needs,help,category,description," +
+  "schedule,hours,contact_name,social_url,website,instagram,is_animal,last_confirmed_at," +
+  "updated_at,source,external_id";
 
 const SELECT = `${LOCATION_COLUMNS},info:center_info(${INFO_COLUMNS})`;
+
+// ── Before `021_disponible` ────────────────────────────────────────────────
+//
+// The newest migration, so the first step down. A database without `db/17_disponible.sql`
+// simply has no "available now" block; everything else reads as usual.
+const PRE_OFFERS_SELECT = SELECT.replace("receives,offers,offers_confirmed_at,", "receives,");
 
 // ── Before `018_horario` ───────────────────────────────────────────────────
 //
@@ -23,7 +30,7 @@ const SELECT = `${LOCATION_COLUMNS},info:center_info(${INFO_COLUMNS})`;
 // `db/12_horario.sql` answers 42703 for `hours`. Without this middle step that error
 // would fall all the way back to the pre-011 list and silently drop websites and
 // Instagram handles too — losing two working columns over one missing one.
-const PRE_HOURS_SELECT = SELECT.replace("schedule,hours,", "schedule,");
+const PRE_HOURS_SELECT = PRE_OFFERS_SELECT.replace("schedule,hours,", "schedule,");
 
 // ── Before `011_digitales` ─────────────────────────────────────────────────
 //
@@ -42,9 +49,13 @@ const LEGACY_INFO_COLUMNS =
   "social_url,is_animal,last_confirmed_at,updated_at,source,external_id";
 const LEGACY_SELECT = `${LEGACY_LOCATION_COLUMNS},info:center_info(${LEGACY_INFO_COLUMNS})`;
 
-/** Postgres `undefined_column`, as PostgREST relays it. */
+/**
+ * Postgres `undefined_column`, as PostgREST relays it — or `PGRST204`, which is what a
+ * WRITE naming a column missing from the schema cache gets instead.
+ */
 function isMissingColumn(error: unknown): boolean {
-  return Boolean(error && typeof error === "object" && (error as { code?: string }).code === "42703");
+  const code = error && typeof error === "object" ? (error as { code?: string }).code : undefined;
+  return code === "42703" || code === "PGRST204";
 }
 
 /**
@@ -54,10 +65,13 @@ function isMissingColumn(error: unknown): boolean {
 async function withFallback<T extends { error: unknown }>(run: (columns: string) => PromiseLike<T>): Promise<T> {
   let result = await run(SELECT);
   if (result.error && isMissingColumn(result.error)) {
-    result = await run(PRE_HOURS_SELECT);
+    result = await run(PRE_OFFERS_SELECT);
     if (result.error && isMissingColumn(result.error)) {
-      warnLegacy();
-      result = await run(LEGACY_SELECT);
+      result = await run(PRE_HOURS_SELECT);
+      if (result.error && isMissingColumn(result.error)) {
+        warnLegacy();
+        result = await run(LEGACY_SELECT);
+      }
     }
   }
   return result;
@@ -160,6 +174,8 @@ export interface CenterDraft {
   info: {
     status: CenterStatus | null;
     receives: string[];
+    /** What the point hands out. The database stamps its date when this changes. */
+    offers: string[];
     needs: string | null;
     help: HelpKind[];
     category: string | null;
@@ -236,6 +252,7 @@ export async function saveCenter(
     location_id: draft.id,
     status: draft.info.status,
     receives: draft.info.receives,
+    offers: draft.info.offers,
     needs: draft.info.needs,
     help: draft.info.help,
     category: draft.info.category,
@@ -256,8 +273,14 @@ export async function saveCenter(
   let { error: infoError } = await sb
     .from("center_info")
     .upsert(info, { onConflict: "location_id" });
-  // Without `018_horario` the marked hours cannot be stored, but `schedule` already
-  // carries them as text, so the point still says when it opens.
+  // Each step drops the newest columns still in the row. Without `021_disponible` there is
+  // nowhere to keep what the point hands out; without `018_horario` the marked hours cannot
+  // be stored, but `schedule` already carries them as text, so the point still says when
+  // it opens.
+  if (infoError && isMissingColumn(infoError)) {
+    delete info.offers;
+    ({ error: infoError } = await sb.from("center_info").upsert(info, { onConflict: "location_id" }));
+  }
   if (infoError && isMissingColumn(infoError)) {
     const withoutHours = { ...info };
     delete withoutHours.hours;

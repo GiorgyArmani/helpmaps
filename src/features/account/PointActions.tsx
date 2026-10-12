@@ -150,7 +150,7 @@ export default function PointActions({ locationId }: { locationId: string }) {
       <div className="dactions">
         <button
           type="button"
-          className={saved ? "btnp" : "btng"}
+          className={saved ? "btnp act-save" : "btng act-save"}
           onClick={onToggleSave}
           disabled={busy}
           aria-pressed={saved}
@@ -159,7 +159,7 @@ export default function PointActions({ locationId }: { locationId: string }) {
           {saved ? t("point.saved") : t("point.save")}
         </button>
 
-        <button type="button" className="btng" onClick={() => setOpen((v) => !v)}>
+        <button type="button" className="btng act-report" onClick={() => setOpen((v) => !v)}>
           <Icon.alert />
           {t("point.report")}
         </button>
@@ -168,7 +168,7 @@ export default function PointActions({ locationId }: { locationId: string }) {
             salido de casa — de ahí que sea la que este producto quiere provocar. */}
         <button
           type="button"
-          className={checkin === "done" ? "btnp" : "btng"}
+          className={checkin === "done" ? "btnp act-here" : "btng act-here"}
           onClick={() => void doCheckin()}
           disabled={checkin === "sending" || checkin === "done"}
         >
