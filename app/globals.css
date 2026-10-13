@@ -1438,6 +1438,38 @@ a {
   flex: 0 0 auto;
 }
 
+/* Por qué salió este punto al buscar un insumo (`queryMatch`). «Disponible» va en tinta y
+   con su visto en verde: es lo que la persona vino a buscar. «Recibe» va apagado: es
+   cierto, pero es la puerta contraria. La palabra lo dice; el color sólo acompaña. */
+.cmatch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cmatch svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  color: var(--ok);
+}
+
+.cmatch-receives {
+  font-weight: 500;
+  color: var(--mut-track);
+}
+
+.cmatch-receives svg {
+  color: currentColor;
+}
+
 .cend {
   display: flex;
   flex-direction: column;
@@ -6067,6 +6099,228 @@ fieldset.fieldset {
   font-size: 0.75rem;
   line-height: 1.5;
   color: var(--mut);
+}
+
+/* ── Notificaciones ───────────────────────────────────────────────────────
+ *
+ * La vista de `NotificationsView.tsx`, dentro de la capa (`.ovbody` pone el canalón).
+ *
+ * Filas y no tarjetas, como la lista de puntos y por lo mismo: son muchas y se recorren.
+ * La fila entera es el botón —72px de alto como poco— y lo nuevo se dice tres veces: el
+ * punto, la negrita del título y la palabra para el lector de pantalla. El color solo no
+ * avisa a nadie que no lo distinga.
+ */
+.ntf {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* El conmutador es el mismo del feed (`.feed-modes`): aquí sin su margen, que lo pone el
+   `gap` de arriba, y con la altura de un dedo. */
+.ntf .feed-modes {
+  margin: 0;
+}
+
+.ntf .feed-mode {
+  min-height: 44px;
+}
+
+.ntf-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  overflow: hidden;
+}
+
+/* El esqueleto usa las filas de la lista de puntos, con el relleno de ésta. */
+.ntf-list .skel-row {
+  padding: 14px 13px;
+}
+
+.ntf-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 13px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background var(--t-tap) var(--ease);
+}
+
+.ntf-list li + li .ntf-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 65px;
+  right: 13px;
+  height: 1px;
+  background: var(--line);
+}
+
+.ntf-row:active {
+  background: var(--soft);
+}
+
+/* Sólo donde hay puntero: en un teléfono `:hover` se queda pegado a la última fila tocada. */
+@media (hover: hover) {
+  .ntf-row:hover {
+    background: var(--soft);
+  }
+}
+
+.ntf-row:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+/* El tono de cada tipo: `--tc` lo pone el modificador y de él salen fondo e icono. */
+.ntf-ic {
+  --tc: var(--brand);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tc) 12%, #fff);
+  color: var(--tc);
+}
+
+.ntf-ic svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ntf-ic-ok {
+  --tc: var(--ok);
+}
+
+.ntf-ic-warn {
+  --tc: var(--warn);
+}
+
+.ntf-ic-mut {
+  --tc: var(--mut-track);
+}
+
+.ntf-txt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ntf-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.1px;
+}
+
+.ntf-row-new .ntf-title {
+  font-weight: 700;
+}
+
+/* Dos renglones como mucho: una publicación entera aquí convertiría la bandeja en el feed. */
+.ntf-detail {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--mut-track);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.ntf-time {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--mut-track);
+}
+
+.ntf-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.ntf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 36px 12px 28px;
+  text-align: center;
+}
+
+.ntf-empty-ic {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--mut-track);
+}
+
+.ntf-empty-ic svg {
+  width: 24px;
+  height: 24px;
+}
+
+.ntf-empty b {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ntf-empty p {
+  margin: 0;
+  max-width: 30em;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+/* El número de nuevas, en el menú y sobre el avatar. En la marca y no en el rojo de
+   `.useritem-alert`: aquél es trabajo sin hacer del equipo, esto es un aviso. */
+.useritem-new {
+  background: var(--brand);
+  color: #fff;
+}
+
+.gear-badge-new {
+  background: var(--brand);
+}
+
+/* `.avatar` recorta lo que se sale del disco —es lo que redondea una foto— y con eso se
+   comía el número, que va montado sobre el borde: se veía una media luna. El botón de la
+   barra sólo lleva una letra o un icono, así que no tiene nada que recortar. */
+.avatar-btn {
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ntf-row {
+    transition: none;
+  }
 }
 
 /* ─────────────────  El perfil de una iniciativa  ─────────────────────────

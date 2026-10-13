@@ -47,7 +47,7 @@ const es = {
     "Este despliegue todavía no tiene su base de datos configurada. Revisa las variables de entorno.",
 
   // ── Mapa y filtros ──────────────────────────────────────────────────────
-  "map.searchPlaceholder": "Busca por nombre o municipio",
+  "map.searchPlaceholder": "Busca un lugar, agua, comida…",
   "map.allRegions": "Todos los {regions}",
   // El sustantivo sale de la CONFIGURACIÓN del país, no del diccionario: "estado" en
   // Venezuela, "departamento" en Colombia. Pasa por una clave para que un despliegue
@@ -106,6 +106,41 @@ const es = {
   "offers.expired": "Nadie lo confirma hace más de {n} días, así que ya no se muestra al público.",
   "offers.stillAvailable": "Sigue disponible",
   "offers.inline": "Disponible: {list}",
+  // Por qué salió un punto al buscar un insumo: lo acepta como donativo, no lo reparte.
+  "search.receives": "Recibe: {list}",
+
+  // ── Notificaciones ──────────────────────────────────────
+  // «Novedades» ya es el nombre del feed: esto es lo TUYO, y se llama distinto.
+  "notif.title": "Notificaciones",
+  "notif.tab.all": "Todo",
+  "notif.tab.progress": "Tu progreso",
+  "notif.tab.points": "Tus puntos",
+  "notif.new": "Nuevo",
+  "notif.unread": "{n} sin leer",
+  "notif.empty": "No hay nada nuevo",
+  "notif.empty.all":
+    "Guarda los puntos que te importan y aquí verás cuando publiquen algo, abran una campaña o cambien de estado. También tu experiencia y tus medallas.",
+  "notif.empty.progress": "Cuando ganes experiencia, subas de nivel o recibas una medalla, aparecerá aquí.",
+  "notif.empty.points": "Guarda un punto desde su ficha y aquí verás lo que publique y cuando cambie de estado.",
+  "notif.fine": "Se muestra lo de los últimos 30 días. Nadie más ve qué puntos sigues.",
+  "notif.level": "Subiste a {level}",
+  "notif.badge": "Nueva medalla: {badge}",
+  "notif.xp": "+{n} de experiencia",
+  "notif.xp.checkin": "Por visitar un punto.",
+  "notif.xp.report": "El equipo aplicó un aviso tuyo.",
+  "notif.xp.suggestion": "Un punto que propusiste se publicó.",
+  "notif.xp.donation": "La iniciativa confirmó tu aporte.",
+  "notif.xp.volunteer": "Por ir a una jornada.",
+  "notif.subApproved": "Tu propuesta se publicó",
+  "notif.subRejected": "Tu propuesta no se publicó",
+  "notif.teamApproved": "Ya eres parte del equipo",
+  "notif.teamRejected": "Tu postulación al equipo no avanzó",
+  "notif.post": "{name} publicó una novedad",
+  "notif.campaign": "{name} abrió una campaña",
+  "notif.goal": "{name} alcanzó su meta",
+  "notif.event": "{name} anunció una jornada",
+  "notif.offers": "{name} tiene disponible",
+  "notif.update": "{name} actualizó sus datos",
   "offers.pickerHint": "Toca lo que tienen para entregar hoy. Si falta algo, escríbelo.",
   "offers.editNote":
     "Se publica con la fecha de hoy. Si nadie lo confirma en {n} días, deja de mostrarse.",

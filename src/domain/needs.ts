@@ -61,6 +61,45 @@ export function sameSupply(a: string, b: string): boolean {
   return normalizeSupply(a) === normalizeSupply(b);
 }
 
+/**
+ * Las palabras con las que la gente PIDE lo mismo.
+ *
+ * Quien busca «comida» tiene que encontrar el punto que escribió «alimentos», y quien busca
+ * «medicinas», el que escribió «medicamentos»: son el segundo y el cuarto insumo más
+ * repetidos de la base, y la búsqueda literal los dejaba fuera con la palabra más corriente.
+ *
+ * Ya normalizadas (sin acentos, en minúscula; «pañales» es `panales`) y de UNA palabra,
+ * porque la búsqueda trabaja palabra por palabra. Están en español porque es lo que hay
+ * escrito en `receives`, `offers` y `needs`; una búsqueda en otro idioma simplemente no se
+ * amplía y sigue funcionando como antes.
+ */
+const SUPPLY_SYNONYMS: string[][] = [
+  ["alimentos", "alimento", "comida", "viveres"],
+  ["medicamentos", "medicamento", "medicinas", "medicina", "remedios", "farmacos"],
+  ["cobijas", "cobija", "frazadas", "mantas", "cobertores"],
+  ["colchonetas", "colchoneta", "colchones", "colchon"],
+  ["panales", "panal"],
+  ["ropa", "vestimenta", "prendas"],
+  ["higiene", "aseo"],
+  ["linternas", "linterna", "lamparas"],
+  ["bebe", "bebes", "lactantes"],
+];
+
+/**
+ * Una palabra de la búsqueda y las que significan lo mismo.
+ *
+ * Recibe la palabra ya normalizada. Con cuatro letras o más también vale el principio
+ * («comid» ya encuentra alimentos): la lista se filtra mientras se escribe, y un resultado
+ * que aparece sólo al teclear la última letra se lee como que la búsqueda no funciona.
+ */
+export function expandSupplyTerm(token: string): string[] {
+  if (!token) return [];
+  const group = SUPPLY_SYNONYMS.find((words) =>
+    words.some((w) => w === token || (token.length >= 4 && w.startsWith(token))),
+  );
+  return group ? [token, ...group.filter((w) => w !== token)] : [token];
+}
+
 export function normalizeSupply(value: string): string {
   return value
     .normalize("NFD")

@@ -4,6 +4,7 @@ import type { Region } from "@/config/types";
 import { MAPCFG } from "@/config";
 import { parseHours } from "@/domain/hours";
 import { pointInRing } from "@/domain/area";
+import { expandSupplyTerm } from "@/domain/needs";
 
 // Everything the app decides ABOUT a point lives here: no component re-implements
 // "is this stale", "is this asking for help", "does this match the search".
@@ -247,9 +248,17 @@ export function normalize(value: string): string {
     .trim();
 }
 
-export function matchesQuery(center: Center, query: string): boolean {
+/** The words of a query, each with the words that mean the same supply. */
+function queryTerms(query: string): string[][] {
   const q = normalize(query);
-  if (!q) return true;
+  return q ? q.split(/\s+/).map(expandSupplyTerm) : [];
+}
+
+const hits = (haystack: string, variants: string[]) => variants.some((v) => haystack.includes(v));
+
+export function matchesQuery(center: Center, query: string): boolean {
+  const terms = queryTerms(query);
+  if (terms.length === 0) return true;
   const haystack = [
     center.name,
     center.municipality ?? "",
@@ -258,12 +267,59 @@ export function matchesQuery(center: Center, query: string): boolean {
     center.info?.needs ?? "",
     // Only what is still believable: an expired offer must not be findable either.
     currentOffers(center).join(" "),
+    // What it accepts. Someone typing "agua" may be carrying it, not looking for it: the
+    // card says which of the two this point is (`queryMatch`), so neither is sent astray.
+    center.info?.receives.join(" ") ?? "",
     center.coverage_regions.join(" "),
     center.coverage_municipalities.join(" "),
   ]
     .map(normalize)
     .join(" ");
-  return q.split(/\s+/).every((token) => haystack.includes(token));
+  return terms.every((variants) => hits(haystack, variants));
+}
+
+/**
+ * WHY a point answers a search, when the reason is a supply and not its name.
+ *
+ * "agua" finds three kinds of point: one that hands water out, one that accepts it as a
+ * donation and one that is simply called that. A list that mixes them without saying which
+ * is which sends the person who needs water to a door that only collects it — the exact
+ * mistake `offers` exists to prevent. So the card prints the reason, and `offers` wins when
+ * a point both gives and takes the same thing.
+ */
+export interface QueryMatch {
+  field: "offers" | "receives";
+  /** The point's own words, as written, for the ones the query matched. */
+  terms: string[];
+}
+
+export function queryMatch(center: Center, query: string): QueryMatch | null {
+  const terms = queryTerms(query);
+  if (terms.length === 0) return null;
+  const pick = (list: string[]) =>
+    list.filter((item) => terms.some((variants) => hits(normalize(item), variants)));
+  const offers = pick(currentOffers(center));
+  if (offers.length > 0) return { field: "offers", terms: offers };
+  const receives = pick(center.info?.receives ?? []);
+  return receives.length > 0 ? { field: "receives", terms: receives } : null;
+}
+
+/**
+ * Search results, most useful first: points that HAVE what was typed, then points named
+ * like it, then the rest in the order they came. Stable, so within each band the list keeps
+ * the order the person already knows. Without a query it returns the list untouched.
+ */
+export function rankByQuery(centers: Center[], query: string): Center[] {
+  const terms = queryTerms(query);
+  if (terms.length === 0) return centers;
+  const band = (c: Center): number => {
+    if (queryMatch(c, query)?.field === "offers") return 0;
+    return terms.every((variants) => hits(normalize(c.name), variants)) ? 1 : 2;
+  };
+  return centers
+    .map((c, i) => ({ c, i, b: band(c) }))
+    .sort((x, y) => x.b - y.b || x.i - y.i)
+    .map((x) => x.c);
 }
 
 export interface CenterFilter {

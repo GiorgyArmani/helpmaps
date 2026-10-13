@@ -59,6 +59,8 @@ export default function AccountMenu({
   managesInitiative = false,
   onOpenInitiative,
   panelOpen = false,
+  unread = 0,
+  onOpenNotifications,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -78,6 +80,9 @@ export default function AccountMenu({
   onOpenInitiative?: () => void;
   /** El panel del equipo está abierto: su fila se marca en vez de desaparecer. */
   panelOpen?: boolean;
+  /** Notificaciones sin ver. Es el número que va sobre el avatar con el menú cerrado. */
+  unread?: number;
+  onOpenNotifications?: () => void;
 }) {
   const { t, lang, setLang, available } = useI18n();
   const site = useSite();
@@ -215,8 +220,28 @@ export default function AccountMenu({
                 <Icon.chevron className="userhead-ch" />
               </button>
 
-              {(managesInitiative && onOpenInitiative) || isStaff || staffPending ? (
+              {onOpenNotifications || (managesInitiative && onOpenInitiative) || isStaff || staffPending ? (
                 <div className="usermenu-list">
+                  {/* Lo primero de lo tuyo: es lo único de este menú que cambia solo. */}
+                  {onOpenNotifications ? (
+                    <button
+                      type="button"
+                      className="useritem"
+                      role="menuitem"
+                      onClick={pick(onOpenNotifications)}
+                    >
+                      <span className="useritem-ic">
+                        <Icon.bell />
+                      </span>
+                      <span className="useritem-txt">{t("notif.title")}</span>
+                      {unread > 0 ? (
+                        <span className="useritem-n useritem-new" aria-label={t("notif.unread", { n: unread })}>
+                          {unread}
+                        </span>
+                      ) : null}
+                    </button>
+                  ) : null}
+
                   {managesInitiative && onOpenInitiative ? (
                     <button
                       type="button"
@@ -343,7 +368,15 @@ export default function AccountMenu({
         onClick={() => onOpenChange(!open)}
       >
         {signedIn && initial ? initial : <Icon.user />}
-        {isStaff && pending > 0 ? <span className="gear-badge">{pending}</span> : null}
+        {/* Un solo número sobre el avatar. Lo que espera al equipo manda: es trabajo sin
+            hacer; las notificaciones son avisos, y siguen a un toque dentro del menú. */}
+        {isStaff && pending > 0 ? (
+          <span className="gear-badge">{pending}</span>
+        ) : signedIn && unread > 0 ? (
+          <span className="gear-badge gear-badge-new" aria-label={t("notif.unread", { n: unread })}>
+            {unread > 9 ? "9+" : unread}
+          </span>
+        ) : null}
       </button>
     </div>
   );

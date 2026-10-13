@@ -10,6 +10,7 @@ import {
   hasCoords,
   isDigital,
   pointsNeedingHelp,
+  rankByQuery,
   type CenterFilter,
 } from "@/domain/center";
 import { Icon } from "@/ui/icons";
@@ -27,6 +28,8 @@ import AccountPanel from "@/features/account/AccountPanel";
 import AccountMenu from "@/features/account/AccountMenu";
 import AccountView from "@/features/account/AccountView";
 import { useAccount } from "@/features/account/useAccount";
+import NotificationsView from "@/features/notifications/NotificationsView";
+import { useNotifications } from "@/features/notifications/useNotifications";
 import { fetchDonations } from "@/data/donations";
 import { fetchCenterById } from "@/data/centers";
 import {
@@ -98,6 +101,11 @@ type View =
   | "contact"
   /** Mi cuenta: guardados, lo enviado, el nombre. Antes era la página `/cuenta`. */
   | "account"
+  /**
+   * Notificaciones: lo nuevo en tu progreso y en los puntos que guardaste. Sin dirección
+   * propia: recargar vuelve al mapa, y el número sigue sobre el avatar.
+   */
+  | "notifications"
   /**
    * «Tu iniciativa»: onboarding y gestión, para quien gestiona un punto.
    *
@@ -373,6 +381,14 @@ export default function AppShell({
   // la vista: son la misma cuenta, y dos copias del recuento de guardados es cómo el menú
   // acaba diciendo 3 mientras el panel dice 4.
   const account = useAccount(userMenu || view === "account");
+  // Lo nuevo para quien tiene sesión. Se pide solo, con el mapa ya cargado, porque su número
+  // va sobre el avatar sin abrir nada; quien entra sin cuenta no paga ninguna petición.
+  const notifs = useNotifications({
+    enabled: !loading,
+    centers,
+    userId: account.userId,
+    favourites: account.favourites,
+  });
   // Entrar desde Mi cuenta cambia de persona con la vista ya abierta, y el rol se pedía
   // sólo al ACTIVARSE: quien entraba ahí con una cuenta del equipo seguía viendo
   // «Postularme» hasta abrir el avatar.
@@ -487,7 +503,11 @@ export default function AppShell({
   // coverage, and the "needs help" count stays about points someone can travel to.
   const physical = useMemo(() => centers.filter((c) => !isDigital(c)), [centers]);
   const digitalAll = useMemo(() => centers.filter(isDigital), [centers]);
-  const visible = useMemo(() => filterCenters(physical, filter), [physical, filter]);
+  // Buscando, primero lo que TIENE lo que se escribió: ver `rankByQuery`.
+  const visible = useMemo(
+    () => rankByQuery(filterCenters(physical, filter), filter.query),
+    [physical, filter],
+  );
   /**
    * Lo que hay dentro de la zona abierta, SIN los demás filtros.
    *
@@ -826,6 +846,7 @@ export default function AppShell({
     await getSupabase()?.auth.signOut();
     staff.clear();
     account.refresh();
+    notifs.refresh();
     setPending(0);
     setUserMenu(false);
     navReset();
@@ -1103,6 +1124,8 @@ export default function AppShell({
               staff={staff}
               pending={pending}
               onOpenAccount={() => goRoot({ view: "account", id: null })}
+              unread={notifs.unread}
+              onOpenNotifications={() => goRoot({ view: "notifications", id: null })}
               onOpenPanel={() => goRoot({ view: "admin", id: null })}
               panelOpen={activeView === "admin"}
               onHelp={() => setTourOpen(true)}
@@ -1364,7 +1387,7 @@ export default function AppShell({
             isDigital(center) ? (
               <DigitalCard key={center.id} center={center} onSelect={openCenter} />
             ) : (
-              <CenterCard key={center.id} center={center} onSelect={openCenter} />
+              <CenterCard key={center.id} center={center} onSelect={openCenter} query={filter.query} />
             ),
           )}
           </>
@@ -1417,6 +1440,8 @@ export default function AppShell({
                       ? t("contact.title")
                       : activeView === "account"
                         ? t(account.userId ? "account.title" : "account.signIn")
+                        : activeView === "notifications"
+                          ? t("notif.title")
                         : activeView === "mine"
                           ? t("mine.kicker")
                           : activeView === "admin"
@@ -1471,6 +1496,15 @@ export default function AppShell({
                 onOpenPanel={() => goRoot({ view: "admin", id: null })}
                 onVolunteer={() => navPush({ view: "volunteer", id: null })}
                 justConfirmed={justConfirmed}
+              />
+            ) : null}
+            {/* Abrir un punto desde aquí cierra la capa y lo enseña en el mapa, igual que
+                desde los guardados de Mi cuenta. */}
+            {activeView === "notifications" ? (
+              <NotificationsView
+                notifs={notifs}
+                onOpenCenter={openCenter}
+                onOpenAccount={() => goRoot({ view: "account", id: null })}
               />
             ) : null}
             {/* «Tu iniciativa». El punto sale de `selectedId`, que la entrada del menú

@@ -1,7 +1,7 @@
 "use client";
 
 import type { Center } from "@/domain/types";
-import { statusOf } from "@/domain/center";
+import { queryMatch, statusOf } from "@/domain/center";
 import { typeStyle } from "@/config";
 import { Icon, TypeGlyph } from "@/ui/icons";
 import { Badge } from "@/ui/primitives";
@@ -19,6 +19,7 @@ export default function CenterCard({
   center,
   onSelect,
   distanceLabel,
+  query,
 }: {
   center: Center;
   onSelect: (id: string) => void;
@@ -28,6 +29,12 @@ export default function CenterCard({
    * Ya viene formateado: la tarjeta no sabe de kilómetros ni de idiomas.
    */
   distanceLabel?: string;
+  /**
+   * Lo que se está buscando, cuando la tarjeta es un RESULTADO. Con él la tarjeta dice por
+   * qué salió: «Disponible: agua» y «Recibe: agua» son dos puertas opuestas, y sin la
+   * etiqueta quien busca agua para su casa no distingue la que la reparte de la que la junta.
+   */
+  query?: string;
 }) {
   const { regionLabel } = useSiteHelpers();
   const { t } = useI18n();
@@ -35,6 +42,7 @@ export default function CenterCard({
   const place = center.municipality ?? regionLabel(center.region);
   const need = center.info?.needs?.trim();
   const status = statusOf(center);
+  const match = query ? queryMatch(center, query) : null;
 
   return (
     <button type="button" className="card" onClick={() => onSelect(center.id)}>
@@ -45,7 +53,14 @@ export default function CenterCard({
       <span className="cmid">
         <span className="cname">{center.name}</span>
         <span className="cmeta">{t(`type.${center.type}` as DictKey)}</span>
-        {need ? (
+        {match ? (
+          <span className={`cmatch cmatch-${match.field}`}>
+            {match.field === "offers" ? <Icon.check /> : <Icon.box />}
+            {t(match.field === "offers" ? "offers.inline" : "search.receives", {
+              list: match.terms.slice(0, 4).join(", "),
+            })}
+          </span>
+        ) : need ? (
           <span className="cneed">{need}</span>
         ) : place ? (
           <span className="cloc">
