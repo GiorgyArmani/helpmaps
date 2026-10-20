@@ -29,6 +29,9 @@ export interface Profile {
   /** Lo que sabe hacer y cuándo puede. Vacío sin `db/16_voluntariado.sql`. */
   skills: Skill[];
   availability: Availability[];
+  /** Su compañero, tal como está guardado (sin validar). `null` sin `db/18_avatar.sql`
+   *  o si todavía no lo creó. Se valida al dibujarlo, con `parseAvatar`. */
+  avatar: unknown;
 }
 
 export const DISPLAY_NAME_MIN = 2;

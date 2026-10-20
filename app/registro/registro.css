@@ -558,3 +558,245 @@
     transform: none;
   }
 }
+
+/* ── Crear el personaje ────────────────────────────────────────────────────
+   Avatar → nombre → perfil → cuenta. Arriba, las etapas; desde que tiene nombre, la ficha
+   del personaje. Mientras se crea, la página esconde su titular (`.rgp-sr`) y la tarjeta
+   sube: el escenario es lo único que importa en ese momento. */
+
+.rgp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.rgp-card-stage {
+  margin-top: 8px;
+}
+
+/* El botón de seguir queda a mano mientras se baja por las fichas. */
+.rgp-card-stage .rg-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-inline: -18px;
+  margin-bottom: -20px;
+  padding: 14px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  background: linear-gradient(to bottom, transparent, #fff 34%);
+}
+
+/* Las etapas: cuatro puntos con su nombre, unidos por una línea. */
+.rg-phases {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.rg-ph {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--mut-track);
+}
+
+/* La línea hacia el punto anterior. */
+.rg-ph + .rg-ph::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  right: calc(50% + 16px);
+  width: calc(100% - 32px);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+  transition: background-color var(--t-ui) var(--ease);
+}
+
+.rg-ph-done + .rg-ph::before,
+.rg-ph-done + .rg-ph-done::before {
+  background: var(--ink);
+}
+
+.rg-ph-dot {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition:
+    background-color var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
+}
+
+.rg-ph-n {
+  max-width: 100%;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rg-ph-on {
+  color: var(--ink);
+}
+
+.rg-ph-on .rg-ph-dot {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.rg-ph-done .rg-ph-dot {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* La ficha del personaje: quién se está creando, y la puerta para volver a vestirlo. */
+.rg-me {
+  display: flex;
+  margin-bottom: 8px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 8px;
+  border-radius: 999px;
+  background: var(--soft);
+}
+
+.rg-me-ave {
+  width: 40px;
+  height: 40px;
+}
+
+.rg-me-txt {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.rg-me-txt b {
+  font-size: 0.9375rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rg-me-txt span {
+  font-size: 0.75rem;
+  color: var(--mut-track);
+}
+
+.rg-me-x {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--e-1);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rg-me-x:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.rg-h-big {
+  font-size: 1.625rem;
+  letter-spacing: -0.5px;
+}
+
+/* Ponle nombre: la misma escena del creador, con el personaje saludando y un globo
+   encima que dice su nombre mientras se escribe. */
+.rg-hello {
+  position: relative;
+  height: clamp(220px, 34dvh, 300px);
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--soft);
+  box-shadow: var(--e-2);
+}
+
+.rg-bubble {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--e-2);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.rg-bubble-ask {
+  color: var(--mut-track);
+  font-weight: 600;
+}
+
+.rg-name-in {
+  min-height: 52px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rg-ph + .rg-ph::before,
+  .rg-ph-dot {
+    transition: none;
+  }
+}
+
+/* ── En el teléfono, crear el personaje ocupa la pantalla ──
+   Sin tarjeta flotando sobre un fondo gris: el creador va de borde a borde, con la escena
+   pegada a los lados, como una app. En pantallas grandes sigue siendo una tarjeta. */
+@media (max-width: 560px) {
+  .rgp-card-stage {
+    margin-inline: calc(-1 * var(--olp-gut));
+    padding: 12px 16px 20px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .rgp-card-stage .ave-scene,
+  .rgp-card-stage .rg-hello {
+    margin-inline: -16px;
+    border-radius: 0 0 24px 24px;
+  }
+
+  .rgp-card-stage .rg-nav {
+    margin-inline: -16px;
+    padding-inline: 16px;
+    border-radius: 0;
+  }
+}

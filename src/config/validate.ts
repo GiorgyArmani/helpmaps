@@ -21,6 +21,7 @@
 
 import type { LocationType } from "@/domain/types";
 import { LOCATION_TYPES } from "@/domain/types";
+import { SPECIES } from "@/domain/avatar";
 import type { CountryConfig, SiteConfig } from "@/config/types";
 import { HUB_HOST } from "~/config/network";
 
@@ -95,6 +96,11 @@ function checkCountry(c: CountryConfig, errors: string[]): void {
       errors.push(`regions["${r.code}"]: el código va en snake_case; se guarda en locations.region`);
     if (south < north && west < east && (r.lat < south || r.lat > north || r.lng < west || r.lng > east))
       errors.push(`regions["${r.code}"]: el centroide [${r.lat}, ${r.lng}] cae fuera de geo.bounds`);
+  }
+
+  for (const sp of c.fauna ?? []) {
+    if (!(SPECIES as readonly string[]).includes(sp))
+      errors.push(`country.fauna: "${sp}" no tiene dibujo (ver SPECIES en src/domain/avatar.ts); no se ofrecerá`);
   }
 
   if (!c.regionNoun.one.trim() || !c.regionNoun.many.trim())

@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Center } from "@/domain/types";
 import { useI18n } from "@/i18n/context";
-import Recognition from "@/features/account/Recognition";
+import {
+  AchievementsSection,
+  BADGE_TOTAL,
+  levelOf,
+  useRecognition,
+} from "@/features/account/Recognition";
 import MyEvents from "@/features/account/MyEvents";
 import VolunteerProfile from "@/features/account/VolunteerProfile";
 import type { DictKey } from "@/i18n";
@@ -23,34 +28,50 @@ import CenterCard from "@/features/centers/CenterCard";
 import DigitalCard from "@/features/centers/DigitalCard";
 import { isDigital } from "@/domain/center";
 import LoginForm from "@/features/admin/LoginForm";
-import PasswordChange from "@/features/admin/PasswordChange";
 import { savedLabel, sentLabel } from "@/features/account/ledger";
+import { useSite } from "@/features/app/SiteProvider";
+import { useSessionPeek } from "@/features/account/useSessionPeek";
+import { faunaOf } from "@/domain/avatar";
+import { myAvatar } from "@/features/avatar/mine";
+import { AvatarCard } from "@/features/avatar/AvatarArt";
+
+/** Las secciones de la cuenta. Cada una abre su propia pantalla desde el menú. */
+export type AccountSection =
+  "saved" | "achievements" | "events" | "help" | "sent";
+type Section = AccountSection;
+
+/** El título de cada sección: lo pinta la cabecera del panel mientras está abierta. */
+export const ACCOUNT_SECTION_TITLE: Record<AccountSection, DictKey> = {
+  saved: "account.saved.title",
+  achievements: "account.menu.achievements",
+  events: "myEvents.title",
+  help: "vol.title",
+  sent: "account.mine",
+};
 
 /**
- * Mi cuenta, DENTRO de la aplicación.
+ * Mi cuenta, DENTRO de la aplicación, armada como el perfil de una app del teléfono.
  *
- * ── EL ORDEN ES EL ARGUMENTO ────────────────────────────────────────────────
+ * ── UN MENÚ, NO UN ROLLO ────────────────────────────────────────────────────
  *
- * La página que esto reemplaza abría con el campo "nombre para mostrar". Nadie abre su
- * cuenta para cambiarse el nombre. Alguien que se hizo una cuenta en un mapa de
- * emergencia lo hizo para volver a encontrar los puntos que guardó, así que los guardados
- * van primero y todo lo demás va debajo:
+ * Antes era una sola columna con todo —nivel, medallas, eventos, oficios, guardados, lo
+ * enviado, el equipo, la contraseña— y llegar a lo que se buscaba era bajar varias
+ * pantallas con el pulgar. Ahora la portada de la cuenta es corta y siempre igual:
  *
- *   1. quién eres, en una línea, con lo que llevas hecho contado en números
- *   2. TUS PUNTOS — y tocarlos abre el punto en el mapa, no una copia de la ficha
- *   3. lo que enviaste, y en qué quedó
- *   4. sumarme al equipo
+ *   1. TU TARJETA: tu avatar con su nivel, tu nombre y cuánto falta para el siguiente.
+ *   2. UN MENÚ de botones grandes, uno por sección, con su recuento al lado.
+ *
+ * Tocar un botón abre ESA sección en su propia pantalla: la cabecera del panel dice cuál y
+ * su flecha vuelve al menú de la cuenta (la sección vive en `AppShell` por eso). Lo
+ * que se edita (el avatar, la contraseña) vive aparte, en Configuración: esta pantalla es
+ * para ver lo tuyo de un vistazo.
  *
  * ── LOS GUARDADOS SALEN DEL MAPA QUE YA ESTÁ CARGADO ────────────────────────
  *
  * `favourites` guarda ids, y los puntos ya están en memoria: cruzarlos acá evita una
- * consulta entera y, sobre todo, devuelve `Center` completos. Por eso cada fila es un
- * `CenterCard` de verdad —la misma tarjeta de la lista, con su color de tipo y su estado—
- * y tocarla vuela el mapa hasta el punto. Una lista de nombres sueltos habría sido otra
- * pantalla que hay que aprender.
- *
- * Un id guardado que ya no está en el mapa se cuenta aparte y se dice, en vez de
- * desaparecer en silencio: que un refugio que guardaste ya no exista es información.
+ * consulta entera y devuelve `Center` completos, así que cada fila es la misma tarjeta de
+ * la lista y tocarla vuela el mapa hasta el punto. Un id guardado que ya no está en el mapa
+ * se cuenta aparte: que un refugio que guardaste ya no exista es información.
  */
 export default function AccountView({
   account,
@@ -59,6 +80,9 @@ export default function AccountView({
   onVolunteer,
   isStaff,
   onOpenPanel,
+  onOpenSettings,
+  section,
+  onSection,
   justConfirmed,
 }: {
   account: AccountState;
@@ -68,9 +92,21 @@ export default function AccountView({
   /** Del equipo, sí o no; `null` mientras el rol no ha llegado. */
   isStaff: boolean | null;
   onOpenPanel: () => void;
+  /** Configuración: cambiar el avatar y la contraseña. */
+  onOpenSettings: () => void;
+  /** La sección abierta, o `null` en el menú. La controla `AppShell`. */
+  section: AccountSection | null;
+  onSection: (s: AccountSection | null) => void;
   justConfirmed?: boolean;
 }) {
   const { t, lang } = useI18n();
+  const site = useSite();
+  const peek = useSessionPeek();
+  const fauna = useMemo(() => faunaOf(site.country), [site.country]);
+  const mine = useMemo(
+    () => myAvatar(fauna, account.profile?.avatar, peek.avatar),
+    [fauna, account.profile?.avatar, peek.avatar],
+  );
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -79,19 +115,25 @@ export default function AccountView({
   const [saveFailed, setSaveFailed] = useState(false);
   const [subs, setSubs] = useState<MySubmission[] | null>(null);
   const [vol, setVol] = useState<MyVolunteerRequest | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
 
   const signedIn = Boolean(account.userId);
+  const rec = useRecognition(account.userId);
+  const nivel = levelOf(rec);
 
   // Lo enviado y la postulación se piden una vez, con la vista ya abierta. No entran en
-  // `useAccount` porque el menú del avatar no los necesita, y ahí sí se pagarían en el
-  // camino de alguien que sólo quería ver su nombre.
+  // `useAccount` porque el menú del avatar no los necesita.
   useEffect(() => {
     if (!signedIn) return;
     const sb = getSupabase();
     if (!sb) return;
     let cancelled = false;
     void (async () => {
-      const [s, v] = await Promise.all([fetchMySubmissions(sb), fetchMyVolunteerRequest(sb)]);
+      const [s, v] = await Promise.all([
+        fetchMySubmissions(sb),
+        fetchMyVolunteerRequest(sb),
+      ]);
       if (cancelled) return;
       setSubs(s);
       setVol(v);
@@ -101,11 +143,16 @@ export default function AccountView({
     };
   }, [signedIn]);
 
+  // Al entrar o salir de una sección, arriba del todo y el foco en su título.
+  useEffect(() => {
+    root.current?.closest(".ovbody")?.scrollTo({ top: 0 });
+    if (section) heading.current?.focus();
+  }, [section]);
+
   const savedCenters = useMemo(
     () => centers.filter((c) => account.favourites.has(c.id)),
     [centers, account.favourites],
   );
-  // Guardados cuyo punto ya no está en el mapa: retirado, o de otra emergencia.
   const missing = account.favourites.size - savedCenters.length;
 
   const startEdit = useCallback(() => {
@@ -129,8 +176,8 @@ export default function AccountView({
         setEditing(false);
         account.refresh();
       } catch {
-        // Un nombre inválido no llega acá: lo corta el guardia de arriba. Lo que llega es la
-        // red o la base, y eso se dice: callarlo deja a la persona creyendo que se guardó.
+        // Lo que llega acá es la red o la base, y eso se dice: callarlo deja a la persona
+        // creyendo que se guardó.
         setSaveFailed(true);
       } finally {
         setBusy(false);
@@ -148,7 +195,7 @@ export default function AccountView({
   }
 
   // Sin sesión: el formulario de acceso, y encima la única frase que explica para qué
-  // sirve una cuenta EN ESTE mapa. "Inicia sesión para ver tu cuenta" no explica nada.
+  // sirve una cuenta EN ESTE mapa.
   if (!signedIn) {
     return (
       <div className="acc">
@@ -162,39 +209,246 @@ export default function AccountView({
   const nameBad = name.length > 0 && displayNameInvalid(cleanDisplayName(name));
   const sent = subs?.length ?? 0;
 
-  return (
-    <div className="acc">
-      {justConfirmed ? <Notice tone="info">{t("account.confirmed")}</Notice> : null}
+  // ── Una sección, en su propia pantalla ──────────────────────────────────
+  if (section) {
+    return (
+      <div className="acc acc-pane" ref={root}>
+        {/* El título va en la cabecera del panel; aquí, sólo para el lector de pantalla y
+            para llevarle el foco al entrar. */}
+        <h2 ref={heading} tabIndex={-1} className="acc-pane-h">
+          {t(ACCOUNT_SECTION_TITLE[section])}
+        </h2>
 
-      {/* ── Quién eres ──────────────────────────────────────────────────── */}
-      <header className="acc-id">
-        <span className="avatar avatar-xl avatar-signed" aria-hidden="true">
-          {displayName ? [...displayName][0]!.toUpperCase() : <Icon.user />}
-        </span>
+        {section === "saved" ? (
+          <>
+            {savedCenters.length === 0 ? (
+              <p className="acc-empty">{t("account.saved.none")}</p>
+            ) : (
+              <div className="acc-saved">
+                {savedCenters.map((c) =>
+                  isDigital(c) ? (
+                    <DigitalCard
+                      key={c.id}
+                      center={c}
+                      onSelect={onOpenCenter}
+                    />
+                  ) : (
+                    <CenterCard key={c.id} center={c} onSelect={onOpenCenter} />
+                  ),
+                )}
+              </div>
+            )}
+            {missing > 0 ? (
+              <p className="acc-empty">
+                {t("account.saved.gone", { n: missing })}
+              </p>
+            ) : null}
+          </>
+        ) : null}
 
-        {editing ? (
-          <form className="acc-rename" onSubmit={saveName}>
-            <Input
-              value={name}
-              autoFocus
-              aria-label={t("account.displayName")}
-              onChange={(e) => setName(e.target.value)}
+        {section === "achievements" ? <AchievementsSection rec={rec} /> : null}
+
+        {section === "events" && account.userId ? (
+          <MyEvents userId={account.userId} onOpenCenter={onOpenCenter} />
+        ) : null}
+
+        {section === "help" ? (
+          <>
+            <VolunteerProfile
+              profile={account.profile}
+              onSaved={account.refresh}
             />
-            <div className="acc-rename-row">
-              <Button type="submit" loading={busy} disabled={nameBad || !name.trim()}>
-                {busy ? t("common.saving") : t("common.save")}
-              </Button>
-              <button type="button" className="linkish" onClick={() => setEditing(false)}>
-                {t("common.cancel")}
-              </button>
-            </div>
-            {nameBad ? <p className="lerr">{t("register.errorName")}</p> : null}
-            {saveFailed ? <p className="lerr">{t("admin.saveError")}</p> : null}
-          </form>
+            {/* Quien ya es del equipo no se postula: le sale la puerta a su panel. Lo
+                decide `staff_users` y no la postulación. Mientras el rol no llega, el hueco
+                del botón y no un «Postularme» que cambia. */}
+            <section className="acc-sec">
+              <h3 className="acc-h">
+                {isStaff ? t("admin.title") : t("account.volunteer")}
+              </h3>
+              {isStaff === null ? (
+                <span className="skel acc-skel" aria-hidden="true" />
+              ) : isStaff ? (
+                <>
+                  <p className="acc-empty">{t("account.teamNote")}</p>
+                  <button
+                    type="button"
+                    className="acc-cta"
+                    onClick={onOpenPanel}
+                  >
+                    {t("account.openPanel")}
+                    <Icon.chevron />
+                  </button>
+                </>
+              ) : vol === null ? (
+                <>
+                  <p className="acc-empty">{t("account.volNone")}</p>
+                  <button
+                    type="button"
+                    className="acc-cta"
+                    onClick={onVolunteer}
+                  >
+                    {t("account.volApply")}
+                    <Icon.chevron />
+                  </button>
+                </>
+              ) : vol.status === "pending" ? (
+                <Notice tone="info">{t("account.volPending")}</Notice>
+              ) : vol.status === "approved" ? (
+                <Notice tone="info">{t("account.volApproved")}</Notice>
+              ) : (
+                <Notice tone="info">{t("account.volRejected")}</Notice>
+              )}
+            </section>
+          </>
+        ) : null}
+
+        {section === "sent" ? (
+          subs === null ? (
+            <span className="skel acc-skel" aria-hidden="true" />
+          ) : subs.length === 0 ? (
+            <p className="acc-empty">{t("account.noSubmissions")}</p>
+          ) : (
+            <ul className="acc-subs">
+              {subs.map((s) => (
+                <li key={s.id} className="acc-sub">
+                  <p className="acc-sub-msg">{s.message}</p>
+                  <p className="acc-sub-meta">
+                    <span
+                      className={`acc-dot acc-dot-${s.status}`}
+                      aria-hidden="true"
+                    />
+                    {t(`account.status.${s.status}` as DictKey)}
+                    {" · "}
+                    {new Date(s.createdAt).toLocaleDateString(lang, {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : null}
+      </div>
+    );
+  }
+
+  // ── La portada: tu tarjeta y el menú ────────────────────────────────────
+  const hasAvatar = fauna.length > 0;
+  const menu: {
+    id: Section;
+    icon: keyof typeof Icon;
+    label: string;
+    sub: string | null;
+  }[] = [
+    {
+      id: "saved",
+      icon: "heart",
+      label: t("account.saved.title"),
+      sub: savedLabel(t, account.favourites.size),
+    },
+    {
+      id: "achievements",
+      icon: "spark",
+      label: t("account.menu.achievements"),
+      sub: rec.counts
+        ? t("account.menu.badges", { n: rec.earned.size, total: BADGE_TOTAL })
+        : null,
+    },
+    {
+      id: "events",
+      icon: "clock",
+      label: t("myEvents.title"),
+      sub: t("account.menu.eventsSub"),
+    },
+    {
+      id: "help",
+      icon: "volunteer",
+      label: t("vol.title"),
+      sub: t("account.menu.helpSub"),
+    },
+    {
+      id: "sent",
+      icon: "mail",
+      label: t("account.mine"),
+      sub: subs === null ? null : sentLabel(t, sent),
+    },
+  ];
+
+  return (
+    <div className="acc acc-home" ref={root}>
+      {justConfirmed ? (
+        <Notice tone="info">{t("account.confirmed")}</Notice>
+      ) : null}
+
+      {/* ── Tu tarjeta ──────────────────────────────────────────────────── */}
+      <header className="acc-hero">
+        {hasAvatar ? (
+          // Tocar el avatar lleva a cambiarlo: es lo primero que se quiere tocar.
+          <button
+            type="button"
+            className="acc-hero-ave"
+            aria-label={mine ? t("avatar.edit") : t("avatar.create")}
+            onClick={onOpenSettings}
+          >
+            {mine ? (
+              <AvatarCard avatar={mine} />
+            ) : (
+              <span className="ave-card acc-hero-none" aria-hidden="true" />
+            )}
+            {nivel ? (
+              <span className="acc-hero-lvl" aria-hidden="true">
+                {nivel.level}
+              </span>
+            ) : null}
+            <span className="acc-hero-pen" aria-hidden="true">
+              <Icon.pencil width={13} height={13} />
+            </span>
+          </button>
         ) : (
-          <div className="acc-id-txt">
+          <span className="avatar avatar-xl avatar-signed" aria-hidden="true">
+            {displayName ? [...displayName][0]!.toUpperCase() : <Icon.user />}
+          </span>
+        )}
+
+        <div className="acc-hero-txt">
+          {editing ? (
+            <form className="acc-rename" onSubmit={saveName}>
+              <Input
+                value={name}
+                autoFocus
+                aria-label={t("account.displayName")}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <div className="acc-rename-row">
+                <Button
+                  type="submit"
+                  loading={busy}
+                  disabled={nameBad || !name.trim()}
+                >
+                  {busy ? t("common.saving") : t("common.save")}
+                </Button>
+                <button
+                  type="button"
+                  className="linkish"
+                  onClick={() => setEditing(false)}
+                >
+                  {t("common.cancel")}
+                </button>
+              </div>
+              {nameBad ? (
+                <p className="lerr">{t("register.errorName")}</p>
+              ) : null}
+              {saveFailed ? (
+                <p className="lerr">{t("admin.saveError")}</p>
+              ) : null}
+            </form>
+          ) : (
             <h2 className="acc-name">
-              {displayName ?? t("account.noName")}
+              <span className="acc-name-t">
+                {displayName ?? t("account.noName")}
+              </span>
               <button
                 type="button"
                 className="acc-edit"
@@ -205,119 +459,100 @@ export default function AccountView({
                 <Icon.pencil />
               </button>
             </h2>
-            {/* Lo que esta cuenta ES en este mapa, en números que se pueden comprobar. */}
-            <p className="acc-ledger">
-              {savedLabel(t, account.favourites.size)}
-              <span className="acc-sep" aria-hidden="true" />
-              {sentLabel(t, sent)}
-            </p>
-            {saved ? <p className="acc-ok">{t("account.saved")}</p> : null}
-          </div>
-        )}
+          )}
+          {saved && !editing ? (
+            <p className="acc-ok">{t("account.saved")}</p>
+          ) : null}
+
+          {nivel && rec.counts ? (
+            <>
+              <p className="acc-hero-lv">
+                <b>
+                  {t("account.levelN", {
+                    n: nivel.level,
+                    label: t(nivel.label),
+                  })}
+                </b>
+                <span>
+                  {rec.counts.xp === 1
+                    ? t("rec.xpOne")
+                    : t("rec.xp", { n: rec.counts.xp })}
+                </span>
+              </p>
+              {/* La barra dice lo que el número solo no puede: si estás cerca. */}
+              <div
+                className="rec-bar"
+                role="progressbar"
+                aria-valuenow={Math.round(nivel.progress * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={t(nivel.label)}
+              >
+                <span
+                  className="rec-bar-fill"
+                  style={{ width: `${Math.round(nivel.progress * 100)}%` }}
+                />
+              </div>
+              <span className="rec-next">
+                {nivel.next && nivel.toNext !== null
+                  ? t("rec.toNext", {
+                      n: nivel.toNext,
+                      level: t(nivel.next.label),
+                    })
+                  : t("rec.maxLevel")}
+              </span>
+            </>
+          ) : (
+            // El hueco del nivel mientras llega: la tarjeta no cambia de alto.
+            <span className="skel acc-hero-skel" aria-hidden="true" />
+          )}
+        </div>
       </header>
 
-      {/* ── Lo que has aportado ─────────────────────────────────────────
-          Antes de los puntos guardados: guardar un refugio es para ti, aportar es lo que
-          hiciste por otros, y es lo que da sentido a volver a esta pantalla. */}
-      {account.userId ? <Recognition userId={account.userId} /> : null}
-
-      {/* ── Mis eventos ─────────────────────────────────────────────────────
-          Justo después de lo aportado: es lo que viene, y lo que más fácil se olvida. */}
-      {account.userId ? <MyEvents userId={account.userId} onOpenCenter={onOpenCenter} /> : null}
-
-      {/* ── Cómo puedes ayudar ──────────────────────────────────────────────
-          Junto a los eventos: es lo que hace que un evento te encuentre a ti. */}
-      <VolunteerProfile profile={account.profile} onSaved={account.refresh} />
-
-      {/* ── Tus puntos ──────────────────────────────────────────────────── */}
-      <section className="acc-sec">
-        <h3 className="acc-h">{t("account.saved.title")}</h3>
-        {savedCenters.length === 0 ? (
-          <p className="acc-empty">{t("account.saved.none")}</p>
-        ) : (
-          <div className="acc-saved">
-            {savedCenters.map((c) =>
-              isDigital(c) ? (
-                <DigitalCard key={c.id} center={c} onSelect={onOpenCenter} />
-              ) : (
-                <CenterCard key={c.id} center={c} onSelect={onOpenCenter} />
-              ),
-            )}
-          </div>
-        )}
-        {missing > 0 ? <p className="acc-empty">{t("account.saved.gone", { n: missing })}</p> : null}
-      </section>
-
-      {/* ── Lo que enviaste ─────────────────────────────────────────────── */}
-      <section className="acc-sec">
-        <h3 className="acc-h">{t("account.mine")}</h3>
-        {subs === null ? (
-          <p className="acc-empty">{t("common.loading")}</p>
-        ) : subs.length === 0 ? (
-          <p className="acc-empty">{t("account.noSubmissions")}</p>
-        ) : (
-          <ul className="acc-subs">
-            {subs.map((s) => (
-              <li key={s.id} className="acc-sub">
-                <p className="acc-sub-msg">{s.message}</p>
-                <p className="acc-sub-meta">
-                  <span className={`acc-dot acc-dot-${s.status}`} aria-hidden="true" />
-                  {t(`account.status.${s.status}` as DictKey)}
-                  {" · "}
-                  {new Date(s.createdAt).toLocaleDateString(lang, {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* ── El equipo ───────────────────────────────────────────────────────
-          Quien ya es del equipo no se postula: le sale la puerta a su panel. Lo decide
-          `staff_users` y no la postulación, porque una cuenta que da de alta un
-          administrador no tiene solicitud — y a un superadmin se le pedía postularse.
-          Mientras el rol no llega, el hueco del botón y no un «Postularme» que cambia. */}
-      <section className="acc-sec">
-        <h3 className="acc-h">{isStaff ? t("admin.title") : t("account.volunteer")}</h3>
-        {isStaff === null ? (
-          <span className="skel acc-skel" aria-hidden="true" />
-        ) : isStaff ? (
-          <>
-            <p className="acc-empty">{t("account.teamNote")}</p>
-            <button type="button" className="acc-cta" onClick={onOpenPanel}>
-              {t("account.openPanel")}
-              <Icon.chevron />
+      {/* ── El menú: una fila por sección, y Configuración aparte ───────────── */}
+      <nav className="acc-menu" aria-label={t("account.title")}>
+        {menu.map((m) => {
+          const Ic = Icon[m.icon];
+          return (
+            <button
+              key={m.id}
+              type="button"
+              className="acc-mi"
+              onClick={() => onSection(m.id)}
+            >
+              <span className="acc-mi-ic" aria-hidden="true">
+                <Ic width={20} height={20} />
+              </span>
+              <span className="acc-mi-txt">
+                <b>{m.label}</b>
+                {m.sub === null ? (
+                  <span className="skel acc-mi-skel" aria-hidden="true" />
+                ) : (
+                  <span>{m.sub}</span>
+                )}
+              </span>
+              <Icon.chevron className="acc-mi-go" width={18} height={18} />
             </button>
-          </>
-        ) : vol === null ? (
-          <>
-            <p className="acc-empty">{t("account.volNone")}</p>
-            <button type="button" className="acc-cta" onClick={onVolunteer}>
-              {t("account.volApply")}
-              <Icon.chevron />
-            </button>
-          </>
-        ) : vol.status === "pending" ? (
-          <Notice tone="info">{t("account.volPending")}</Notice>
-        ) : vol.status === "approved" ? (
-          <Notice tone="info">{t("account.volApproved")}</Notice>
-        ) : (
-          <Notice tone="info">{t("account.volRejected")}</Notice>
-        )}
-      </section>
+          );
+        })}
+      </nav>
 
-      {/* ── Contraseña ──────────────────────────────────────────────────────
-          Vivía en un engranaje de la cabecera del panel del equipo, así que sólo la
-          encontraba el equipo, y la ruta (`/api/account/password`) es la misma para
-          cualquier cuenta. */}
-      <section className="acc-sec">
-        <h3 className="acc-h">{t("account.security")}</h3>
-        <PasswordChange toggleClassName="acc-cta" />
-      </section>
+      <nav className="acc-menu" aria-label={t("settings.title")}>
+        <button type="button" className="acc-mi" onClick={onOpenSettings}>
+          <span className="acc-mi-ic" aria-hidden="true">
+            <Icon.gear width={20} height={20} />
+          </span>
+          <span className="acc-mi-txt">
+            <b>{t("settings.title")}</b>
+            <span>
+              {hasAvatar
+                ? t("account.menu.settingsSub")
+                : t("account.security")}
+            </span>
+          </span>
+          <Icon.chevron className="acc-mi-go" width={18} height={18} />
+        </button>
+      </nav>
 
       <p className="acc-fine">{t("account.privacy")}</p>
     </div>

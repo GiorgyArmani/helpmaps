@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import RegisterStepper, { type Purpose } from "@/features/account/RegisterStepper";
+import RegisterStepper, { type Purpose, type StepId } from "@/features/account/RegisterStepper";
 import { useI18n } from "@/i18n/context";
 import type { DictKey } from "@/i18n";
 import { useSite } from "@/features/app/SiteProvider";
@@ -29,6 +29,10 @@ import "./registro.css";
  * titular. No es «crear una cuenta» cualquiera: es la bienvenida a la plataforma, y lo
  * primero es preguntar cómo la quiere usar la persona. Desde ahí el recorrido
  * (`RegisterStepper`) y el titular de la página son los de su camino.
+ *
+ * Mientras se crea el personaje (avatar y nombre) el titular se esconde: el escenario es
+ * lo único que importa en ese momento y en 390 px no caben los dos sin empujarlo hacia
+ * abajo. Vuelve en cuanto empiezan las preguntas.
  */
 export default function RegisterPage() {
   return (
@@ -48,6 +52,10 @@ function RegisterBody() {
   // El titular cambia con lo que la persona elige: la página pasa a hablarle a ella.
   const [purpose, setPurpose] = useState<Purpose | null>(null);
   const hero = purpose ?? "welcome";
+  const [step, setStep] = useState<StepId | "done" | null>(null);
+  // `null` mientras el recorrido no ha dicho dónde está: sin titular, para que no aparezca
+  // y desaparezca en el primer instante.
+  const creating = step === null || step === "avatar" || step === "name";
 
   return (
     <main className="olp rgp">
@@ -73,16 +81,22 @@ function RegisterBody() {
       </header>
 
       <section className="rgp-in">
-        {/* `key`: al cambiar de camino, el titular entra de nuevo. */}
-        <div key={hero} className="rgp-hero">
-          <h1 className="olp-h1 rgp-h1">{t(`register.hero.${hero}.title` as DictKey, { platform: site.brand.platform })}</h1>
-          <p className="olp-lead rgp-lead">{t(`register.hero.${hero}.lead` as DictKey, { platform: site.brand.platform })}</p>
-        </div>
+        {/* `key`: al cambiar de camino, el titular entra de nuevo. Mientras se crea el
+            personaje, el titular es el del paso, dentro de la tarjeta. */}
+        {creating ? (
+          <h1 className="rgp-sr">{t("register.title")}</h1>
+        ) : (
+          <div key={hero} className="rgp-hero">
+            <h1 className="olp-h1 rgp-h1">{t(`register.hero.${hero}.title` as DictKey, { platform: site.brand.platform })}</h1>
+            <p className="olp-lead rgp-lead">{t(`register.hero.${hero}.lead` as DictKey, { platform: site.brand.platform })}</p>
+          </div>
+        )}
 
-        <div className="rgp-card">
+        <div className={creating ? "rgp-card rgp-card-stage" : "rgp-card"}>
           <RegisterStepper
             next={next}
             onPurpose={setPurpose}
+            onStep={setStep}
             onSignIn={() => router.push(next ? `/login?next=${encodeURIComponent(next)}` : "/login")}
           />
         </div>

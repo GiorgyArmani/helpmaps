@@ -3,6 +3,7 @@ import type { Dict } from "@/i18n";
 // Partial by design: anything missing falls back to the Spanish base, which is complete.
 const en: Partial<Dict> = {
   "common.close": "Close",
+  "settings.title": "Settings",
   "common.cancel": "Cancel",
   "common.save": "Save",
   "common.saving": "Saving…",
@@ -892,10 +893,10 @@ const en: Partial<Dict> = {
   "register.org.missing": "It's not on the map",
   "register.org.missingDesc": "You register it after creating your user. It takes a minute.",
   "register.account.title": "Create your user",
-  "register.account.lead.help": "A short name is enough. Nobody else sees your email.",
-  "register.account.lead.give": "It's the name organizations see when you sign up to help.",
-  "register.account.lead.org": "Your name, not the organization's. You'll manage it with this user.",
-  "register.account.leadOrg": "With this user you request access to {org}. Use your name, not the organization's.",
+  "register.account.lead.help": "Your email and a password to sign in. Nobody else sees your email.",
+  "register.account.lead.give": "Your email and a password to sign in. Organizations see your name, never your email.",
+  "register.account.lead.org": "Your email and a password. You'll manage your organization with this user.",
+  "register.account.leadOrg": "Your email and a password. With this user you request access to {org}.",
   "register.showPass": "Show password",
   "register.hidePass": "Hide password",
   "register.passRule": "At least {n} characters",

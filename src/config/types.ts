@@ -80,6 +80,12 @@ export interface CountryConfig {
   geo: CountryGeo;
   regions: Region[];
   legal: CountryLegal;
+  /**
+   * The native animals people can pick as their avatar, in display order. Ids come from
+   * `SPECIES` in `src/domain/avatar.ts` (the art only knows how to draw those). Omit it and
+   * this country has no avatar: the bar keeps showing the person's initial.
+   */
+  fauna?: readonly string[];
 
   // -------------------------------------------------------------------------
   // Per-country overrides of the shared kit.

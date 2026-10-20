@@ -21,6 +21,7 @@ import map from "~/config/map";
 import hazard from "~/config/hazard";
 import integrations from "~/config/integrations";
 import network from "~/config/network";
+import compiledCountry from "~/config/country";
 import type {
   BrandOverrides,
   CountryConfig,
@@ -110,6 +111,11 @@ function toCountry(row: EmergencyRow): CountryConfig {
     geo: row.geo,
     regions: row.regions,
     legal: row.legal,
+    // The avatar fauna is artwork, not operating data: it ships with the code, in the
+    // preset. A row for the same country keeps it (compared by ISO code: the row's slug
+    // names the emergency, not the country); a row for another country has none
+    // (its people keep their initial) until that preset lists its own animals.
+    fauna: compiledCountry.code === row.country_code ? compiledCountry.fauna : undefined,
     brand: row.brand,
     features: row.features,
     language: row.language,

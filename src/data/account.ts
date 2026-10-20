@@ -39,6 +39,7 @@ interface ProfileRow {
   created_at: string;
   skills?: unknown;
   availability?: unknown;
+  avatar?: unknown;
 }
 
 function toProfile(row: ProfileRow): Profile {
@@ -49,11 +50,14 @@ function toProfile(row: ProfileRow): Profile {
     createdAt: row.created_at,
     skills: toSkills(row.skills),
     availability: toAvailability(row.availability),
+    avatar: row.avatar ?? null,
   };
 }
 
 /** Sin `db/16_voluntariado.sql`, el perfil se pide sin oficios y no se vuelve a probar. */
 let sinVoluntariado = false;
+/** Lo mismo sin `db/18_avatar.sql`: se pide sin avatar. */
+let sinAvatar = false;
 
 /** ¿La base todavía guarda oficios? Para no ofrecer un editor que no puede guardar. */
 export function volunteerProfileAvailable(): boolean {
@@ -66,10 +70,17 @@ export async function fetchMyProfile(sb: SupabaseClient): Promise<Profile | null
   if (!auth.user) return null;
   const leer = (cols: string) => sb.from("profiles").select(cols).eq("user_id", auth.user!.id).maybeSingle();
   const base = "user_id,display_name,region,created_at";
-  let { data, error } = await leer(sinVoluntariado ? base : `${base},skills,availability`);
-  if (error?.code === "42703" || error?.code === "PGRST204") {
+  const cols = () => base + (sinVoluntariado ? "" : ",skills,availability") + (sinAvatar ? "" : ",avatar");
+  const falta = (e: { code?: string } | null) => e?.code === "42703" || e?.code === "PGRST204";
+  let { data, error } = await leer(cols());
+  // Una columna que falta hace fallar el `select` entero. Se descarta primero la más nueva.
+  if (falta(error) && !sinAvatar) {
+    sinAvatar = true;
+    ({ data, error } = await leer(cols()));
+  }
+  if (falta(error) && !sinVoluntariado) {
     sinVoluntariado = true;
-    ({ data, error } = await leer(base));
+    ({ data, error } = await leer(cols()));
   }
   if (error || !data) return null;
   return toProfile(data as unknown as ProfileRow);

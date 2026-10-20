@@ -26,7 +26,8 @@ import { ZoneDrawBar, type ZoneDraft } from "@/features/area/ZoneEditor";
 import { useStaffSession } from "@/features/admin/useStaffSession";
 import AccountPanel from "@/features/account/AccountPanel";
 import AccountMenu from "@/features/account/AccountMenu";
-import AccountView from "@/features/account/AccountView";
+import AccountView, { ACCOUNT_SECTION_TITLE, type AccountSection } from "@/features/account/AccountView";
+import SettingsView from "@/features/account/SettingsView";
 import { useAccount } from "@/features/account/useAccount";
 import NotificationsView from "@/features/notifications/NotificationsView";
 import { useNotifications } from "@/features/notifications/useNotifications";
@@ -106,6 +107,11 @@ type View =
    * propia: recargar vuelve al mapa, y el número sigue sobre el avatar.
    */
   | "notifications"
+  /**
+   * Configuración: lo que se CAMBIA de la cuenta (el avatar, la contraseña). «Mi cuenta»
+   * es para ver. Sin dirección propia, como las notificaciones.
+   */
+  | "settings"
   /**
    * «Tu iniciativa»: onboarding y gestión, para quien gestiona un punto.
    *
@@ -372,6 +378,9 @@ export default function AppShell({
   // "Correo confirmado" pertenece a la LLEGADA desde el enlace del correo, no a la vista:
   // sin esto reaparecía cada vez que se volvía a abrir la cuenta en la misma sesión.
   const [justConfirmed, setJustConfirmed] = useState(initialAction === "account");
+  // La sección abierta de Mi cuenta (guardados, logros…). Vive aquí para que la flecha de
+  // la cabecera del panel sepa volver al menú de la cuenta y el título diga dónde se está.
+  const [accountSection, setAccountSection] = useState<AccountSection | null>(null);
   // Resolved only once the panel — or the avatar menu — is actually open. Ver
   // useStaffSession: la consulta del rol no entra en el camino crítico del mapa.
   const [fabOpen, setFabOpen] = useState(false);
@@ -380,7 +389,7 @@ export default function AppShell({
   // El perfil y los guardados, con la misma pereza. Una sola instancia para el menú y para
   // la vista: son la misma cuenta, y dos copias del recuento de guardados es cómo el menú
   // acaba diciendo 3 mientras el panel dice 4.
-  const account = useAccount(userMenu || view === "account");
+  const account = useAccount(userMenu || view === "account" || view === "settings");
   // Lo nuevo para quien tiene sesión. Se pide solo, con el mapa ya cargado, porque su número
   // va sobre el avatar sin abrir nada; quien entra sin cuenta no paga ninguna petición.
   const notifs = useNotifications({
@@ -815,6 +824,12 @@ export default function AppShell({
 
   /** Cierra la pantalla de arriba y vuelve a la de debajo — la de verdad, no la lista. */
   function back() {
+    // Dentro de una sección de Mi cuenta, atrás vuelve a su menú, no al mapa: es el
+    // mismo gesto que en cualquier app del teléfono.
+    if (activeView === "account" && accountSection) {
+      setAccountSection(null);
+      return;
+    }
     navBack();
     setJustConfirmed(false);
     // Leaving the panel takes the half-placed pin with it; otherwise it lingers over the
@@ -1123,9 +1138,14 @@ export default function AppShell({
               account={account}
               staff={staff}
               pending={pending}
-              onOpenAccount={() => goRoot({ view: "account", id: null })}
+              onOpenAccount={() => {
+                // Abrir la cuenta desde fuera la abre en su menú, no en la última sección.
+                setAccountSection(null);
+                goRoot({ view: "account", id: null });
+              }}
               unread={notifs.unread}
               onOpenNotifications={() => goRoot({ view: "notifications", id: null })}
+              onOpenSettings={() => goRoot({ view: "settings", id: null })}
               onOpenPanel={() => goRoot({ view: "admin", id: null })}
               panelOpen={activeView === "admin"}
               onHelp={() => setTourOpen(true)}
@@ -1439,9 +1459,13 @@ export default function AppShell({
                     : activeView === "contact"
                       ? t("contact.title")
                       : activeView === "account"
-                        ? t(account.userId ? "account.title" : "account.signIn")
+                        ? accountSection
+                          ? t(ACCOUNT_SECTION_TITLE[accountSection])
+                          : t(account.userId ? "account.title" : "account.signIn")
                         : activeView === "notifications"
                           ? t("notif.title")
+                        : activeView === "settings"
+                          ? t("settings.title")
                         : activeView === "mine"
                           ? t("mine.kicker")
                           : activeView === "admin"
@@ -1494,17 +1518,25 @@ export default function AppShell({
                 onOpenCenter={openCenter}
                 isStaff={staff.checked ? Boolean(staff.session) : null}
                 onOpenPanel={() => goRoot({ view: "admin", id: null })}
+                onOpenSettings={() => navPush({ view: "settings", id: null })}
+                section={accountSection}
+                onSection={setAccountSection}
                 onVolunteer={() => navPush({ view: "volunteer", id: null })}
                 justConfirmed={justConfirmed}
               />
             ) : null}
             {/* Abrir un punto desde aquí cierra la capa y lo enseña en el mapa, igual que
                 desde los guardados de Mi cuenta. */}
+            {activeView === "settings" ? <SettingsView account={account} /> : null}
             {activeView === "notifications" ? (
               <NotificationsView
                 notifs={notifs}
                 onOpenCenter={openCenter}
-                onOpenAccount={() => goRoot({ view: "account", id: null })}
+                onOpenAccount={() => {
+                // Abrir la cuenta desde fuera la abre en su menú, no en la última sección.
+                setAccountSection(null);
+                goRoot({ view: "account", id: null });
+              }}
               />
             ) : null}
             {/* «Tu iniciativa». El punto sale de `selectedId`, que la entrada del menú

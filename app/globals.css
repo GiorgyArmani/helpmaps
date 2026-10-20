@@ -11370,3 +11370,764 @@ button.layers-inside svg:last-child {
 .nowrap {
   white-space: nowrap;
 }
+
+/* ─────────────────  El avatar  ───────────────────────────────────────────
+   Dos cosas distintas, cada una con su forma:
+
+   1. VERLO en la app — `AvatarDisc` (barra, menú, cabecera de la cuenta) y la tarjeta de
+      nivel de «Mi cuenta» (`.rec-ave`). Ligero: SVG en cadena y memorizado, sin fotos ni
+      peticiones, con su hueco reservado antes de dibujar.
+   2. CREARLO — `AvatarEditor`, en el paso 1 de /registro y en Configuración. Como un
+      creador de personaje de un juego para el teléfono: la escena fija arriba mientras se
+      baja por las opciones, cuatro pestañas que caben en 390 px y fichas que enseñan TU
+      personaje con cada opción puesta.
+
+   Mismo lenguaje que el resto del panel: la pista hundida de `.ptabs`, elevación de `--e-*`,
+   movimiento de `--t-*`. Toda área tocable mide 44 px o más, con 8 px entre una y otra. */
+
+/* ── 1. Verlo ── */
+
+/* Un disco con dibujo no lleva letra ni color de marca: el dibujo es el fondo. */
+.avatar-art {
+  background: var(--soft);
+  padding: 0;
+}
+
+.avatar .ave-disc {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.avatar .ave-disc svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Cuerpo entero. La proporción se reserva antes de dibujar: nada salta debajo. */
+.ave-card {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 120 / 150;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--soft);
+}
+
+.ave-card svg,
+.ave-sceneart svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ave-sceneart {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── 2. Crearlo ── */
+
+.ave {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* La escena: queda fija arriba mientras se baja por las fichas. */
+.ave-scene {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: clamp(220px, 36dvh, 320px);
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--soft);
+  box-shadow: var(--e-2);
+}
+
+.ave-scene-in {
+  position: absolute;
+  inset: 0;
+}
+
+/* Cada cambio, un saltito: dice «esto cambió» sin tener que buscar qué. */
+.ave-hop {
+  animation: ave-hop 340ms var(--ease) both;
+}
+
+@keyframes ave-hop {
+  0% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* Etiquetas sobre la escena, en vidrio: se leen sobre cualquier cielo. */
+.ave-tag,
+.ave-dice {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--e-1);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.ave-tag {
+  left: 12px;
+  bottom: 12px;
+  padding: 7px 12px;
+}
+
+.ave-dice {
+  top: 12px;
+  right: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform var(--t-tap) var(--ease);
+}
+
+.ave-dice svg {
+  color: var(--brand);
+}
+
+.ave-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Pestañas (y zonas) fijas debajo de la escena. El alto de la escena es el mismo `clamp`. */
+.ave-bar {
+  position: sticky;
+  top: clamp(220px, 36dvh, 320px);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Unos píxeles más ancha que su columna: el anillo de la ficha elegida sobresale 4 px y
+     asomaba por el costado al pasar por debajo. */
+  margin: -14px -6px 0;
+  padding: 12px 6px 10px;
+  background: #fff;
+}
+
+/* Cuatro pestañas iguales: la pista hundida de las del panel. */
+.ave-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding: 3px;
+  border-radius: 14px;
+  background: var(--soft);
+}
+
+.ave-tab {
+  min-width: 0;
+  height: 44px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 11px;
+  background: none;
+  color: var(--mut-track);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition:
+    background-color var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease);
+}
+
+.ave-tab-on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-1);
+}
+
+/* La zona de los accesorios: cabeza, cara, cuello, cuerpo. */
+.ave-zones {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ave-zone {
+  position: relative;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--t-ui) var(--ease),
+    border-color var(--t-ui) var(--ease),
+    color var(--t-ui) var(--ease);
+}
+
+.ave-zone-on {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+/* Ya hay algo puesto en esa zona. */
+.ave-zone-dot {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.ave-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 10px;
+}
+
+@media (min-width: 560px) {
+  .ave-grid {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  }
+}
+
+.ave-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mut-track);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ave-tile-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--soft);
+  transition:
+    box-shadow var(--t-ui) var(--ease),
+    transform var(--t-tap) var(--ease);
+}
+
+.ave-tile-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ave-tile-n {
+  max-width: 100%;
+  padding-bottom: 1px;
+  font-size: 0.71875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ave-tile.ave-on .ave-tile-art {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px var(--accent);
+}
+
+.ave-tile.ave-on .ave-tile-n {
+  color: var(--ink);
+}
+
+.ave-tile-check {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.ave-tile-locked {
+  cursor: not-allowed;
+}
+
+.ave-tile-locked .ave-tile-art {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.ave-tile-lock {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 22px);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: calc(100% - 6px);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.ave-colors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ave-lbl {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mut-track);
+}
+
+/* Los nueve colores, en filas: ninguno escondido detrás de un deslizamiento. */
+.ave-dots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 44px);
+  gap: 8px;
+}
+
+.ave-dot {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: pointer;
+  transition:
+    box-shadow var(--t-ui) var(--ease),
+    transform var(--t-tap) var(--ease);
+}
+
+.ave-dot.ave-on {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.ave-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--mut-track);
+}
+
+.ave-tile:active .ave-tile-art,
+.ave-dot:active,
+.ave-dice:active,
+.ave-zone:active {
+  transform: scale(0.95);
+}
+
+.ave-tile:focus-visible,
+.ave-dot:focus-visible,
+.ave-tab:focus-visible,
+.ave-zone:focus-visible,
+.ave-dice:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ── En Configuración ── */
+
+.aveset {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.aveset-lead {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+/* El hueco del creador mientras llega el nivel. */
+.ave-skel {
+  display: block;
+  width: 100%;
+  height: 560px;
+  border-radius: 24px;
+}
+
+/* «Guardar» queda a mano mientras se baja por las fichas. */
+.aveset-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-inline: calc(-1 * var(--gut));
+  padding: 14px var(--gut) calc(14px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to bottom, transparent, #fff 30%);
+}
+
+.aveset-bar .btnp {
+  flex: 1 1 auto;
+}
+
+.aveset-ok {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* El final del registro: su personaje saluda. */
+.rg-done-ave {
+  width: 120px;
+  margin-bottom: 4px;
+  box-shadow: var(--e-2);
+  animation: ave-hop 420ms var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ave-hop,
+  .rg-done-ave {
+    animation: none;
+  }
+
+  .ave-tab,
+  .ave-zone,
+  .ave-tile-art,
+  .ave-dot,
+  .ave-dice {
+    transition: none;
+  }
+
+  .ave-tile:active .ave-tile-art,
+  .ave-dot:active,
+  .ave-dice:active,
+  .ave-zone:active {
+    transform: none;
+  }
+}
+
+/* El hueco de la tarjeta mientras llegan las contribuciones. */
+.rec-skel {
+  display: block;
+  width: 100%;
+  height: 96px;
+  border-radius: var(--r-md);
+}
+
+/* ─────────────────  Mi cuenta: tu tarjeta y un menú  ─────────────────────
+   Como el perfil de una app del teléfono: arriba tu tarjeta (avatar con su nivel, nombre,
+   barra), debajo un menú de botones grandes, uno por sección. Cada botón abre su sección en
+   su propia pantalla (`.acc-pane`) con «Mi cuenta» para volver. Nada de bajar varias
+   pantallas para encontrar algo. Ver `AccountView.tsx`. */
+
+.acc-home {
+  gap: 16px;
+}
+
+.acc-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 24px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 7%, #fff), #fff 70%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent),
+    var(--e-1);
+}
+
+/* El avatar es un botón: tocarlo lleva a cambiarlo. */
+.acc-hero-ave {
+  position: relative;
+  flex: 0 0 auto;
+  width: 92px;
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: none;
+  cursor: pointer;
+}
+
+.acc-hero-ave .ave-card {
+  border-radius: 18px;
+  box-shadow: var(--e-2);
+}
+
+.acc-hero-none {
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.acc-hero-lvl {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  box-shadow: 0 0 0 3px #fff;
+}
+
+.acc-hero-pen {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--e-2);
+}
+
+.acc-hero-ave:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.acc-hero-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.acc-name-t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* El lápiz del nombre: 44 px de área aunque se dibuje pequeño. */
+.acc-hero .acc-edit {
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px -10px -6px;
+  border-radius: 12px;
+}
+
+.acc-hero-lv {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.acc-hero-lv b {
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.acc-hero-lv span {
+  font-size: 0.75rem;
+  color: var(--mut-track);
+}
+
+.acc-hero-skel {
+  display: block;
+  width: 100%;
+  height: 58px;
+  border-radius: 10px;
+}
+
+/* El menú: filas grandes en una tarjeta agrupada, como los ajustes de un teléfono. */
+.acc-menu {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px var(--line),
+    var(--e-1);
+}
+
+.acc-mi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 0;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--t-tap) var(--ease);
+}
+
+.acc-mi + .acc-mi {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+.acc-mi:active {
+  background: var(--soft);
+}
+
+@media (hover: hover) {
+  .acc-mi:hover {
+    background: var(--soft);
+  }
+}
+
+.acc-mi:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: -3px;
+}
+
+.acc-mi-ic {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  /* El azul de la marca y no el acento: en Venezuela el acento es casi negro y los
+     íconos se leían como apagados. */
+  background: color-mix(in srgb, var(--brand) 10%, #fff);
+  color: var(--brand);
+}
+
+.acc-mi-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.acc-mi-txt b {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.acc-mi-txt span {
+  font-size: 0.78125rem;
+  color: var(--mut-track);
+}
+
+.acc-mi-skel {
+  display: block;
+  width: 110px;
+  height: 12px;
+  margin-top: 3px;
+  border-radius: 6px;
+}
+
+.acc-mi-go {
+  flex: 0 0 auto;
+  color: var(--mut);
+}
+
+/* ── Una sección, en su propia pantalla ── */
+
+.acc-pane {
+  gap: 14px;
+}
+
+.acc-pane-h {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* El título ya lo dice la pantalla: las secciones que traen el suyo no lo repiten. */
+.acc-pane > .acc-sec:first-of-type > .acc-h:first-child,
+.acc-pane .vprof-head > .acc-h {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.acc-pane .vprof-head {
+  justify-content: flex-end;
+}
+
+.acc-pane .rec {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.rec-sub-first {
+  margin-top: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acc-mi {
+    transition: none;
+  }
+}

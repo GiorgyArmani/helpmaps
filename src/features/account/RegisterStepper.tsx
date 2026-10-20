@@ -14,11 +14,25 @@ import { cleanDisplayName, displayNameInvalid } from "@/domain/account";
 import ToggleChips from "@/features/volunteer/ToggleChips";
 import { skillLabel } from "@/features/volunteer/EventNeeds";
 import { searchDirectory } from "../../../app/organizaciones/search";
+import { SPECIES, faunaOf, starterAvatar, type Avatar } from "@/domain/avatar";
+import AvatarEditor from "@/features/avatar/AvatarEditor";
+import { AvatarCard, AvatarDisc, AvatarScene } from "@/features/avatar/AvatarArt";
 
 /** Para qué viene la persona: decide el recorrido entero. */
 export type Purpose = "help" | "give" | "org";
 
-type StepId = "choose" | "skills" | "org" | "account";
+export type StepId = "avatar" | "name" | "choose" | "skills" | "org" | "account";
+
+/** Las cuatro etapas que se ven arriba. Perfil agrupa la pregunta del camino y lo que pide. */
+type Phase = "avatar" | "name" | "profile" | "account";
+const PHASE_OF: Record<StepId, Phase> = {
+  avatar: "avatar",
+  name: "name",
+  choose: "profile",
+  skills: "profile",
+  org: "profile",
+  account: "account",
+};
 
 /**
  * Cada camino pide lo suyo y nada más:
@@ -70,6 +84,19 @@ interface OrgRow {
  *
  * Quien llega con un `next` (una invitación) ya sabe a dónde va: sólo crea su usuario.
  *
+ * ── PRIMERO SE CREA UN PERSONAJE ────────────────────────────────────────────
+ *
+ * El registro empieza como un videojuego: la persona elige su avatar —un animal de la
+ * fauna del país, vestido a su gusto (`AvatarEditor`)— y después le pone nombre, con el
+ * personaje saludando y diciéndolo mientras se escribe. Sólo entonces vienen las preguntas
+ * y, al final, el correo y la contraseña. Es lo primero que se lleva de la plataforma y lo
+ * que la hace suya; viaja con la cuenta y la barra lo dibuja en cuanto entra. Se puede
+ * seguir con el que viene puesto: nadie se queda atascado eligiendo. Un país sin fauna en
+ * su preset salta el avatar y empieza por el nombre.
+ *
+ * Arriba siempre se ven las etapas —Avatar, Nombre, Perfil, Cuenta— y, desde que tiene
+ * nombre, la ficha del personaje: quién se está creando, y la puerta para volver a vestirlo.
+ *
  * ── POR QUÉ EL «ÉXITO» NO DICE SI LA CUENTA SE CREÓ ─────────────────────────
  *
  * El final dice «si esa dirección puede usarse, te llega un enlace», no «te creamos la
@@ -81,16 +108,23 @@ export default function RegisterStepper({
   next,
   onSignIn,
   onPurpose,
+  onStep,
 }: {
   next?: string | null;
   onSignIn?: () => void;
   /** La elección, para que la página cambie su titular. */
   onPurpose?: (p: Purpose | null) => void;
+  /** El paso visible: la página esconde su titular mientras se crea el personaje. */
+  onStep?: (s: StepId | "done") => void;
 }) {
   const { t } = useI18n();
   const site = useSite();
   const [purpose, setPurpose] = useState<Purpose | null>(null);
   const [at, setAt] = useState(0);
+  // Su compañero. Arranca con el primer animal del país para que «Continuar» ya sirva.
+  const fauna = useMemo(() => faunaOf(site.country), [site.country]);
+  const hasAvatar = fauna.length > 0;
+  const [avatar, setAvatar] = useState<Avatar>(() => starterAvatar(fauna[0] ?? SPECIES[0]));
   // La cuenta.
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -113,13 +147,24 @@ export default function RegisterStepper({
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
 
-  const steps: StepId[] = next ? ["account"] : purpose ? PATHS[purpose] : ["choose"];
+  const first: StepId[] = hasAvatar ? ["avatar", "name"] : ["name"];
+  const steps: StepId[] = next
+    ? [...first, "account"]
+    : purpose
+      ? [...first, ...PATHS[purpose]]
+      : [...first, "choose"];
   const step = steps[at] ?? "choose";
+  // Dónde está la pregunta del camino: después del avatar y del nombre.
+  const chooseAt = first.length;
 
   // Al cambiar de paso, el foco va a su pregunta (el lector la anuncia). No al abrir.
   useEffect(() => {
     if (moved.current) heading.current?.focus();
   }, [at, purpose, done]);
+
+  useEffect(() => {
+    onStep?.(done ? "done" : step);
+  }, [onStep, step, done]);
 
   // El directorio llega sólo cuando hace falta: al entrar al paso de la organización.
   useEffect(() => {
@@ -145,13 +190,13 @@ export default function RegisterStepper({
     onPurpose?.(k);
     // Tocar ya es responder: avanza solo, con un instante para ver lo elegido.
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setTimeout(() => go(1), still ? 0 : 180);
+    setTimeout(() => go(chooseAt + 1), still ? 0 : 180);
   }
 
   function restart() {
     setPurpose(null);
     onPurpose?.(null);
-    go(0);
+    go(chooseAt);
   }
 
   const name = cleanDisplayName(displayName);
@@ -180,6 +225,10 @@ export default function RegisterStepper({
     e.preventDefault();
     if (step !== "account") {
       if (step === "org" && !org) return;
+      if (step === "name" && !nameOk) {
+        setTouched((s) => ({ ...s, name: true }));
+        return;
+      }
       go(at + 1);
       return;
     }
@@ -197,6 +246,7 @@ export default function RegisterStepper({
           password,
           next: destination(),
           ...(purpose === "give" ? { skills, availability, region: region || undefined } : {}),
+          ...(hasAvatar ? { avatar } : {}),
         }),
       });
       const data: { error?: string } = await res.json().catch(() => ({}));
@@ -235,11 +285,16 @@ export default function RegisterStepper({
         : t(`register.then.${purpose ?? "help"}` as DictKey);
     return (
       <div className="rg-done" role="status">
-        <span className="rg-done-ic" aria-hidden="true">
-          <Icon.mail width={26} height={26} />
-        </span>
+        {hasAvatar ? (
+          // Su personaje saluda: es lo primero que se lleva, y ya es suyo.
+          <AvatarCard avatar={avatar} mood="feliz" className="rg-done-ave" />
+        ) : (
+          <span className="rg-done-ic" aria-hidden="true">
+            <Icon.mail width={26} height={26} />
+          </span>
+        )}
         <h2 ref={heading} tabIndex={-1} className="rg-h">
-          {t("register.doneTitle")}
+          {nameOk ? t("register.doneTitleNamed", { name }) : t("register.doneTitle")}
         </h2>
         <p className="rg-p">{t("register.doneBody")}</p>
         {then ? <p className="rg-p rg-p-ink">{then}</p> : null}
@@ -253,45 +308,125 @@ export default function RegisterStepper({
 
   const chosen = purpose ? PURPOSES.find((p) => p.k === purpose)! : null;
   const ChosenIcon = chosen ? Icon[chosen.icon] : null;
-  // El avance cuenta los pasos después de la elección: elegir es la bienvenida.
-  const counted: StepId[] = steps.filter((s) => s !== "choose");
-  const pos = counted.indexOf(step);
+  // Las etapas que se ven arriba. Con una invitación (`next`) no hay perfil que armar.
+  const phases: Phase[] = [
+    ...(hasAvatar ? (["avatar"] as Phase[]) : []),
+    "name",
+    ...(next ? [] : (["profile"] as Phase[])),
+    "account",
+  ];
+  const phase = PHASE_OF[step];
+  const phaseAt = phases.indexOf(phase);
+  // La ficha del personaje, desde que tiene nombre.
+  const showMe = phaseAt > phases.indexOf("name") && nameOk;
+  const phaseLabel = t("register.phaseOf", {
+    n: phaseAt + 1,
+    total: phases.length,
+    label: t(`register.phase.${phase}` as DictKey),
+  });
 
   return (
     <form className="rg" onSubmit={submit} noValidate>
-      {step !== "choose" ? (
-        <>
-          {/* Lo elegido, con la puerta para cambiarlo: el recorrido depende de esto. */}
-          {chosen && ChosenIcon ? (
-            <div className="rg-path">
-              <span className="rg-path-ic" aria-hidden="true">
-                <ChosenIcon width={14} height={14} />
-              </span>
-              <span className="rg-path-n">{t(`register.p.${chosen.k}` as DictKey)}</span>
-              <button type="button" className="rg-path-x" onClick={restart}>
-                {t("register.change")}
-              </button>
-            </div>
+      <ol className="rg-phases" aria-label={phaseLabel}>
+        {phases.map((p, i) => (
+          <li
+            key={p}
+            className={i < phaseAt ? "rg-ph rg-ph-done" : i === phaseAt ? "rg-ph rg-ph-on" : "rg-ph"}
+            aria-current={i === phaseAt ? "step" : undefined}
+          >
+            <span className="rg-ph-dot" aria-hidden="true">
+              {i < phaseAt ? <Icon.check width={12} height={12} /> : i + 1}
+            </span>
+            <span className="rg-ph-n">{t(`register.phase.${p}` as DictKey)}</span>
+          </li>
+        ))}
+      </ol>
+
+      {showMe ? (
+        <div className="rg-me">
+          {hasAvatar ? (
+            <span className="avatar avatar-art rg-me-ave" aria-hidden="true">
+              <AvatarDisc avatar={avatar} label={null} />
+            </span>
           ) : null}
-          {counted.length > 1 ? (
-            <>
-              <div className="rg-bars" aria-hidden="true">
-                {counted.map((s, i) => (
-                  <span key={s} className={i <= pos ? "rg-bar rg-bar-on" : "rg-bar"} />
-                ))}
-              </div>
-              <p className="rg-count">{t("register.stepOf", { n: pos + 1, total: counted.length })}</p>
-            </>
+          <span className="rg-me-txt">
+            <b>{name}</b>
+            {hasAvatar ? <span>{t(`avatar.sp.${avatar.sp}` as DictKey)}</span> : null}
+          </span>
+          {hasAvatar ? (
+            <button type="button" className="rg-me-x" onClick={() => go(0)}>
+              {t("common.edit")}
+            </button>
           ) : null}
-        </>
+        </div>
+      ) : null}
+
+      {chosen && ChosenIcon && phase === "profile" && step !== "choose" ? (
+        /* Lo elegido, con la puerta para cambiarlo: el recorrido depende de esto. */
+        <div className="rg-path">
+          <span className="rg-path-ic" aria-hidden="true">
+            <ChosenIcon width={14} height={14} />
+          </span>
+          <span className="rg-path-n">{t(`register.p.${chosen.k}` as DictKey)}</span>
+          <button type="button" className="rg-path-x" onClick={restart}>
+            {t("register.change")}
+          </button>
+        </div>
       ) : null}
 
       {/* `key`: cada paso entra con su animación. */}
       <div key={`${purpose}-${step}`} className="rg-body">
+        {step === "avatar" ? (
+          <>
+            <h2 ref={heading} tabIndex={-1} className="rg-h rg-h-big">
+              {t("avatar.title")}
+            </h2>
+            <p className="rg-p">{t("register.avatar.lead", { platform: site.brand.platform })}</p>
+            <AvatarEditor value={avatar} onChange={setAvatar} species={fauna} level={1} />
+          </>
+        ) : null}
+
+        {step === "name" ? (
+          <>
+            <h2 ref={heading} tabIndex={-1} className="rg-h rg-h-big">
+              {t("register.name.title")}
+            </h2>
+            {hasAvatar ? (
+              // El personaje saluda y dice su nombre mientras se escribe.
+              <div className="rg-hello">
+                <AvatarScene avatar={avatar} mood="feliz" />
+                <p className={nameOk ? "rg-bubble" : "rg-bubble rg-bubble-ask"} aria-live="polite">
+                  {nameOk ? t("register.name.hello", { name }) : t("register.name.ask")}
+                </p>
+              </div>
+            ) : null}
+            <Field label={t("register.displayName")} hint={t("register.name.lead")}>
+              <Input
+                required
+                autoComplete="nickname"
+                enterKeyHint="next"
+                maxLength={40}
+                className="rg-name-in"
+                value={displayName}
+                aria-invalid={touched.name && !nameOk}
+                onBlur={() => displayName && setTouched((s) => ({ ...s, name: true }))}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </Field>
+            {touched.name && !nameOk ? (
+              <p className="lerr" role="alert">
+                {t("register.errorName")}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+
         {step === "choose" ? (
           <>
             <h2 ref={heading} tabIndex={-1} className="rg-h">
-              {t("register.s0", { platform: site.brand.platform })}
+              {nameOk
+                ? t("register.s0named", { platform: site.brand.platform, name })
+                : t("register.s0", { platform: site.brand.platform })}
             </h2>
             <div className="rg-opts" role="radiogroup" aria-label={t("register.s0", { platform: site.brand.platform })}>
               {PURPOSES.map(({ k, icon }) => {
@@ -440,31 +575,13 @@ export default function RegisterStepper({
         {step === "account" ? (
           <>
             <h2 ref={heading} tabIndex={-1} className="rg-h">
-              {t("register.account.title")}
+              {nameOk ? t("register.account.titleNamed", { name }) : t("register.account.title")}
             </h2>
             <p className="rg-p">
               {purpose === "org" && org && org !== "none"
                 ? t("register.account.leadOrg", { org: org.name })
                 : t(`register.account.lead.${next ? "help" : (purpose ?? "help")}` as DictKey)}
             </p>
-            <Field label={t("register.displayName")} hint={t("register.displayNameHint")}>
-              <Input
-                required
-                autoComplete="nickname"
-                enterKeyHint="next"
-                maxLength={40}
-                value={displayName}
-                aria-invalid={touched.name && !nameOk}
-                onBlur={() => displayName && setTouched((s) => ({ ...s, name: true }))}
-                onChange={(e) => setDisplayName(e.target.value)}
-              />
-            </Field>
-            {touched.name && !nameOk ? (
-              <p className="lerr" role="alert">
-                {t("register.errorName")}
-              </p>
-            ) : null}
-
             <Field label={t("register.email")} hint={t("register.emailHint")}>
               <Input
                 required
@@ -519,21 +636,27 @@ export default function RegisterStepper({
         ) : null}
       </div>
 
-      {step !== "choose" ? (
+      {step !== "choose" || at > 0 ? (
         <div className="rg-nav">
           {at > 0 ? (
-            <button type="button" className="rg-back" onClick={() => (at === 1 ? restart() : go(at - 1))}>
+            <button
+              type="button"
+              className="rg-back"
+              onClick={() => (steps[at - 1] === "choose" ? restart() : go(at - 1))}
+            >
               <Icon.back width={18} height={18} />
               {t("common.back")}
             </button>
           ) : (
             <span />
           )}
+          {/* En la pregunta del camino no hay «Continuar»: tocar una opción ya avanza. */}
+          {step === "choose" ? null : (
           <Button
             type="submit"
             className="rg-go"
             loading={busy}
-            disabled={step === "account" ? !accountOk : step === "org" ? !org : false}
+            disabled={step === "account" ? !accountOk : step === "org" ? !org : step === "name" ? !nameOk : false}
           >
             {step === "account" ? (
               busy ? (
@@ -550,6 +673,7 @@ export default function RegisterStepper({
               </>
             )}
           </Button>
+          )}
         </div>
       ) : null}
 

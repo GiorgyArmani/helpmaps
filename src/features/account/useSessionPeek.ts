@@ -8,6 +8,8 @@ export interface SessionPeek {
   hasSession: boolean | null;
   /** La letra que va en el avatar hasta que se conozca el nombre para mostrar. */
   initial: string | null;
+  /** El código corto de su avatar (`encodeAvatar`), si lo tiene. Viaja en el token. */
+  avatar: string | null;
 }
 
 /**
@@ -36,7 +38,9 @@ export interface SessionPeek {
  */
 export function useSessionPeek(): SessionPeek {
   const [peek, setPeek] = useState<SessionPeek>(() =>
-    supabaseConfigured() ? { hasSession: null, initial: null } : { hasSession: false, initial: null },
+    supabaseConfigured()
+      ? { hasSession: null, initial: null, avatar: null }
+      : { hasSession: false, initial: null, avatar: null },
   );
 
   useEffect(() => {
@@ -44,7 +48,7 @@ export function useSessionPeek(): SessionPeek {
     if (!sb) return;
     let cancelled = false;
 
-    const read = (email: string | undefined, present: boolean) => {
+    const read = (email: string | undefined, present: boolean, meta?: Record<string, unknown>) => {
       if (cancelled) return;
       setPeek({
         hasSession: present,
@@ -52,13 +56,18 @@ export function useSessionPeek(): SessionPeek {
         // Es el mismo dato que ya tiene delante en la pestaña de al lado, y se reemplaza
         // por el nombre para mostrar en cuanto el menú carga el perfil.
         initial: present ? (email?.trim()[0]?.toUpperCase() ?? null) : null,
+        // Lo puso el servidor al guardar el avatar (`/api/account/avatar`). Se decodifica
+        // con el catálogo al dibujarlo: un código raro no dibuja nada y queda la inicial.
+        avatar: present && typeof meta?.avatar === "string" ? meta.avatar : null,
       });
     };
 
-    void sb.auth.getSession().then(({ data }) => read(data.session?.user.email, Boolean(data.session)));
+    void sb.auth
+      .getSession()
+      .then(({ data }) => read(data.session?.user.email, Boolean(data.session), data.session?.user.user_metadata));
 
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
-      read(session?.user.email, Boolean(session));
+      read(session?.user.email, Boolean(session), session?.user.user_metadata);
     });
 
     return () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/ui/icons";
 import { useI18n } from "@/i18n/context";
@@ -12,6 +12,9 @@ import type { StaffState } from "@/features/admin/useStaffSession";
 import type { AccountState } from "@/features/account/useAccount";
 import { avatarInitial, useSessionPeek } from "@/features/account/useSessionPeek";
 import { savedLabel } from "@/features/account/ledger";
+import { faunaOf } from "@/domain/avatar";
+import { myAvatar } from "@/features/avatar/mine";
+import { AvatarDisc } from "@/features/avatar/AvatarArt";
 
 const STAFF_HINT = "hmWasStaff";
 
@@ -61,6 +64,7 @@ export default function AccountMenu({
   panelOpen = false,
   unread = 0,
   onOpenNotifications,
+  onOpenSettings,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -83,6 +87,8 @@ export default function AccountMenu({
   /** Notificaciones sin ver. Es el número que va sobre el avatar con el menú cerrado. */
   unread?: number;
   onOpenNotifications?: () => void;
+  /** Configuración: el avatar y la contraseña. */
+  onOpenSettings?: () => void;
 }) {
   const { t, lang, setLang, available } = useI18n();
   const site = useSite();
@@ -95,6 +101,13 @@ export default function AccountMenu({
   const signedIn = Boolean(account.userId) || peek.hasSession === true;
   const name = account.profile?.displayName ?? null;
   const initial = avatarInitial(name, peek.initial);
+  // Su animal, si lo tiene. Sale del token en el primer instante y del perfil en cuanto
+  // llega: la barra nunca espera a la red para dibujarlo.
+  const fauna = useMemo(() => faunaOf(site.country), [site.country]);
+  const mine = useMemo(
+    () => (signedIn ? myAvatar(fauna, account.profile?.avatar, peek.avatar) : null),
+    [signedIn, fauna, account.profile?.avatar, peek.avatar],
+  );
   const isStaff = Boolean(staff.session);
 
   // El rol cuesta un viaje y se pide al abrir el menú, así que «Panel del equipo» entraba
@@ -208,8 +221,8 @@ export default function AccountMenu({
                   saluda, dice quién eres y cuántos puntos llevas guardados. Un recuento se
                   puede comprobar; "bienvenido" no informa de nada. */}
               <button type="button" className="userhead" role="menuitem" onClick={pick(onOpenAccount)}>
-                <span className="avatar avatar-lg avatar-signed" aria-hidden="true">
-                  {initial ?? <Icon.user />}
+                <span className={`avatar avatar-lg${mine ? " avatar-art" : " avatar-signed"}`} aria-hidden="true">
+                  {mine ? <AvatarDisc avatar={mine} label={null} /> : (initial ?? <Icon.user />)}
                 </span>
                 <span className="userhead-txt">
                   <b className="userhead-name">{name ?? t("account.noName")}</b>
@@ -282,6 +295,14 @@ export default function AccountMenu({
               {general}
 
               <div className="usermenu-list">
+                {onOpenSettings ? (
+                  <button type="button" className="useritem" role="menuitem" onClick={pick(onOpenSettings)}>
+                    <span className="useritem-ic">
+                      <Icon.gear />
+                    </span>
+                    <span className="useritem-txt">{t("settings.title")}</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="useritem useritem-mut"
@@ -359,7 +380,7 @@ export default function AccountMenu({
 
       <button
         type="button"
-        className={`avatar avatar-btn${signedIn ? " avatar-signed" : ""}${open ? " avatar-on" : ""}`}
+        className={`avatar avatar-btn${mine ? " avatar-art" : signedIn ? " avatar-signed" : ""}${open ? " avatar-on" : ""}`}
         data-tour="staffgear"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -367,7 +388,7 @@ export default function AccountMenu({
         title={t("account.title")}
         onClick={() => onOpenChange(!open)}
       >
-        {signedIn && initial ? initial : <Icon.user />}
+        {mine ? <AvatarDisc avatar={mine} label={null} /> : signedIn && initial ? initial : <Icon.user />}
         {/* Un solo número sobre el avatar. Lo que espera al equipo manda: es trabajo sin
             hacer; las notificaciones son avisos, y siguen a un toque dentro del menú. */}
         {isStaff && pending > 0 ? (

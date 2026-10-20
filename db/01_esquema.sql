@@ -3956,3 +3956,51 @@ comment on column public.center_info.offers_confirmed_at is
   'el valor que mande el cliente se ignora.';
 
 notify pgrst, 'reload schema';
+
+
+-- ###########################################################################
+-- ### 022_avatar
+-- ###########################################################################
+-- El avatar de cada persona: un animal de la fauna del país, como ids de catálogo. Copia
+-- literal de db/18_avatar.sql, que explica por qué sólo lo escribe el servidor. Si cambias
+-- uno, cambia el otro.
+-- ===========================================================================
+
+alter table public.profiles
+  add column if not exists avatar jsonb;
+
+-- Un objeto, y pequeño: son seis identificadores, no un dibujo.
+alter table public.profiles drop constraint if exists profiles_avatar_shape;
+alter table public.profiles add constraint profiles_avatar_shape
+  check (avatar is null or (jsonb_typeof(avatar) = 'object' and pg_column_size(avatar) <= 1024));
+
+create or replace function public.guard_profile_avatar()
+returns trigger
+language plpgsql
+set search_path = public
+as $avatar$
+begin
+  if (tg_op = 'INSERT' and new.avatar is not null)
+     or (tg_op = 'UPDATE' and new.avatar is distinct from old.avatar) then
+    -- El rol de servicio (las rutas del servidor) y quien corre SQL a mano en el editor.
+    if coalesce(auth.role(), '') <> 'service_role'
+       and current_user not in ('postgres', 'supabase_admin', 'service_role') then
+      raise exception 'avatar_server_only'
+        using errcode = '42501',
+              hint = 'El avatar se guarda por /api/account/avatar, que comprueba el nivel.';
+    end if;
+  end if;
+  return new;
+end
+$avatar$;
+
+drop trigger if exists trg_profiles_avatar_guard on public.profiles;
+create trigger trg_profiles_avatar_guard
+  before insert or update on public.profiles
+  for each row execute function public.guard_profile_avatar();
+
+comment on column public.profiles.avatar is
+  'El avatar: especie, hábitat y una pieza por zona, como ids del catálogo de '
+  'src/domain/avatar.ts. Sólo lo escribe el servidor (trigger trg_profiles_avatar_guard).';
+
+notify pgrst, 'reload schema';

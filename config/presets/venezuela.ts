@@ -65,6 +65,21 @@ const venezuela: CountryConfig = {
     ],
   },
 
+  // El avatar: la fauna autóctona que cada persona puede elegir (`src/domain/avatar.ts`).
+  // El orden es el del selector: primero el ave nacional y el animal de los llanos.
+  fauna: [
+    "turpial",
+    "chiguire",
+    "frontino",
+    "jaguar",
+    "tonina",
+    "caiman",
+    "palmero",
+    "cardenalito",
+    "perroagua",
+    "anaconda",
+  ],
+
   regions: [
     { code: "amazonas", name: "Amazonas", lat: 3.9, lng: -65.8 },
     { code: "anzoategui", name: "Anzoátegui", lat: 9.0, lng: -64.3 },

@@ -7,9 +7,10 @@ import { MIN_PASSWORD_PUBLIC, publicPasswordTooShort } from "@/lib/password";
 import { isPwnedPassword } from "@/lib/passwordBreach";
 import { cleanDisplayName, displayNameInvalid } from "@/domain/account";
 import { sendAccountConfirm } from "@/lib/email";
-import { isKnownRegion } from "@/config";
+import { COUNTRY, isKnownRegion } from "@/config";
 import { safeNext } from "@/lib/safeNext";
 import { toAvailability, toSkills } from "@/domain/volunteer";
+import { encodeAvatar, faunaOf, parseAvatar } from "@/domain/avatar";
 
 /**
  * Crear una cuenta de persona. Pública, sin invitación.
@@ -74,6 +75,10 @@ export async function POST(req: Request) {
   // (`src/domain/volunteer.ts`): nada que no esté en la lista entra a la base.
   const skills = toSkills(raw.skills);
   const availability = toAvailability(raw.availability);
+  // El paso 1 del registro: su avatar. Una cuenta nueva está en el nivel 1, así que aquí
+  // sólo entran las piezas básicas — un especial mandado a mano se cae en `parseAvatar`.
+  // Mal formado o de una especie que este país no ofrece: la cuenta se crea igual, sin él.
+  const avatar = parseAvatar(raw.avatar, { species: faunaOf(COUNTRY), level: 1 });
 
   if (!isEmail(email)) {
     return NextResponse.json({ error: "invalid_email" }, { status: 400 });
@@ -111,7 +116,9 @@ export async function POST(req: Request) {
     password,
     options: {
       redirectTo: absoluteUrl(next ? `/cuenta?next=${encodeURIComponent(next)}` : "/cuenta"),
-      data: { display_name: displayName, region },
+      // `avatar` va también en los metadatos: la barra lo dibuja leyendo el token, sin
+      // preguntarle a la red (ver `useSessionPeek`). La copia de verdad va en `profiles`.
+      data: { display_name: displayName, region, ...(avatar ? { avatar: encodeAvatar(avatar) } : {}) },
     },
   });
 
@@ -128,14 +135,19 @@ export async function POST(req: Request) {
   // pueda leer— y se pierde en la próxima base que se levante desde `db/`.
   const base = { user_id: data.user.id, display_name: displayName, region };
   const volunteer = skills.length > 0 || availability.length > 0 ? { skills, availability } : null;
-  let { error: profileError } = await admin
-    .from("profiles")
-    .upsert(volunteer ? { ...base, ...volunteer } : base, { onConflict: "user_id" });
-  // Una base sin `db/16_voluntariado.sql` no tiene esas columnas: el perfil se crea igual,
-  // sin ellas. Perder los oficios es un retoque en la cuenta; perder el perfil, no poder
-  // entrar con nombre.
-  if (profileError && volunteer) {
-    ({ error: profileError } = await admin.from("profiles").upsert(base, { onConflict: "user_id" }));
+  // De lo más completo a lo mínimo. Una base sin `db/18_avatar.sql` o sin
+  // `db/16_voluntariado.sql` no tiene esas columnas: el perfil se crea igual, sin ellas.
+  // Perder el avatar o los oficios es un retoque en la cuenta (el avatar sigue en la
+  // sesión); perder el perfil, no poder entrar con nombre.
+  const tries = [
+    { ...base, ...(volunteer ?? {}), ...(avatar ? { avatar } : {}) },
+    ...(avatar && volunteer ? [{ ...base, ...volunteer }] : []),
+    ...(avatar || volunteer ? [base] : []),
+  ];
+  let profileError: { message: string } | null = null;
+  for (const row of tries) {
+    ({ error: profileError } = await admin.from("profiles").upsert(row, { onConflict: "user_id" }));
+    if (!profileError) break;
   }
   if (profileError) {
     console.error("[register] no se pudo crear el perfil:", profileError.message);
