@@ -35,6 +35,14 @@ export const SPECIES = [
   "cardenalito",
   "perroagua",
   "anaconda",
+  "guacamaya",
+  "guacaverde",
+  "guacazul",
+  "morrocoy",
+  "cachicamo",
+  "perezatres",
+  "perezados",
+  "condor",
 ] as const;
 export type SpeciesId = (typeof SPECIES)[number];
 
@@ -72,6 +80,11 @@ export const ITEMS: readonly ItemDef[] = [
   { id: "pelotero", slot: "ropa" },
   { id: "vinotinto", slot: "ropa" },
   { id: "liqui", slot: "ropa" },
+  { id: "chemise", slot: "ropa", def: "amarillo" },
+  { id: "sueter", slot: "ropa", def: "verde" },
+  { id: "vestido", slot: "ropa", def: "rosado" },
+  { id: "flores", slot: "ropa", def: "azul" },
+  { id: "joropo", slot: "ropa", def: "rojo" },
   // Cabeza
   { id: "gorra", slot: "cabeza", def: "azul" },
   { id: "gorro", slot: "cabeza", def: "rojo" },
@@ -80,16 +93,29 @@ export const ITEMS: readonly ItemDef[] = [
   { id: "panoleta", slot: "cabeza", def: "morado" },
   { id: "cintillo", slot: "cabeza", def: "verde" },
   { id: "cayena", slot: "cabeza", def: "rojo" },
+  { id: "lazo", slot: "cabeza", def: "rosado" },
+  { id: "corona", slot: "cabeza", def: "amarillo" },
+  { id: "cogollo", slot: "cabeza" },
+  { id: "audifonos", slot: "cabeza", def: "negro" },
+  { id: "casco", slot: "cabeza", def: "amarillo" },
   // Cara
   { id: "lentes", slot: "cara", def: "negro" },
   { id: "lentessol", slot: "cara", def: "rojo" },
+  { id: "corazon", slot: "cara", def: "rosado" },
+  { id: "tapabocas", slot: "cara", def: "azul" },
+  { id: "pecas", slot: "cara" },
   // Cuello
   { id: "bufanda", slot: "cuello", def: "amarillo" },
   { id: "panuelo", slot: "cuello", def: "rojo" },
   { id: "corbatin", slot: "cuello", def: "azul" },
   { id: "collar", slot: "cuello" },
+  { id: "perlas", slot: "cuello" },
+  { id: "medalla", slot: "cuello", def: "azul" },
   // Cuerpo
   { id: "morral", slot: "cuerpo", def: "rojo" },
+  { id: "bolso", slot: "cuerpo", def: "marron" },
+  { id: "cuatro", slot: "cuerpo" },
+  { id: "maracas", slot: "cuerpo" },
   // Especiales: se ganan.
   { id: "tricolor", slot: "cabeza", lock: 2 },
   { id: "chaleco", slot: "cuerpo", lock: 3 },
@@ -132,6 +158,14 @@ export const NATIVE_HABITAT: Record<SpeciesId, HabitatId> = {
   cardenalito: "andes",
   perroagua: "llanos",
   anaconda: "llanos",
+  guacamaya: "selva",
+  guacaverde: "selva",
+  guacazul: "selva",
+  morrocoy: "llanos",
+  cachicamo: "llanos",
+  perezatres: "selva",
+  perezados: "selva",
+  condor: "andes",
 };
 
 const isSpecies = (v: unknown): v is SpeciesId => typeof v === "string" && (SPECIES as readonly string[]).includes(v);

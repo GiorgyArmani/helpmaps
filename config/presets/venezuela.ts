@@ -78,6 +78,14 @@ const venezuela: CountryConfig = {
     "cardenalito",
     "perroagua",
     "anaconda",
+    "guacamaya",
+    "guacaverde",
+    "guacazul",
+    "morrocoy",
+    "cachicamo",
+    "perezatres",
+    "perezados",
+    "condor",
   ],
 
   regions: [
