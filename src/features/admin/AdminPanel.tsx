@@ -43,6 +43,7 @@ import { useI18n, useTimeAgo } from "@/i18n/context";
 import { fetchPendingReports, resolveReports, type ReportGroup } from "@/data/account";
 import { fetchPendingManageRequests, type PendingManageRequest } from "@/data/initiatives";
 import CenterForm, { type CenterPrefill } from "@/features/admin/CenterForm";
+import OrgApprove, { type OrgRegistration } from "@/features/admin/OrgApprove";
 import DonationForm from "@/features/admin/DonationForm";
 import ZoneEditor, { type ZoneDraft } from "@/features/area/ZoneEditor";
 import type { AffectedZone } from "@/domain/area";
@@ -88,19 +89,19 @@ function digitalHints(sub: Submission): CenterPrefill | null {
  * A registration from `/organizaciones` (`app/api/suggest/route.ts` writes and checks it):
  * the organisation's own data, ready to become a point. `null` for any other submission.
  */
-function orgHints(sub: Submission): CenterPrefill | null {
+function orgHints(sub: Submission): OrgRegistration | null {
   const p = sub.payload;
   if (!p || p.org !== true) return null;
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
   const name = str(p.name);
-  if (!name) return null;
+  const type = str(p.type);
+  if (!name || !type) return null;
   return {
     name,
-    type: str(p.type) as LocationType | undefined,
+    type: type as LocationType,
     region: str(p.region),
     address: str(p.place),
-    description: str(p.notes),
-    contact_name: sub.name ?? undefined,
+    contact: sub.contact,
   };
 }
 
@@ -170,8 +171,8 @@ export default function AdminPanel({
   // marked approved once the point is actually saved — not before.
   const [prefill, setPrefill] = useState<CenterPrefill | undefined>(undefined);
   const [fromSubmission, setFromSubmission] = useState<string | null>(null);
-  // Quien registró su organización: al guardar el punto se le invita a gestionarlo.
-  const [inviteTo, setInviteTo] = useState<string | null>(null);
+  // Un registro de `/organizaciones` que se está aprobando (`OrgApprove`).
+  const [approving, setApproving] = useState<{ subId: string; org: OrgRegistration } | null>(null);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [error, setError] = useState<string | null>(null);
@@ -240,7 +241,7 @@ export default function AdminPanel({
     setCreating(false);
     setPrefill(undefined);
     setFromSubmission(null);
-    setInviteTo(null);
+    setApproving(null);
   }
 
   async function handleSave(draft: CenterDraft, statusChanged: boolean) {
@@ -249,9 +250,22 @@ export default function AdminPanel({
     await saveCenter(sb, draft, { statusChanged, emergencyId });
     // The point is on the map now, so the submission that asked for it is done.
     if (fromSubmission) await reviewSubmission(sb, fromSubmission, "approved");
-    const to = inviteTo;
     closeForm();
-    if (to) await inviteManager(draft.id, draft.name, to);
+    await load();
+  }
+
+  /**
+   * Aprobar una organización registrada en `/organizaciones`: el punto con lo mínimo, la
+   * sugerencia cerrada y la invitación a su correo. Todo lo demás lo completa ella.
+   */
+  async function handleApprove(draft: CenterDraft) {
+    const sb = getSupabase();
+    if (!sb || !approving) return;
+    const { subId, org } = approving;
+    await saveCenter(sb, draft, { statusChanged: false, emergencyId });
+    await reviewSubmission(sb, subId, "approved");
+    closeForm();
+    if (org.contact) await inviteManager(draft.id, draft.name, org.contact);
     await load();
   }
 
@@ -473,6 +487,24 @@ export default function AdminPanel({
                 }
               : undefined
           }
+        />
+      </div>
+    );
+  }
+
+  if (approving) {
+    return (
+      <div className="admwrap-body">
+        <div className="wrapline">
+          <h1>{approving.org.name}</h1>
+        </div>
+        <OrgApprove
+          key={approving.subId}
+          org={approving.org}
+          pinDragRef={onPinDrag}
+          onCoordsChange={onDraftPin}
+          onApprove={handleApprove}
+          onCancel={closeForm}
         />
       </div>
     );
@@ -905,13 +937,11 @@ export default function AdminPanel({
                     className="btnp"
                     disabled={busy}
                     onClick={() => {
-                      setPrefill(orgHints(sub) ?? undefined);
-                      setFromSubmission(sub.id);
-                      setInviteTo(sub.contact);
-                      setCreating(true);
+                      const org = orgHints(sub);
+                      if (org) setApproving({ subId: sub.id, org });
                     }}
                   >
-                    {t("admin.org.publish")}
+                    {t("admin.org.approve")}
                   </button>
                 ) : null}
                 {digitalHints(sub) ? (
