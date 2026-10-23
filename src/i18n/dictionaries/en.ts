@@ -951,6 +951,7 @@ const en: Partial<Dict> = {
   "admin.org.contact": "Email",
   "admin.org.pinTitle": "Where it is",
   "admin.org.pinFound": "Located from the address they wrote. Check the pin on the map; you can drag it.",
+  "admin.org.pinMap": "Map with the point's pin",
   "admin.org.pinNotFound": "We could not find that address. Paste a Google Maps link to the place or search with other words.",
   "admin.org.restByThem": "Everything else (what they do, hours, needs, photos and contact) the organization fills in during its welcome after accepting the invitation.",
   "admin.org.invited": "“{name}” is on the map. We emailed {email} an invitation to manage it.",

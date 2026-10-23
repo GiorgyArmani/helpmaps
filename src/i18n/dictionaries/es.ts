@@ -1218,6 +1218,7 @@ const es = {
   "admin.org.contact": "Correo",
   "admin.org.pinTitle": "Dónde está",
   "admin.org.pinFound": "Ubicada con la dirección que escribió. Revisa el pin en el mapa; puedes arrastrarlo.",
+  "admin.org.pinMap": "Mapa con el pin del punto",
   "admin.org.pinNotFound": "No encontramos esa dirección. Pega un enlace de Google Maps del lugar o busca con otras palabras.",
   "admin.org.restByThem": "Lo demás —qué hacen, horario, qué necesitan, fotos y contacto— lo completa la organización en su bienvenida al aceptar la invitación.",
   "admin.org.invited": "«{name}» ya está en el mapa. Le mandamos la invitación para gestionarlo a {email}.",

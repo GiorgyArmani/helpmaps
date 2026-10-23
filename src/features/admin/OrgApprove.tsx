@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { LocationType } from "@/domain/types";
 import { makeCenterId, type CenterDraft } from "@/data/centers";
 import { Button, Field, Input, Notice } from "@/ui/primitives";
@@ -9,6 +9,16 @@ import { useI18n } from "@/i18n/context";
 import type { DictKey } from "@/i18n";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
 import { geocode, matchRegion, type GeoResult } from "@/features/admin/geocode";
+import PinPreview from "@/features/admin/PinPreview";
+
+// Por debajo de este ancho el panel es una hoja que tapa el mapa (ver `.sheet` en
+// `globals.css`): ahí el pin necesita su propio mapa dentro del panel.
+const NARROW = "(max-width: 767px)";
+function subscribeNarrow(cb: () => void): () => void {
+  const mq = window.matchMedia(NARROW);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
 
 /** Lo que trae un registro de `/organizaciones` (ver `orgHints` en `AdminPanel`). */
 export interface OrgRegistration {
@@ -63,6 +73,11 @@ export default function OrgApprove({
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const narrow = useSyncExternalStore(
+    subscribeNarrow,
+    () => window.matchMedia(NARROW).matches,
+    () => false,
+  );
 
   const pick = useCallback((r: GeoResult) => {
     setPin({ lat: r.lat, lng: r.lng });
@@ -194,6 +209,9 @@ export default function OrgApprove({
           <p className="small" role="status">
             <Icon.check width={16} height={16} aria-hidden="true" /> {t("admin.org.pinFound")}
           </p>
+        ) : null}
+        {pin && narrow && !searching ? (
+          <PinPreview at={pin} onMove={setPin} label={t("admin.org.pinMap")} />
         ) : null}
         {notFound ? <p className="geo-empty">{t("admin.org.pinNotFound")}</p> : null}
         {results.length > 1 ? (
