@@ -1213,6 +1213,12 @@ const es = {
   "admin.filter.points": "Con sede",
   "admin.filter.digital": "Digitales",
   "admin.publishDigital": "Publicar como iniciativa digital",
+  "admin.org.publish": "Publicar y dar acceso",
+  "admin.org.invited": "«{name}» ya está en el mapa. Le mandamos la invitación para gestionarlo a {email}.",
+  "admin.org.inviteLink":
+    "«{name}» ya está en el mapa. Su contacto no es un correo: pásale este enlace para que lo gestione (sirve una sola vez): {url}",
+  "admin.org.inviteFailed":
+    "«{name}» ya está en el mapa, pero la invitación no salió. Mándala desde «Gestores» al editar el punto.",
   "admin.unknownRegionHint":
     "Esta fila tiene una región que este país no tiene. Corrígela para que aparezca en el filtro.",
 
@@ -1593,13 +1599,14 @@ const es = {
   "orgs.reg.type": "¿Qué es?",
   "orgs.reg.regionPick": "Elegir",
   "orgs.reg.place": "Municipio o dirección",
-  "orgs.reg.contact": "WhatsApp o correo",
-  "orgs.reg.contactHint": "Por aquí te escribimos para darte acceso. No se publica.",
+  "orgs.reg.contact": "Correo",
+  "orgs.reg.emailRequired": "Necesitamos un correo: ahí te llegan la confirmación y el acceso a tu organización.",
+  "orgs.reg.contactHint": "Aquí te llegan la confirmación y el acceso para gestionarla. No se publica.",
   "orgs.reg.notes": "Algo más que debamos saber",
   "orgs.reg.submit": "Enviar registro",
   "orgs.reg.msgIntro": "Registro desde /organizaciones: quiere gestionar esta organización.",
   "orgs.reg.doneTitle": "Recibimos «{name}»",
-  "orgs.reg.doneBody": "El equipo la revisa y te escribe a {contact} para darte acceso. Cuando se publique, aparecerá en el mapa.",
+  "orgs.reg.doneBody": "Te mandamos la confirmación a {contact}. El equipo la revisa y, cuando esté en el mapa, te llega a ese correo la invitación para gestionarla.",
   "orgs.featTitle": "Así aparecerás en {platform}",
   "orgs.featLead": "Un perfil propio para tu organización, que puedes consultar y actualizar directamente desde tu celular.",
   "orgs.f.profile": "Mantén tu información actualizada",

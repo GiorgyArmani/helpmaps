@@ -770,6 +770,51 @@ export async function sendCenterInvite(input: {
   });
 }
 
+/**
+ * Acuse a quien registró su organización desde `/organizaciones`. Texto fijo: la
+ * dirección la tecleó alguien sin cuenta, así que nada de lo que escribió viaja en el
+ * correo (ver la nota en `emailCopy.ts`).
+ */
+export async function sendOrgRegistrationReceived(input: {
+  to: string;
+  lang?: Lang;
+  site?: string;
+}): Promise<boolean> {
+  if (!isEmail(input.to)) return false;
+
+  const t = emailT(input.lang);
+  const site = (input.site ?? siteUrl()).replace(/\/+$/, "");
+  const brand = BRAND.name;
+
+  const html = emailShell({
+    site,
+    preheader: t("email.orgReceived.preheader"),
+    footer: t("email.footer.note", { brand }),
+    body: lines(
+      heading(t("email.orgReceived.title")),
+      paragraph(t("email.orgReceived.body", { brand })),
+      paragraph(t("email.orgReceived.next")),
+      divider(),
+      note(t("email.orgReceived.ignore")),
+    ),
+  });
+
+  return deliver({
+    to: input.to,
+    subject: t("email.orgReceived.subject", { brand }),
+    html,
+    text: lines(
+      t("email.orgReceived.title"),
+      "",
+      t("email.orgReceived.body", { brand }),
+      "",
+      t("email.orgReceived.next"),
+      "",
+      t("email.orgReceived.ignore"),
+    ),
+  });
+}
+
 export async function sendVolunteerRejected(input: {
   to: string;
   name?: string | null;

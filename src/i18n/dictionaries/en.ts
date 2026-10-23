@@ -946,6 +946,12 @@ const en: Partial<Dict> = {
   "admin.filter.points": "With a seat",
   "admin.filter.digital": "Digital",
   "admin.publishDigital": "Publish as digital initiative",
+  "admin.org.publish": "Publish and grant access",
+  "admin.org.invited": "“{name}” is on the map. We emailed {email} an invitation to manage it.",
+  "admin.org.inviteLink":
+    "“{name}” is on the map. Their contact is not an email: send them this link so they can manage it (single use): {url}",
+  "admin.org.inviteFailed":
+    "“{name}” is on the map, but the invitation did not go out. Send it from “Managers” when editing the point.",
   "admin.unknownRegionHint":
     "This row has a region this country does not define. Fix it so it shows in the filter.",
 
@@ -1246,13 +1252,14 @@ const en: Partial<Dict> = {
   "orgs.reg.type": "What is it?",
   "orgs.reg.regionPick": "Choose",
   "orgs.reg.place": "Municipality or address",
-  "orgs.reg.contact": "WhatsApp or email",
-  "orgs.reg.contactHint": "We'll use it to give you access. It is not published.",
+  "orgs.reg.contact": "Email",
+  "orgs.reg.emailRequired": "We need an email: that is where your confirmation and access arrive.",
+  "orgs.reg.contactHint": "Your confirmation and access to manage it arrive here. It is not published.",
   "orgs.reg.notes": "Anything else we should know",
   "orgs.reg.submit": "Send registration",
   "orgs.reg.msgIntro": "Registration from /organizaciones: wants to manage this organization.",
   "orgs.reg.doneTitle": "We received \"{name}\"",
-  "orgs.reg.doneBody": "The team reviews it and writes to {contact} to give you access. Once published, it will appear on the map.",
+  "orgs.reg.doneBody": "We sent a confirmation to {contact}. The team reviews it and, once it is on the map, the invitation to manage it arrives at that address.",
   "orgs.featTitle": "How you will appear on {platform}",
   "orgs.featLead": "A profile of your own for your organization, which you can view and update straight from your phone.",
   "orgs.f.profile": "Keep your information up to date",

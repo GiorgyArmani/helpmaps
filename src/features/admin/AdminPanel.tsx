@@ -5,6 +5,7 @@ import type {
   AuditEntry,
   Center,
   Donation,
+  LocationType,
   StaffRole,
   StaffSession,
   Submission,
@@ -34,6 +35,7 @@ import {
   type DonationDraft,
 } from "@/data/donations";
 import { getSupabase } from "@/lib/supabase/client";
+import { isEmail } from "@/lib/sanitize";
 import { useEmergencyId } from "@/features/app/SiteProvider";
 import { Badge, Notice } from "@/ui/primitives";
 import { Icon } from "@/ui/icons";
@@ -79,6 +81,26 @@ function digitalHints(sub: Submission): CenterPrefill | null {
     website: str(p.website),
     instagram: str(p.instagram),
     whatsapp: str(p.whatsapp),
+  };
+}
+
+/**
+ * A registration from `/organizaciones` (`app/api/suggest/route.ts` writes and checks it):
+ * the organisation's own data, ready to become a point. `null` for any other submission.
+ */
+function orgHints(sub: Submission): CenterPrefill | null {
+  const p = sub.payload;
+  if (!p || p.org !== true) return null;
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+  const name = str(p.name);
+  if (!name) return null;
+  return {
+    name,
+    type: str(p.type) as LocationType | undefined,
+    region: str(p.region),
+    address: str(p.place),
+    description: str(p.notes),
+    contact_name: sub.name ?? undefined,
   };
 }
 
@@ -148,6 +170,8 @@ export default function AdminPanel({
   // marked approved once the point is actually saved — not before.
   const [prefill, setPrefill] = useState<CenterPrefill | undefined>(undefined);
   const [fromSubmission, setFromSubmission] = useState<string | null>(null);
+  // Quien registró su organización: al guardar el punto se le invita a gestionarlo.
+  const [inviteTo, setInviteTo] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [error, setError] = useState<string | null>(null);
@@ -216,6 +240,7 @@ export default function AdminPanel({
     setCreating(false);
     setPrefill(undefined);
     setFromSubmission(null);
+    setInviteTo(null);
   }
 
   async function handleSave(draft: CenterDraft, statusChanged: boolean) {
@@ -224,8 +249,38 @@ export default function AdminPanel({
     await saveCenter(sb, draft, { statusChanged, emergencyId });
     // The point is on the map now, so the submission that asked for it is done.
     if (fromSubmission) await reviewSubmission(sb, fromSubmission, "approved");
+    const to = inviteTo;
     closeForm();
+    if (to) await inviteManager(draft.id, draft.name, to);
     await load();
+  }
+
+  /**
+   * La otra mitad de un registro de `/organizaciones`: el punto ya existe, ahora quien lo
+   * pidió recibe la invitación para gestionarlo. Con correo se manda; sin correo (un
+   * teléfono), el enlace se muestra para pasarlo por WhatsApp. El punto ya está guardado,
+   * así que un fallo aquí se avisa sin deshacer nada: la invitación se puede repetir desde
+   * «Gestores» en el formulario del punto.
+   */
+  async function inviteManager(locationId: string, name: string, contact: string) {
+    const email = isEmail(contact) ? contact.trim().toLowerCase() : undefined;
+    try {
+      const res = await fetch("/api/staff/center-invite", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ locationId, email }),
+      });
+      const data: { url?: string; emailed?: boolean } = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        setNotice(t("admin.org.inviteFailed", { name }));
+      } else if (data.emailed) {
+        setNotice(t("admin.org.invited", { name, email: email ?? "" }));
+      } else {
+        setNotice(t("admin.org.inviteLink", { name, url: data.url }));
+      }
+    } catch {
+      setNotice(t("admin.org.inviteFailed", { name }));
+    }
   }
 
   async function handleDelete(center: Center) {
@@ -844,6 +899,21 @@ export default function AdminPanel({
                 );
               })()}
               <div className="subcard-acts">
+                {orgHints(sub) ? (
+                  <button
+                    type="button"
+                    className="btnp"
+                    disabled={busy}
+                    onClick={() => {
+                      setPrefill(orgHints(sub) ?? undefined);
+                      setFromSubmission(sub.id);
+                      setInviteTo(sub.contact);
+                      setCreating(true);
+                    }}
+                  >
+                    {t("admin.org.publish")}
+                  </button>
+                ) : null}
                 {digitalHints(sub) ? (
                   <button
                     type="button"
@@ -860,7 +930,7 @@ export default function AdminPanel({
                 ) : null}
                 <button
                   type="button"
-                  className={digitalHints(sub) ? "btng" : "btnp"}
+                  className={digitalHints(sub) || orgHints(sub) ? "btng" : "btnp"}
                   disabled={busy}
                   onClick={() =>
                     void review(async () => {

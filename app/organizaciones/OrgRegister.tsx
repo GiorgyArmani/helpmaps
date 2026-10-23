@@ -11,6 +11,7 @@ import { glyphSvg } from "@/features/map/pinGlyphs";
 import PrivacyNotice from "@/features/suggest/PrivacyNotice";
 import { enqueue } from "@/features/suggest/offlineQueue";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
+import { isEmail } from "@/lib/sanitize";
 
 const STEPS = 3;
 
@@ -55,7 +56,14 @@ export default function OrgRegister({ initialName, onCancel }: { initialName: st
     if (moved.current) heading.current?.focus();
   }, [step]);
 
-  const canNext = [name.trim().length >= 2 && type !== null, true, contact.trim().length >= 5][step];
+  // El correo es obligatorio: ahí llegan el acuse, la invitación para gestionar el punto
+  // y todo lo que venga después. No se apaga el botón por él: se deja tocar y se dice
+  // qué falta, porque un botón gris sin explicación parece roto.
+  const [contactTouched, setContactTouched] = useState(false);
+  const hasContact = contact.trim().length > 0;
+  const emailOk = isEmail(contact);
+  const showEmailError = contactTouched && !emailOk;
+  const canNext = [name.trim().length >= 2 && type !== null, true, true][step];
   const go = (to: number) => {
     moved.current = true;
     setStep(to);
@@ -64,7 +72,7 @@ export default function OrgRegister({ initialName, onCancel }: { initialName: st
   const Region = regionNoun.charAt(0).toUpperCase() + regionNoun.slice(1);
 
   async function send() {
-    if (state === "sending" || !type) return;
+    if (state === "sending" || !type || !emailOk) return;
     setState("sending");
     const regionName = site.country.regions.find((r) => r.code === region)?.name ?? "";
     // Lo que el equipo lee en su panel: una línea por dato, en el idioma de quien escribe.
@@ -82,8 +90,18 @@ export default function OrgRegister({ initialName, onCancel }: { initialName: st
       kind: type === "iniciativa" ? ("initiative" as const) : ("center" as const),
       message,
       name: who.trim() || null,
-      contact: contact.trim(),
-      payload: null,
+      contact: contact.trim().toLowerCase(),
+      // Los mismos datos, ya separados: con ellos el panel abre el formulario del punto
+      // relleno y, al guardarlo, invita como gestor al contacto. Sin esto el equipo sólo
+      // tenía el texto y «Revisado» no creaba nada.
+      payload: {
+        org: true,
+        name: name.trim(),
+        type,
+        region: region || null,
+        place: place.trim() || null,
+        notes: notes.trim() || null,
+      },
     };
     try {
       const res = await fetch("/api/suggest", {
@@ -92,6 +110,11 @@ export default function OrgRegister({ initialName, onCancel }: { initialName: st
         body: JSON.stringify(sub),
       });
       if (res.status === 429) return setState("limited");
+      if (res.status === 400) {
+        // El servidor no aceptó el correo: se vuelve al campo con el aviso, no a un error genérico.
+        setContactTouched(true);
+        return setState("idle");
+      }
       setState(res.ok ? "done" : "error");
     } catch {
       // Sin señal a mitad del envío: se guarda y sale cuando vuelva (`offlineQueue`).
@@ -105,6 +128,7 @@ export default function OrgRegister({ initialName, onCancel }: { initialName: st
     e.preventDefault();
     if (!canNext) return;
     if (step < STEPS - 1) go(step + 1);
+    else if (!emailOk) setContactTouched(true);
     else void send();
   }
 
@@ -116,7 +140,7 @@ export default function OrgRegister({ initialName, onCancel }: { initialName: st
         </span>
         <h3 className="olp-reg-h">{t("orgs.reg.doneTitle", { name: name.trim() })}</h3>
         <p className="olp-reg-p">
-          {state === "queued" ? t("offline.queued") : t("orgs.reg.doneBody", { contact: contact.trim() })}
+          {state === "queued" ? t("offline.queued") : t("orgs.reg.doneBody", { contact: contact.trim().toLowerCase() })}
         </p>
       </div>
     );
@@ -208,14 +232,23 @@ export default function OrgRegister({ initialName, onCancel }: { initialName: st
           <>
             <Field label={t("orgs.reg.contact")} hint={t("orgs.reg.contactHint")}>
               <Input
+                type="email"
+                inputMode="email"
                 value={contact}
                 required
                 maxLength={120}
                 autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
                 enterKeyHint="send"
+                aria-invalid={showEmailError || undefined}
+                onBlur={() => hasContact && setContactTouched(true)}
                 onChange={(e) => setContact(e.target.value)}
               />
             </Field>
+            {showEmailError ? (
+              <Notice tone="danger">{hasContact ? t("register.errorEmail") : t("orgs.reg.emailRequired")}</Notice>
+            ) : null}
             <Field label={t("suggest.name")} optional optionalLabel={t("common.optional")}>
               <Input value={who} maxLength={80} autoComplete="name" onChange={(e) => setWho(e.target.value)} />
             </Field>

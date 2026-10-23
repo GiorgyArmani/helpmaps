@@ -203,6 +203,21 @@ const es = {
   "email.volDecision.rejectedAgain":
     "Podés volver a postularte más adelante, y podés seguir ayudando desde el mapa sin cuenta de equipo: sugerir un punto o avisar de un cambio no requiere permisos.",
   "email.volDecision.map": "Ir al mapa",
+
+  // ── Registro desde /organizaciones recibido ────────────────────────────────
+  //
+  // Va a una dirección que tecleó alguien sin cuenta: NO interpola nada de lo que
+  // escribió, ni el nombre de la organización. Si lo hiciera, el formulario serviría
+  // para mandar texto ajeno a cualquiera desde nuestro dominio.
+  "email.orgReceived.subject": "Recibimos tu registro · {brand}",
+  "email.orgReceived.preheader": "El equipo lo revisa y te escribe a este correo.",
+  "email.orgReceived.title": "Recibimos tu registro",
+  "email.orgReceived.body":
+    "Gracias por registrar tu organización en {brand}. Una persona del equipo la revisa y, cuando esté publicada en el mapa, te mandamos a este correo la invitación para gestionarla.",
+  "email.orgReceived.next":
+    "Desde ahí podrás actualizar qué necesitan, su horario y cómo recibir aportes, y abrir campañas y eventos.",
+  "email.orgReceived.ignore":
+    "Si no registraste ninguna organización, ignora este correo: no se creó ninguna cuenta con tu dirección.",
 } as const;
 
 export type EmailKey = keyof typeof es;
@@ -210,6 +225,16 @@ export type EmailKey = keyof typeof es;
 const en: Partial<Record<EmailKey, string>> = {
   "email.footer.note":
     "Automatic notice from {brand}. You can reply to this email if you need the team.",
+
+  "email.orgReceived.subject": "We received your registration · {brand}",
+  "email.orgReceived.preheader": "The team reviews it and writes to this address.",
+  "email.orgReceived.title": "We received your registration",
+  "email.orgReceived.body":
+    "Thank you for registering your organization on {brand}. Someone from the team reviews it and, once it is published on the map, we send the invitation to manage it to this address.",
+  "email.orgReceived.next":
+    "From there you can update what it needs, its hours and how to receive donations, and open campaigns and events.",
+  "email.orgReceived.ignore":
+    "If you did not register an organization, ignore this email: no account was created with your address.",
 
   "email.centerInvite.subject": "You've been invited to manage {place} · {brand}",
   "email.centerInvite.preheader": "You can now publish your initiative's needs and campaigns.",

@@ -35,6 +35,9 @@ export interface CenterPrefill {
   coverage_municipalities?: string[];
   website?: string;
   instagram?: string;
+  region?: string;
+  address?: string;
+  contact_name?: string;
 }
 
 export default function CenterForm({
@@ -69,9 +72,9 @@ export default function CenterForm({
   const [form, setForm] = useState({
     name: center?.name ?? prefill?.name ?? "",
     type: (center?.type ?? prefill?.type ?? enabledTypes()[0] ?? "shelter") as LocationType,
-    region: center?.region ?? "",
+    region: center?.region ?? prefill?.region ?? "",
     municipality: center?.municipality ?? "",
-    address: center?.address ?? "",
+    address: center?.address ?? prefill?.address ?? "",
     // A digital initiative has none; the string form of `null` must not become "null".
     lat: center?.lat != null ? String(center.lat) : "",
     lng: center?.lng != null ? String(center.lng) : "",
@@ -88,7 +91,7 @@ export default function CenterForm({
     description: info?.description ?? prefill?.description ?? "",
     schedule: info?.schedule ?? "",
     hours: info?.hours ?? null,
-    contactName: info?.contact_name ?? "",
+    contactName: info?.contact_name ?? prefill?.contact_name ?? "",
     socialUrl: info?.social_url ?? "",
     website: info?.website ?? prefill?.website ?? "",
     instagram: info?.instagram ?? prefill?.instagram ?? "",
@@ -103,7 +106,8 @@ export default function CenterForm({
   // The one type that is not a place: no address, no pin, coverage instead.
   const digital = form.type === "digital";
 
-  const [geoQuery, setGeoQuery] = useState("");
+  // Con una dirección prellenada, la búsqueda ya la trae: ubicar el pin es un toque.
+  const [geoQuery, setGeoQuery] = useState(center ? "" : (prefill?.address ?? ""));
   const [geoError, setGeoError] = useState<string | null>(null);
   const [results, setResults] = useState<GeoResult[]>([]);
   const [searching, setSearching] = useState(false);

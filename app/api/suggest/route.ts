@@ -1,11 +1,11 @@
 import { NextResponse, after } from "next/server";
 import { supabasePublic } from "@/lib/supabase/server";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
-import { cleanName, cleanPhone, cleanText, cleanUrl } from "@/lib/sanitize";
-import { isKnownRegion } from "@/config";
+import { cleanName, cleanPhone, cleanText, cleanUrl, isEmail } from "@/lib/sanitize";
+import { isKnownRegion, isTypeEnabled } from "@/config";
 import { createSubmission } from "@/data/staff";
-import { notifySubmission } from "@/lib/email";
-import type { SubmissionKind } from "@/domain/types";
+import { notifySubmission, sendOrgRegistrationReceived } from "@/lib/email";
+import type { LocationType, SubmissionKind } from "@/domain/types";
 
 // Public write surface: a suggestion for a point that is missing from the map.
 //
@@ -56,6 +56,31 @@ function digitalPayload(raw: unknown): Record<string, unknown> | null {
   };
 }
 
+/**
+ * A registration from `/organizaciones`: the organisation's own data, split into fields
+ * so the staff panel can publish it as a point and invite the contact to manage it. Same
+ * rules as above — every field re-checked against the config, capped, the rest dropped.
+ */
+function orgPayload(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as Record<string, unknown>;
+  if (p.org !== true) return null;
+  const type = typeof p.type === "string" && isTypeEnabled(p.type as LocationType) ? p.type : null;
+  // `cleanText`, no `cleanName`: ése es para nombres de PERSONA y quita cifras y signos,
+  // y «Comedor 23 de Enero» llegaba como «Comedor de Enero». Este nombre no viaja en
+  // ningún correo a terceros; lo lee el equipo y lo corrige en el formulario si hace falta.
+  const name = cleanText(p.name, 80);
+  if (!type || name.length < 2) return null;
+  return {
+    org: true,
+    name,
+    type,
+    region: typeof p.region === "string" && isKnownRegion(p.region) ? p.region : null,
+    place: cleanText(p.place, 160) || null,
+    notes: cleanText(p.notes, 600) || null,
+  };
+}
+
 export async function POST(req: Request) {
   const limit = rateLimit(`suggest:${clientIp(req.headers)}`, 10);
   if (!limit.ok) return tooManyRequests(limit);
@@ -80,15 +105,24 @@ export async function POST(req: Request) {
   const sb = supabasePublic();
   if (!sb) return NextResponse.json({ error: "not_configured" }, { status: 503 });
 
+  const org = orgPayload(raw.payload);
+  const contact = cleanText(raw.contact, 120) || null;
+  // A registration from `/organizaciones` MUST bring an email: the acknowledgement, the
+  // invitation to manage the point and everything after go there. A general suggestion
+  // may still leave a phone or a handle.
+  if (org && !isEmail(contact)) {
+    return NextResponse.json({ error: "invalid_email" }, { status: 400 });
+  }
+
   const submission = {
     kind,
     message,
     name: cleanName(raw.name, 80) || null,
     // A contact may legitimately be an email, a phone or a handle, so it is cleaned as
     // text rather than forced into one shape and rejected.
-    contact: cleanText(raw.contact, 120) || null,
+    contact: org && contact ? contact.toLowerCase() : contact,
     // Only an initiative can carry the digital hints; any other kind's payload is ignored.
-    payload: kind === "initiative" ? digitalPayload(raw.payload) : null,
+    payload: org ?? (kind === "initiative" ? digitalPayload(raw.payload) : null),
   };
 
   try {
@@ -105,6 +139,11 @@ export async function POST(req: Request) {
   // so `void send()` means the notification is racing the runtime and usually loses. This
   // keeps the send off the response's critical path AND guarantees it runs.
   after(() => notifySubmission(submission));
+  // Communication with the organisation starts here, not when the team gets to it.
+  if (org && submission.contact) {
+    const to = submission.contact;
+    after(() => sendOrgRegistrationReceived({ to }));
+  }
 
   return NextResponse.json({ ok: true });
 }
