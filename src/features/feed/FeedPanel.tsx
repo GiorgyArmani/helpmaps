@@ -10,6 +10,7 @@ import { formatAmount } from "@/features/centers/InitiativeSections";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import type { DictKey } from "@/i18n";
 import { FeedSkeleton } from "@/ui/Skeleton";
+import VerifiedSeal from "@/features/centers/VerifiedSeal";
 
 /**
  * El feed: lo que está pasando cerca, en scroll.
@@ -139,7 +140,10 @@ export default function FeedPanel({
       {shown.map((item) => (
         <article key={item.id} className="fitem">
           <Link className="fitem-head" href={hrefFor(item)}>
-            <span className="fitem-name">{item.center.name}</span>
+            <span className="fitem-name">
+              {item.center.name}
+              <VerifiedSeal center={item.center} size="icon" />
+            </span>
             <span className="fitem-meta">
               {item.saved ? (
                 <span className="fitem-saved">

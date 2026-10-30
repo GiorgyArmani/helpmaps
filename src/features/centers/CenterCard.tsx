@@ -8,6 +8,7 @@ import { Badge } from "@/ui/primitives";
 import { useI18n } from "@/i18n/context";
 import type { DictKey } from "@/i18n";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
+import VerifiedSeal from "@/features/centers/VerifiedSeal";
 
 /**
  * One point in the list.
@@ -51,7 +52,10 @@ export default function CenterCard({
       </span>
 
       <span className="cmid">
-        <span className="cname">{center.name}</span>
+        <span className="cname">
+          <span className="cname-t">{center.name}</span>
+          <VerifiedSeal center={center} size="icon" />
+        </span>
         <span className="cmeta">{t(`type.${center.type}` as DictKey)}</span>
         {match ? (
           <span className={`cmatch cmatch-${match.field}`}>

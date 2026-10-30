@@ -51,9 +51,33 @@ import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
 import { isDigital } from "@/domain/center";
 import { coverageLabel } from "@/features/centers/coverage";
+import AdminMetrics from "@/features/admin/AdminMetrics";
+import ReverifyQueue from "@/features/admin/ReverifyQueue";
+import { daysSince, lastTouched } from "@/domain/center";
+import { verifyState } from "@/domain/verification";
+
+/** El plazo que el roadmap promete para un aviso o una solicitud: 36 horas. */
+const SLA_H = 36;
+
+/**
+ * Cuánto lleva esperando algo, con el plazo a la vista: ámbar pasadas 24 horas, rojo y con
+ * la palabra «fuera de plazo» pasadas 36. El color nunca va solo.
+ */
+function Age({ at, now, ago, late }: { at: string; now: number; ago: (iso: string) => string; late: string }) {
+  const h = (now - Date.parse(at)) / 3_600_000;
+  const cls = h > SLA_H ? "age age-late" : h > 24 ? "age age-warn" : "age";
+  return (
+    <span className={cls}>
+      {h > SLA_H ? <Icon.alert /> : <Icon.clock />}
+      {ago(at)}
+      {h > SLA_H ? ` · ${late}` : ""}
+    </span>
+  );
+}
 
 type Tab = "activity" | "centers" | "submissions" | "reports" | "volunteers" | "donations" | "area";
 type TypeFilter = "all" | "points" | "digital";
+type CentersView = "list" | "verify";
 type VolView = "requests" | "team";
 
 /** A row of `GET /api/staff/volunteers`. */
@@ -175,6 +199,12 @@ export default function AdminPanel({
   const [approving, setApproving] = useState<{ subId: string; org: OrgRegistration } | null>(null);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [centersView, setCentersView] = useState<CentersView>("list");
+  // Sube con cada recarga del panel: el tablero vuelve a contar después de resolver algo.
+  const [metricsKey, setMetricsKey] = useState(0);
+  // La hora de la última carga: de aquí cuelga «cuánto lleva esperando». Se fija al cargar
+  // y no al dibujar, para que un aviso no cambie de color entre dos renders.
+  const [loadedAt, setLoadedAt] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -214,6 +244,8 @@ export default function AdminPanel({
       setDonations(don);
       setMaintenanceState(settings.maintenance);
       onPendingChange?.(sub.length + vol.length + rep.length + mreq.length);
+      setMetricsKey((k) => k + 1);
+      setLoadedAt(Date.now());
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "load failed");
@@ -559,6 +591,18 @@ export default function AdminPanel({
 
   const pendingTotal = submissions.length + volunteers.length + manageReqs.length;
 
+  // Lo que la cola de re-verificación tiene esperando: el número del conmutador. Sin
+  // `useMemo` a propósito: va después de los `return` de los formularios, y un hook ahí
+  // cambiaría de orden entre renders. Filtrar unos cientos de filas no se nota.
+  const verifyCount = centers.filter((c) => {
+    if (!c.active) return false;
+    if (c.info?.verified_at && verifyState(c.info.verified_at) !== "verified") return true;
+    const d = daysSince(lastTouched(c));
+    return d === null || d >= site.map.staleAfterDays;
+  }).length;
+
+  const lateLabel = t("metrics.lateShort");
+
   return (
     <div className="admwrap-body">
       {/* Icon rail, as in the original, and FIRST — flush under the overlay header, so
@@ -656,6 +700,8 @@ export default function AdminPanel({
 
       {tab === "activity" ? (
         <div className="stack">
+          <AdminMetrics reloadKey={metricsKey} />
+
           {pendingTotal > 0 ? (
             <Notice tone="warn">{t("admin.pending", { n: pendingTotal })}</Notice>
           ) : (
@@ -687,6 +733,7 @@ export default function AdminPanel({
             </div>
           ) : null}
 
+          <h3 className="mt-h">{t("metrics.recent")}</h3>
           <ul className="feed-list">
             {audit.map((entry) => (
               <li key={entry.id} className={`feed-item feed-${entry.entity}`}>
@@ -706,6 +753,45 @@ export default function AdminPanel({
       ) : null}
 
       {tab === "centers" ? (
+        <div className="seg seg-top" role="group" aria-label={t("admin.tab.centers")}>
+          {(["list", "verify"] as CentersView[]).map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={`segb${centersView === v ? " segb-on" : ""}`}
+              aria-pressed={centersView === v}
+              onClick={() => setCentersView(v)}
+            >
+              {v === "list" ? t("verify.tabList") : t("verify.tabQueue", { n: verifyCount })}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {tab === "centers" && centersView === "verify" ? (
+        <ReverifyQueue
+          centers={centers}
+          onEdit={setEditing}
+          onVerified={(id, at, managed) =>
+            setCenters((prev) =>
+              prev.map((c) =>
+                c.id === id && c.info
+                  ? {
+                      ...c,
+                      info: {
+                        ...c.info,
+                        last_confirmed_at: at,
+                        verified_at: managed ? at : c.info.verified_at,
+                      },
+                    }
+                  : c,
+              ),
+            )
+          }
+        />
+      ) : null}
+
+      {tab === "centers" && centersView === "list" ? (
         <div className="stack">
           <button type="button" className="addbtn" onClick={() => setCreating(true)}>
             <Icon.plus />
@@ -854,7 +940,7 @@ export default function AdminPanel({
               <div className="subcard-head">
                 <span className="subcard-kind">{t("admin.manage.kind")}</span>
                 <strong>{m.place}</strong>
-                <span>{ago(m.created_at)}</span>
+                <Age at={m.created_at} now={loadedAt} ago={ago} late={lateLabel} />
               </div>
               <p className="subcard-msg">
                 {m.display_name ?? t("account.noName")} · {t("admin.manage.role", { role: m.role })}
@@ -893,7 +979,7 @@ export default function AdminPanel({
             <article key={sub.id} className="subcard">
               <div className="subcard-head">
                 <span className="subcard-kind">{t(`suggest.kind.${sub.kind}` as DictKey)}</span>
-                <span>{ago(sub.created_at)}</span>
+                <Age at={sub.created_at} now={loadedAt} ago={ago} late={lateLabel} />
                 {sub.name || sub.contact ? (
                   <span>{[sub.name, sub.contact].filter(Boolean).join(" · ")}</span>
                 ) : null}
@@ -1003,7 +1089,14 @@ export default function AdminPanel({
               <div className="subcard-head">
                 <strong>{g.locationName}</strong>
                 {g.region ? <span>{helpers.regionLabel(g.region)}</span> : null}
-                <span>{ago(g.ultimo)}</span>
+                {/* El plazo corre desde el aviso MÁS VIEJO del grupo: es el que lleva más
+                    tiempo esperando, aunque luego hayan llegado otros. */}
+                <Age
+                  at={g.reports.reduce((min, r) => (r.createdAt < min ? r.createdAt : min), g.ultimo)}
+                  now={loadedAt}
+                  ago={ago}
+                  late={lateLabel}
+                />
               </div>
 
               {/* El recuento primero, y en grande. La pregunta que resuelve esta pantalla

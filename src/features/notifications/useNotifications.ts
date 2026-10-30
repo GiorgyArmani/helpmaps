@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Center } from "@/domain/types";
 import { getSupabase } from "@/lib/supabase/client";
 import { fetchMyFavourites } from "@/data/account";
+import { fetchMyFollows } from "@/data/follows";
 import { fetchNotificationSources } from "@/data/notifications";
 import { buildNotifications, countUnread, type Notif, type NotifSources } from "@/domain/notifications";
 
@@ -49,6 +50,11 @@ export interface NotificationsState {
   /** Dar todo por visto, ahora. */
   markSeen: () => void;
   refresh: () => void;
+  /** La cuenta y su experiencia total, para celebrar una subida de nivel. Null sin sesión. */
+  uid: string | null;
+  xp: number | null;
+  /** Cuándo subió de nivel por última vez dentro de la ventana, si subió. */
+  lastLevelAt: string | null;
 }
 
 interface Loaded {
@@ -63,6 +69,7 @@ export function useNotifications({
   centers,
   userId,
   favourites,
+  follows,
 }: {
   /** El mapa ya cargó. */
   enabled: boolean;
@@ -71,11 +78,16 @@ export function useNotifications({
   userId: string | null;
   /** Sus guardados, si ya están en memoria. Guardar un punto vuelve a pedir lo suyo. */
   favourites: ReadonlySet<string>;
+  /** Las organizaciones que sigue. Para la bandeja cuentan igual que un guardado. */
+  follows: ReadonlySet<string>;
 }): NotificationsState {
   const [loadedFor, setLoaded] = useState<Loaded | null>(null);
   const [tick, setTick] = useState(0);
   // Los ids, ordenados: el efecto depende de CUÁLES son, no de la identidad del Set.
-  const favKey = useMemo(() => [...favourites].sort().join(","), [favourites]);
+  const favKey = useMemo(
+    () => [...new Set([...favourites, ...follows])].sort().join(","),
+    [favourites, follows],
+  );
 
   useEffect(() => {
     if (!enabled) return;
@@ -94,8 +106,15 @@ export function useNotifications({
           return;
         }
         // Los guardados de la cuenta ya abierta, o los propios si el menú no se abrió.
-        const ids = userId === uid ? (favKey ? favKey.split(",") : []) : await fetchMyFavourites(sb);
-        const src = await fetchNotificationSources(sb, ids);
+        const ids =
+          userId === uid
+            ? favKey
+              ? favKey.split(",")
+              : []
+            : await Promise.all([fetchMyFavourites(sb), fetchMyFollows(sb)]).then(([a, b]) => [
+                ...new Set([...a, ...b]),
+              ]);
+        const src = await fetchNotificationSources(sb, ids, uid);
         if (!vivo) return;
         setLoaded({ uid, src, saved: new Set(ids), seenAt: readSeen(uid) });
       })();
@@ -128,5 +147,11 @@ export function useNotifications({
 
   const refresh = useCallback(() => setTick((n) => n + 1), []);
 
-  return { items, unread, loaded: loadedFor !== null, seenAt, markSeen, refresh };
+  const xp = useMemo(
+    () => (loadedFor ? loadedFor.src.contributions.reduce((sum, c) => sum + c.points, 0) : null),
+    [loadedFor],
+  );
+  const lastLevelAt = useMemo(() => items.find((n) => n.kind === "level")?.at ?? null, [items]);
+
+  return { items, unread, loaded: loadedFor !== null, seenAt, markSeen, refresh, uid, xp, lastLevelAt };
 }

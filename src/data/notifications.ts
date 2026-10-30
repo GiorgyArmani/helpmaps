@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchMySubmissions, fetchMyVolunteerRequest } from "@/data/account";
 import { fetchMyBadges, fetchMyContributions } from "@/data/recognition";
+import { fetchMyEvents } from "@/data/events";
 import { EMPTY_SOURCES, NOTIF_WINDOW_DAYS, type NotifSources } from "@/domain/notifications";
 
 // El material de las notificaciones. Ver `src/domain/notifications.ts` para por qué se
@@ -83,17 +84,34 @@ async function fetchSavedActivity(
   };
 }
 
-/** Todo lo que hace falta para armar la bandeja, en una sola tanda de peticiones. */
-export async function fetchNotificationSources(sb: SupabaseClient, savedIds: string[]): Promise<NotifSources> {
+/**
+ * Todo lo que hace falta para armar la bandeja, en una sola tanda de peticiones.
+ *
+ * `savedIds` son los puntos guardados Y los seguidos, ya unidos: para la bandeja las dos
+ * cosas significan «quiero enterarme de lo que hace este punto».
+ */
+export async function fetchNotificationSources(
+  sb: SupabaseClient,
+  savedIds: string[],
+  userId: string,
+): Promise<NotifSources> {
   try {
-    const [contributions, badges, submissions, volunteer, saved] = await Promise.all([
+    const [contributions, badges, submissions, volunteer, saved, events] = await Promise.all([
       fetchMyContributions(sb),
       fetchMyBadges(sb),
       fetchMySubmissions(sb),
       fetchMyVolunteerRequest(sb),
       fetchSavedActivity(sb, savedIds),
+      fetchMyEvents(sb, userId),
     ]);
-    return { contributions, badges, submissions, volunteer, ...saved };
+    const mine = events.map((e) => ({
+      activityId: e.activityId,
+      locationId: e.locationId,
+      locationName: e.locationName,
+      title: e.title,
+      startsAt: e.startsAt,
+    }));
+    return { contributions, badges, submissions, volunteer, ...saved, mine };
   } catch {
     // Sin red: la bandeja queda vacía, no rota.
     return EMPTY_SOURCES;

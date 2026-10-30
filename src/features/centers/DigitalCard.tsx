@@ -9,6 +9,7 @@ import { useI18n } from "@/i18n/context";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
 import { coverageLabel, instagramUrl } from "@/features/centers/coverage";
 import { whatsappHref } from "@/features/share/share";
+import VerifiedSeal from "@/features/centers/VerifiedSeal";
 
 /**
  * One digital initiative in the list.
@@ -45,7 +46,10 @@ export default function DigitalCard({
         </span>
 
         <span className="cmid">
-          <span className="cname">{center.name}</span>
+          <span className="cname">
+            <span className="cname-t">{center.name}</span>
+            <VerifiedSeal center={center} size="icon" />
+          </span>
           <span className="cmeta">{info?.category ?? t("digital.noSeat")}</span>
           <span className="cloc">
             <Icon.globe />

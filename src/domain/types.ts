@@ -134,6 +134,12 @@ export interface CenterInfo {
   is_animal: boolean;
   /** Last time a human confirmed the point is still operating. */
   last_confirmed_at: string | null;
+  /**
+   * Last time the team verified the ORGANISATION behind the point (`db/19`). The «Verificada»
+   * seal is derived from it in `src/domain/verification.ts`; null on a base without the
+   * migration and on every point nobody manages.
+   */
+  verified_at: string | null;
   updated_at: string | null;
   /** Provenance ("AcopioVE", "equipo", a partner feed). Drives the attribution line. */
   source: string | null;

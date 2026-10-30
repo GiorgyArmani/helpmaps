@@ -47,6 +47,7 @@ const LOOK: Record<Notif["kind"], { icon: Glyph; tone: "brand" | "ok" | "warn" |
   event: { icon: "clock", tone: "brand" },
   offers: { icon: "box", tone: "ok" },
   update: { icon: "pencil", tone: "mut" },
+  reminder: { icon: "calendar", tone: "warn" },
 };
 
 /** Lo que dice cada fila: una frase que se entiende sola y, debajo, el detalle. */
@@ -90,6 +91,16 @@ function wording(n: Notif, t: Translate, lang: string): { title: string; detail:
     }
     case "offers":
       return { title: t("notif.offers", { name: n.name }), detail: n.text };
+    case "reminder": {
+      const d = n.when ? new Date(n.when) : null;
+      const hour = d ? d.toLocaleTimeString(lang, { hour: "numeric", minute: "2-digit" }) : "";
+      const day = d ? d.toLocaleDateString(lang, { weekday: "long", day: "numeric", month: "short" }) : "";
+      const key = n.n <= 3 ? "notif.remind.soon" : n.n <= 24 ? "notif.remind.tomorrow" : "notif.remind.days";
+      return {
+        title: t(key, { title: n.text, hour }),
+        detail: n.name ? `${n.name} · ${day}` : day,
+      };
+    }
     case "update":
       return {
         title: t("notif.update", { name: n.name }),

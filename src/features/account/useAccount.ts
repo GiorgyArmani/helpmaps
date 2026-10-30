@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { fetchMyFavourites, fetchMyProfile } from "@/data/account";
+import { fetchMyFollows } from "@/data/follows";
 import type { Profile } from "@/domain/account";
 
 /**
@@ -37,17 +38,21 @@ export interface AccountState {
   profile: Profile | null;
   /** Los puntos que guardó. Vacío mientras no se haya resuelto. */
   favourites: Set<string>;
+  /** Las organizaciones que sigue (`db/19`). Vacío sin la migración. */
+  follows: Set<string>;
   /** Falso hasta que la primera consulta termina; distingue "no" de "todavía no". */
   checked: boolean;
   refresh: () => void;
   /** Marca o desmarca en local, para que el botón responda sin esperar al servidor. */
   setFavourite: (locationId: string, on: boolean) => void;
+  setFollowing: (locationId: string, on: boolean) => void;
 }
 
 export function useAccount(active: boolean): AccountState {
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [favourites, setFavourites] = useState<Set<string>>(() => new Set());
+  const [follows, setFollows] = useState<Set<string>>(() => new Set());
   const [checked, setChecked] = useState(() => !supabaseConfigured());
   const [tick, setTick] = useState(0);
 
@@ -65,14 +70,16 @@ export function useAccount(active: boolean): AccountState {
         setUserId(null);
         setProfile(null);
         setFavourites(new Set());
+        setFollows(new Set());
         setChecked(true);
         return;
       }
-      const [p, favs] = await Promise.all([fetchMyProfile(sb), fetchMyFavourites(sb)]);
+      const [p, favs, fols] = await Promise.all([fetchMyProfile(sb), fetchMyFavourites(sb), fetchMyFollows(sb)]);
       if (cancelled) return;
       setUserId(user.id);
       setProfile(p);
       setFavourites(new Set(favs));
+      setFollows(new Set(fols));
       setChecked(true);
     })();
 
@@ -92,5 +99,14 @@ export function useAccount(active: boolean): AccountState {
     });
   }, []);
 
-  return { userId, profile, favourites, checked, refresh, setFavourite };
+  const setFollowing = useCallback((locationId: string, on: boolean) => {
+    setFollows((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(locationId);
+      else next.delete(locationId);
+      return next;
+    });
+  }, []);
+
+  return { userId, profile, favourites, follows, checked, refresh, setFavourite, setFollowing };
 }

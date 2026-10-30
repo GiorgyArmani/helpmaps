@@ -46,6 +46,7 @@ export function mapCenterInfo(row: Row | null | undefined): CenterInfo | null {
     instagram: str(row.instagram),
     is_animal: row.is_animal === true,
     last_confirmed_at: str(row.last_confirmed_at),
+    verified_at: str(row.verified_at),
     updated_at: str(row.updated_at),
     source: str(row.source),
     external_id: str(row.external_id),

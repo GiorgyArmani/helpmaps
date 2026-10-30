@@ -30,6 +30,8 @@ import ProfileTabs, { type ProfileTab } from "@/features/centers/ProfileTabs";
 import HoursView from "@/features/centers/HoursView";
 import OffersView from "@/features/centers/OffersView";
 import PointActions from "@/features/account/PointActions";
+import VerifiedSeal from "@/features/centers/VerifiedSeal";
+import { isFollowable } from "@/domain/verification";
 import ShareRow from "@/features/share/ShareRow";
 import ManageRequest from "@/features/initiative/ManageRequest";
 import type { DictKey } from "@/i18n";
@@ -343,8 +345,11 @@ export default async function CenterPage({ params, searchParams }: Params) {
               {t(`type.${center.type}` as DictKey)}
               {place ? ` · ${place}` : ""}
             </p>
-            <span className={`prof-status prof-status-${status ?? "unknown"}`}>
-              {status ? t(`status.${status}`) : t("status.unknown")}
+            <span className="prof-badges">
+              <span className={`prof-status prof-status-${status ?? "unknown"}`}>
+                {status ? t(`status.${status}`) : t("status.unknown")}
+              </span>
+              <VerifiedSeal center={center} />
             </span>
             {/* El aviso va ANTES que las acciones: que el punto siga existiendo pesa más que
                 lo que esté pidiendo. */}
@@ -399,7 +404,7 @@ export default async function CenterPage({ params, searchParams }: Params) {
                 {t("entry.enter")}
               </Link>
             </div>
-            <PointActions locationId={center.id} />
+            <PointActions locationId={center.id} followable={isFollowable(center)} />
           </div>
         </div>
 

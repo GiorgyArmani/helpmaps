@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/i18n/context";
 import { Icon } from "@/ui/icons";
 import { Button, Field, Notice, TextArea } from "@/ui/primitives";
 import { getSupabase } from "@/lib/supabase/client";
 import { createPointReport, toggleFavourite } from "@/data/account";
+import { fetchFollowersCount, followsAvailable, setFollow } from "@/data/follows";
 import { REPORT_KINDS, type ReportKind } from "@/domain/account";
 import { useAccount } from "@/features/account/useAccount";
 import { useMyLocation } from "@/features/nearby/useMyLocation";
@@ -33,7 +34,17 @@ import { useMyLocation } from "@/features/nearby/useMyLocation";
  * consigue una cuenta. Un control que aparece y desaparece según un estado invisible es
  * cómo se pierde la mitad de la gente que habría ayudado.
  */
-export default function PointActions({ locationId }: { locationId: string }) {
+export default function PointActions({
+  locationId,
+  followable = false,
+}: {
+  locationId: string;
+  /**
+   * ¿Este punto publica? Seguir sólo tiene sentido con alguien que publique: un acopio
+   * importado sin gestor no va a contar nada, y «Seguir» ahí sería una promesa vacía.
+   */
+  followable?: boolean;
+}) {
   const { t } = useI18n();
   const account = useAccount(true);
   const [open, setOpen] = useState(false);
@@ -48,6 +59,43 @@ export default function PointActions({ locationId }: { locationId: string }) {
   const [farKm, setFarKm] = useState<number | null>(null);
 
   const saved = account.favourites.has(locationId);
+  const following = account.follows.has(locationId);
+  const [followBusy, setFollowBusy] = useState(false);
+  // Cuántos la siguen: prueba social, y lo que invita a sumarse. Público, sin nombres.
+  const [followers, setFollowers] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!followable) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    let vivo = true;
+    void fetchFollowersCount(sb, locationId).then((n) => {
+      if (vivo) setFollowers(n);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [followable, locationId]);
+
+  const onToggleFollow = useCallback(async () => {
+    const sb = getSupabase();
+    if (!sb || followBusy) return;
+    setFollowBusy(true);
+    const next = !following;
+    // Optimista, como guardar: el botón responde ya y se revierte si falla.
+    account.setFollowing(locationId, next);
+    setFollowers((n) => (n === null ? n : Math.max(0, n + (next ? 1 : -1))));
+    try {
+      await setFollow(sb, locationId, next);
+    } catch {
+      account.setFollowing(locationId, !next);
+      setFollowers((n) => (n === null ? n : Math.max(0, n + (next ? -1 : 1))));
+    } finally {
+      setFollowBusy(false);
+    }
+  }, [account, followBusy, following, locationId]);
+
+  const showFollow = followable && followsAvailable();
 
   const onToggleSave = useCallback(async () => {
     const sb = getSupabase();
@@ -137,7 +185,8 @@ export default function PointActions({ locationId }: { locationId: string }) {
   if (!account.userId) {
     return (
       <p className="small mut">
-        {t("point.needAccount")}{" "}
+        {followable && followers ? `${t("follow.count", { n: followers })} · ` : ""}
+        {followable ? t("follow.needAccount") : t("point.needAccount")}{" "}
         <Link className="linkish" href="/registro">
           {t("login.createAccount")}
         </Link>
@@ -148,6 +197,19 @@ export default function PointActions({ locationId }: { locationId: string }) {
   return (
     <div>
       <div className="dactions">
+        {showFollow ? (
+          <button
+            type="button"
+            className={following ? "btng act-follow act-follow-on" : "btnp act-follow"}
+            onClick={() => void onToggleFollow()}
+            disabled={followBusy}
+            aria-pressed={following}
+          >
+            {following ? <Icon.check /> : <Icon.follow />}
+            {following ? t("follow.following") : t("follow.follow")}
+          </button>
+        ) : null}
+
         <button
           type="button"
           className={saved ? "btnp act-save" : "btng act-save"}
@@ -194,6 +256,12 @@ export default function PointActions({ locationId }: { locationId: string }) {
       {here.status === "denied" ? <p className="small mut">{t("nearby.denied")}</p> : null}
       {checkin === "done" ? <p className="small mut">{t("point.checkedInHint")}</p> : null}
 
+      {showFollow && followers !== null ? (
+        <p className="small mut">
+          {followers > 0 ? t("follow.count", { n: followers }) : t("follow.first")}
+          {following ? ` · ${t("follow.followingHint")}` : ""}
+        </p>
+      ) : null}
       {saved ? <p className="small mut">{t("point.saveHint")}</p> : null}
 
       {open ? (

@@ -10,6 +10,8 @@ import { useI18n, useTimeAgo } from "@/i18n/context";
 import { StatusBadge, StatusWarning } from "@/features/centers/CenterStatus";
 import ShareRow from "@/features/share/ShareRow";
 import PointActions from "@/features/account/PointActions";
+import VerifiedSeal from "@/features/centers/VerifiedSeal";
+import { isFollowable } from "@/domain/verification";
 import { telHref, whatsappHref } from "@/features/share/share";
 import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
@@ -282,6 +284,7 @@ export default function CenterDetail({
         </div>
         <div className="wrapline" style={{ justifyContent: "center" }}>
           <StatusBadge center={center} />
+          <VerifiedSeal center={center} />
           {info?.is_animal ? <Badge tone="off">{t("center.animal")}</Badge> : null}
         </div>
       </div>
@@ -381,7 +384,7 @@ export default function CenterDetail({
 
       {/* Guardar y avisar. Va DESPUÉS de cómo llegar: quien abre una ficha viene a decidir
           si va, no a administrarla. Lo que cambia esa decisión se lee primero. */}
-      <PointActions locationId={center.id} />
+      <PointActions locationId={center.id} followable={isFollowable(center)} />
 
       <ProfileTabs tabs={tabs} />
     </>

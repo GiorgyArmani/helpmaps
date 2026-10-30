@@ -162,9 +162,31 @@ export const Icon = {
       <path d="M12 10v4M12 17.2v.1" />
     </Svg>
   ),
+  // The «Verificada» seal: a scalloped badge with a check. Not the plain check, which this
+  // app already uses for «done» — a verified organisation is a status, not a finished task.
+  verified: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M12 2.8l2.3 1.7 2.8-.2.9 2.7 2.4 1.5-.9 2.7.9 2.7-2.4 1.5-.9 2.7-2.8-.2L12 21.2l-2.3-1.7-2.8.2-.9-2.7-2.4-1.5.9-2.7-.9-2.7 2.4-1.5.9-2.7 2.8.2L12 2.8Z" />
+      <path d="m8.6 12.2 2.3 2.3 4.6-4.8" />
+    </Svg>
+  ),
+  // Follow: a person with a plus. Distinct from the heart (save) on purpose.
+  follow: (p: IconProps) => (
+    <Svg {...p}>
+      <circle cx="9.5" cy="8" r="3.5" />
+      <path d="M3 20c.6-3.6 3.3-5.5 6.5-5.5S15.4 16.4 16 20" />
+      <path d="M19 8v6M16 11h6" />
+    </Svg>
+  ),
   check: (p: IconProps) => (
     <Svg {...p}>
       <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Svg>
+  ),
+  calendar: (p: IconProps) => (
+    <Svg {...p}>
+      <rect x="4" y="5.5" width="16" height="14.5" rx="2.5" />
+      <path d="M8 3.5v4M16 3.5v4M4 10h16" />
     </Svg>
   ),
   clock: (p: IconProps) => (

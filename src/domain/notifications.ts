@@ -40,7 +40,8 @@ export type NotifKind =
   | "goal"
   | "event"
   | "offers"
-  | "update";
+  | "update"
+  | "reminder";
 
 /**
  * Una notificación, sin redactar. La vista pone las palabras: aquí sólo van los datos, para
@@ -85,6 +86,8 @@ export interface NotifSources {
     updated_at: string | null;
   }[];
   events: { id: string; location_id: string; title: string; starts_at: string; created_at: string }[];
+  /** Los eventos a los que esta persona se anotó y que todavía no pasaron. */
+  mine: { activityId: string; locationId: string; locationName: string; title: string; startsAt: string }[];
 }
 
 export const EMPTY_SOURCES: NotifSources = {
@@ -95,7 +98,30 @@ export const EMPTY_SOURCES: NotifSources = {
   posts: [],
   campaigns: [],
   events: [],
+  mine: [],
 };
+
+/**
+ * Los recordatorios de un evento al que te anotaste: a 48 horas, a 24 y a 3. Cada etapa es
+ * una notificación nueva —con su propia fecha, así que vuelve a contar como «sin leer»—
+ * pero sólo se enseña la última alcanzada: tres avisos del mismo evento en la lista serían
+ * ruido. La fecha de la etapa es el momento en que «tocaba» avisar, que ya pasó; por eso
+ * entra en la ventana sin trucos.
+ */
+export const REMINDER_STAGES_H = [48, 24, 3] as const;
+
+export function reminderStage(startsAt: string, now: number = Date.now()): { hours: number; at: number } | null {
+  const start = Date.parse(startsAt);
+  if (!Number.isFinite(start)) return null;
+  // Un evento que empezó hace más de 3 horas ya no se recuerda: o fuiste o no.
+  if (now > start + 3 * 3_600_000) return null;
+  let hit: { hours: number; at: number } | null = null;
+  for (const h of REMINDER_STAGES_H) {
+    const at = start - h * 3_600_000;
+    if (now >= at) hit = { hours: h, at };
+  }
+  return hit;
+}
 
 export function buildNotifications(
   src: NotifSources,
@@ -166,6 +192,26 @@ export function buildNotifications(
   const v = src.volunteer;
   if (v?.reviewedAt && v.status !== "pending") {
     push({ id: `team:${v.id}`, group: "progress", kind: "team", at: v.reviewedAt, centerId: null, code: v.status });
+  }
+
+  // ── Tu agenda ───────────────────────────────────────────────────────────
+  //
+  // No depende de que el punto siga en memoria: te anotaste a ese evento, y recordártelo
+  // es lo mínimo. El nombre viene con el propio evento.
+  for (const e of src.mine) {
+    const stage = reminderStage(e.startsAt, now);
+    if (!stage) continue;
+    push({
+      id: `remind:${e.activityId}:${stage.hours}`,
+      group: "progress",
+      kind: "reminder",
+      at: new Date(stage.at).toISOString(),
+      centerId: e.locationId,
+      name: e.locationName,
+      text: e.title,
+      n: stage.hours,
+      when: e.startsAt,
+    });
   }
 
   // ── Los puntos que sigues ───────────────────────────────────────────────

@@ -77,6 +77,10 @@ import { watchConnection } from "@/features/suggest/offlineQueue";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
 import { useNavStack, type NavEntry } from "@/features/app/useNavStack";
 import { useDismiss } from "@/ui/useDismiss";
+import LevelUp, { useLevelUp } from "@/features/notifications/LevelUp";
+import { useSessionPeek } from "@/features/account/useSessionPeek";
+import { faunaOf } from "@/domain/avatar";
+import { myAvatar } from "@/features/avatar/mine";
 
 // Leaflet touches `window` at import time, so the map never renders on the server.
 const MapCanvas = dynamic(() => import("@/features/map/MapCanvas"), {
@@ -397,7 +401,15 @@ export default function AppShell({
     centers,
     userId: account.userId,
     favourites: account.favourites,
+    follows: account.follows,
   });
+  // Subir de nivel se celebra en cuanto la bandeja trae la experiencia: es el mismo dato.
+  const levelUp = useLevelUp(notifs.uid, notifs.xp, notifs.lastLevelAt);
+  const peek = useSessionPeek();
+  const myAve = useMemo(
+    () => myAvatar(faunaOf(site.country), account.profile?.avatar, peek.avatar),
+    [site.country, account.profile?.avatar, peek.avatar],
+  );
   // Entrar desde Mi cuenta cambia de persona con la vista ya abierta, y el rol se pedía
   // sólo al ACTIVARSE: quien entraba ahí con una cuenta del equipo seguía viendo
   // «Postularme» hasta abrir el avatar.
@@ -1597,6 +1609,16 @@ export default function AppShell({
           way for a tour running over the map to drive it. */}
       {staffTourOpen ? (
         <GuidedTour steps={STAFF_STEPS} lang={lang} ctl={tourCtl} onClose={closeStaffTour} />
+      ) : null}
+
+      {levelUp.level !== null && notifs.xp !== null && !tourOpen && !staffTourOpen ? (
+        <LevelUp
+          level={levelUp.level}
+          xp={notifs.xp}
+          avatar={myAve}
+          onClose={levelUp.close}
+          onWear={() => goRoot({ view: "settings", id: null })}
+        />
       ) : null}
     </div>
   );

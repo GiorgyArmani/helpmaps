@@ -37,12 +37,13 @@ import { AvatarCard } from "@/features/avatar/AvatarArt";
 
 /** Las secciones de la cuenta. Cada una abre su propia pantalla desde el menú. */
 export type AccountSection =
-  "saved" | "achievements" | "events" | "help" | "sent";
+  "saved" | "following" | "achievements" | "events" | "help" | "sent";
 type Section = AccountSection;
 
 /** El título de cada sección: lo pinta la cabecera del panel mientras está abierta. */
 export const ACCOUNT_SECTION_TITLE: Record<AccountSection, DictKey> = {
   saved: "account.saved.title",
+  following: "follow.mine",
   achievements: "account.menu.achievements",
   events: "myEvents.title",
   help: "vol.title",
@@ -154,6 +155,12 @@ export default function AccountView({
     [centers, account.favourites],
   );
   const missing = account.favourites.size - savedCenters.length;
+  // Las organizaciones que sigue: el otro puente, el de quien quiere ayudar. Sólo las que
+  // siguen en el mapa, como los guardados.
+  const followedCenters = useMemo(
+    () => centers.filter((c) => account.follows.has(c.id)),
+    [centers, account.follows],
+  );
 
   const startEdit = useCallback(() => {
     setName(account.profile?.displayName ?? "");
@@ -244,6 +251,25 @@ export default function AccountView({
               </p>
             ) : null}
           </>
+        ) : null}
+
+        {section === "following" ? (
+          followedCenters.length === 0 ? (
+            <p className="acc-empty">{t("follow.none")}</p>
+          ) : (
+            <>
+              <p className="acc-empty">{t("follow.mineHint")}</p>
+              <div className="acc-saved">
+                {followedCenters.map((c) =>
+                  isDigital(c) ? (
+                    <DigitalCard key={c.id} center={c} onSelect={onOpenCenter} />
+                  ) : (
+                    <CenterCard key={c.id} center={c} onSelect={onOpenCenter} />
+                  ),
+                )}
+              </div>
+            </>
+          )
         ) : null}
 
         {section === "achievements" ? <AchievementsSection rec={rec} /> : null}
@@ -349,6 +375,17 @@ export default function AccountView({
       sub: savedLabel(t, account.favourites.size),
     },
     {
+      id: "following",
+      icon: "follow",
+      label: t("follow.mine"),
+      sub:
+        account.follows.size === 0
+          ? t("follow.countNone")
+          : account.follows.size === 1
+            ? t("follow.countOne")
+            : t("follow.countMany", { n: account.follows.size }),
+    },
+    {
       id: "achievements",
       icon: "spark",
       label: t("account.menu.achievements"),
@@ -358,7 +395,7 @@ export default function AccountView({
     },
     {
       id: "events",
-      icon: "clock",
+      icon: "calendar",
       label: t("myEvents.title"),
       sub: t("account.menu.eventsSub"),
     },

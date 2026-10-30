@@ -14,15 +14,21 @@ const LOCATION_COLUMNS =
 const INFO_COLUMNS =
   "location_id,status,receives,offers,offers_confirmed_at,needs,help,category,description," +
   "schedule,hours,contact_name,social_url,website,instagram,is_animal,last_confirmed_at," +
-  "updated_at,source,external_id";
+  "verified_at,updated_at,source,external_id";
 
 const SELECT = `${LOCATION_COLUMNS},info:center_info(${INFO_COLUMNS})`;
 
+// ── Before `023_seguir_y_verificada` ───────────────────────────────────────
+//
+// The newest step down. Without `db/19_seguir_y_verificada.sql` there is no seal to show;
+// the map must not go blank over it.
+const PRE_VERIFIED_SELECT = SELECT.replace("last_confirmed_at,verified_at,", "last_confirmed_at,");
+
 // ── Before `021_disponible` ────────────────────────────────────────────────
 //
-// The newest migration, so the first step down. A database without `db/17_disponible.sql`
+// One step further down. A database without `db/17_disponible.sql`
 // simply has no "available now" block; everything else reads as usual.
-const PRE_OFFERS_SELECT = SELECT.replace("receives,offers,offers_confirmed_at,", "receives,");
+const PRE_OFFERS_SELECT = PRE_VERIFIED_SELECT.replace("receives,offers,offers_confirmed_at,", "receives,");
 
 // ── Before `018_horario` ───────────────────────────────────────────────────
 //
@@ -64,6 +70,9 @@ function isMissingColumn(error: unknown): boolean {
  */
 async function withFallback<T extends { error: unknown }>(run: (columns: string) => PromiseLike<T>): Promise<T> {
   let result = await run(SELECT);
+  if (result.error && isMissingColumn(result.error)) {
+    result = await run(PRE_VERIFIED_SELECT);
+  }
   if (result.error && isMissingColumn(result.error)) {
     result = await run(PRE_OFFERS_SELECT);
     if (result.error && isMissingColumn(result.error)) {
