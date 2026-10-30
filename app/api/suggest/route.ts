@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { supabasePublic } from "@/lib/supabase/server";
+import { supabasePublic, supabaseServer } from "@/lib/supabase/server";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { cleanName, cleanPhone, cleanText, cleanUrl, isEmail } from "@/lib/sanitize";
 import { isKnownRegion, isTypeEnabled } from "@/config";
@@ -102,7 +102,12 @@ export async function POST(req: Request) {
     ? (raw.kind as SubmissionKind)
     : "center";
 
-  const sb = supabasePublic();
+  // Con sesión, la sugerencia se guarda CON esa sesión: la base sella `created_by` con
+  // `auth.uid()` (db/20) y, si el equipo la aprueba, los puntos son de esa cuenta. El autor
+  // nunca viaja en el cuerpo: lo que mande el navegador se ignora.
+  const session = await supabaseServer();
+  const { data: auth } = session ? await session.auth.getUser() : { data: { user: null } };
+  const sb = auth.user ? session : supabasePublic();
   if (!sb) return NextResponse.json({ error: "not_configured" }, { status: 503 });
 
   const org = orgPayload(raw.payload);

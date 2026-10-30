@@ -90,6 +90,8 @@ export default function ProfileEditor({
   const editable = mode === "edit";
   const style = typeStyle(center.type);
   const place = [center.municipality, helpers.regionLabel(center.region)].filter(Boolean).join(", ");
+  // Sin estado no lleva etiqueta: nada de «Sin confirmar».
+  const estado = toCenterStatus(profile.status);
 
   // Los aportes que esperan respuesta. Se cargan aquí y no en la configuración porque el
   // engranaje lleva su número: alguien que declaró un aporte está esperando, y eso tiene
@@ -371,10 +373,8 @@ export default function ProfileEditor({
           {t(`type.${center.type}` as "type.iniciativa")}
           {place ? ` · ${place}` : ""}
         </p>
-        {!editable ? (
-          <span className={`prof-status prof-status-${toCenterStatus(profile.status) ?? "unknown"}`}>
-            {profile.status ? t(`status.${toCenterStatus(profile.status) ?? "abierto"}`) : t("status.unknown")}
-          </span>
+        {!editable && estado ? (
+          <span className={`prof-status prof-status-${estado}`}>{t(`status.${estado}`)}</span>
         ) : null}
       </div>
 

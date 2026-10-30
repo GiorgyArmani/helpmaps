@@ -289,17 +289,17 @@ export default function CenterDetail({
         </div>
       </div>
 
-      <div className="dupdated-hero">
-        <span className="duh-label">
-          {confirmed ? t("center.confirmedLabel") : t("center.updatedLabel")}
-        </span>
-        <span className="duh-time">{touched ? ago(touched) : t("common.unknown")}</span>
-        {touched ? (
+      {/* Sin fecha no se dibuja nada: «Sin confirmación reciente» en cada punto que nadie
+          ha revisado hacía parecer que todo el mapa estaba sin confirmar. */}
+      {touched ? (
+        <div className="dupdated-hero">
+          <span className="duh-label">
+            {confirmed ? t("center.confirmedLabel") : t("center.updatedLabel")}
+          </span>
+          <span className="duh-time">{ago(touched)}</span>
           <span className="duh-date">{new Date(touched).toLocaleString()}</span>
-        ) : (
-          <span className="duh-date">{t("center.neverConfirmed")}</span>
-        )}
-      </div>
+        </div>
+      ) : null}
 
       {/* Above the needs on purpose: whether the point still exists outranks what it
           is asking for. */}

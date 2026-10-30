@@ -68,7 +68,7 @@ export function UpdatedLine({ center }: { center: Center }) {
   const ago = useTimeAgo();
   const confirmed = center.info?.last_confirmed_at;
   const touched = lastTouched(center);
-  if (!touched) return <span className="small mut">{t("center.neverConfirmed")}</span>;
+  if (!touched) return null;
   return (
     <span className="small mut">
       {confirmed

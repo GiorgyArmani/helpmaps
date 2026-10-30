@@ -99,12 +99,23 @@ export async function fetchSubmissions(
   return (data ?? []) as unknown as Submission[];
 }
 
+/**
+ * Aprobar o descartar una sugerencia. Al aprobarla, la base le da los puntos a quien la
+ * mandó (db/20); `locationId` es el punto que se publicó a partir de ella, si lo hay.
+ */
 export async function reviewSubmission(
   sb: SupabaseClient,
   id: string,
   action: "approved" | "rejected",
+  locationId?: string,
 ): Promise<void> {
-  const { error } = await sb.from("submissions").update({ status: action }).eq("id", id);
+  const patch: Record<string, unknown> = { status: action };
+  if (action === "approved" && locationId) patch.location_id = locationId;
+  let { error } = await sb.from("submissions").update(patch).eq("id", id);
+  // Una base sin db/20 no tiene `location_id`: se aprueba igual, sin el punto.
+  if (error && "location_id" in patch && (error.code === "42703" || error.code === "PGRST204")) {
+    ({ error } = await sb.from("submissions").update({ status: action }).eq("id", id));
+  }
   if (error) throw error;
 }
 

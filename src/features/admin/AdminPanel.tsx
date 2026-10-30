@@ -281,7 +281,7 @@ export default function AdminPanel({
     if (!sb) return;
     await saveCenter(sb, draft, { statusChanged, emergencyId });
     // The point is on the map now, so the submission that asked for it is done.
-    if (fromSubmission) await reviewSubmission(sb, fromSubmission, "approved");
+    if (fromSubmission) await reviewSubmission(sb, fromSubmission, "approved", draft.id);
     closeForm();
     await load();
   }
@@ -295,7 +295,7 @@ export default function AdminPanel({
     if (!sb || !approving) return;
     const { subId, org } = approving;
     await saveCenter(sb, draft, { statusChanged: false, emergencyId });
-    await reviewSubmission(sb, subId, "approved");
+    await reviewSubmission(sb, subId, "approved", draft.id);
     closeForm();
     if (org.contact) await inviteManager(draft.id, draft.name, org.contact);
     await load();

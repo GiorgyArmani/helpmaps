@@ -346,9 +346,9 @@ export default async function CenterPage({ params, searchParams }: Params) {
               {place ? ` · ${place}` : ""}
             </p>
             <span className="prof-badges">
-              <span className={`prof-status prof-status-${status ?? "unknown"}`}>
-                {status ? t(`status.${status}`) : t("status.unknown")}
-              </span>
+              {/* Sin estado no hay etiqueta: un «Sin confirmar» en cada punto que nadie ha
+                  revisado se lee como que todo el mapa está sin confirmar. */}
+              {status ? <span className={`prof-status prof-status-${status}`}>{t(`status.${status}`)}</span> : null}
               <VerifiedSeal center={center} />
             </span>
             {/* El aviso va ANTES que las acciones: que el punto siga existiendo pesa más que

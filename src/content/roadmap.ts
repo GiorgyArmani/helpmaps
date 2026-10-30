@@ -123,8 +123,24 @@ export const ROADMAP_PHASES: Phase[] = [
         en: "Each initiative has its own profile: campaigns with a concrete goal, an activity calendar, posts, deliveries made and its own managers. What it posts shows up in the news feed.",
       },
       {
-        es: "Reconocimiento del voluntariado: experiencia, cinco niveles y medallas, que otorga el servidor y sólo por acciones comprobadas.",
-        en: "Volunteer recognition: experience, five levels and badges, granted by the server and only for verified actions.",
+        es: "Reconocimiento del voluntariado: experiencia, cinco niveles, medallas y un avatar de fauna que se viste con lo ganado. Lo otorga el servidor y sólo por lo comprobado: una visita a un punto, un aviso que el equipo aplicó, una sugerencia publicada, un aporte que la iniciativa confirmó o una asistencia a una jornada.",
+        en: "Volunteer recognition: experience, five levels, badges and a wildlife avatar that dresses up with what you earn. The server grants it, and only for what was verified: a visit to a point, a report the team applied, a published suggestion, a contribution the initiative confirmed or attendance at an event.",
+      },
+      {
+        es: "Voluntariado por oficios: perfil con disponibilidad y lo que cada quien sabe hacer, jornadas que dicen qué les falta (manos, oficios, donación en especie o difusión), «Me anoto» con su calendario, y la iniciativa confirma quién vino.",
+        en: "Skills-based volunteering: a profile with availability and what each person can do, events that say what they are missing (hands, skills, in-kind donations or outreach), “I'm going” with its calendar, and the initiative confirms who came.",
+      },
+      {
+        es: "Aportes que la iniciativa confirma, y «Disponible ahora»: lo que un punto entrega hoy, además de lo que recibe.",
+        en: "Contributions the initiative confirms, and “Available now”: what a point hands out today, as well as what it takes in.",
+      },
+      {
+        es: "Seguir a una organización: sus campañas, jornadas y publicaciones llegan a Notificaciones, con recordatorios antes de cada jornada a la que te anotaste.",
+        en: "Follow an organisation: its campaigns, events and posts reach your Notifications, with reminders before each event you signed up for.",
+      },
+      {
+        es: "Sello «Verificada» para las organizaciones cuyo gestor comprobó el equipo. Vence a los 90 días si no se vuelve a comprobar, y el equipo trabaja con una cola de re-verificación y el plazo de 36 horas a la vista.",
+        en: "A “Verified” seal for organisations whose manager the team checked. It expires after 90 days unless checked again, and the team works from a re-verification queue with the 36-hour deadline in view.",
       },
       {
         es: "Capas de amenaza en vivo: epicentros y contornos de intensidad del servicio público del USGS, con aviso de que son estimaciones revisables.",
@@ -238,12 +254,12 @@ export const ROADMAP_PHASES: Phase[] = [
   },
   {
     id: "comunidad",
-    status: "next",
+    status: "current",
     when: { es: "T2 a T8", en: "Q2 to Q8", pt: "T2 a T8" },
     title: { es: "Iniciativas, voluntariado y comunidad", en: "Initiatives, volunteers and community", pt: "Iniciativas, voluntariado e comunidade" },
     note: {
-      es: "Los dos puentes: que una iniciativa pequeña demuestre su trabajo y capte apoyo sin intermediarios, y que quien quiere ayudar encuentre dónde hace falta lo que sabe hacer.",
-      en: "Both bridges: a small initiative can show its work and win support with no middlemen, and someone who wants to help finds where what they can do is needed.",
+      es: "Los dos puentes: que una iniciativa pequeña demuestre su trabajo y capte apoyo sin intermediarios, y que quien quiere ayudar encuentre dónde hace falta lo que sabe hacer. Las herramientas ya funcionan (perfil propio, voluntariado por oficios, seguir y recordatorios); lo que queda es llevarlas a escala.",
+      en: "Both bridges: a small initiative can show its work and win support with no middlemen, and someone who wants to help finds where what they can do is needed. The tools already work (own profile, skills-based volunteering, following and reminders); what remains is taking them to scale.",
     },
     items: [
       {
@@ -251,12 +267,8 @@ export const ROADMAP_PHASES: Phase[] = [
         en: "Initiatives manage their own profile, with training in fundraising campaigns, events and posts. The aim is for the {platform} team to stop being necessary.",
       },
       {
-        es: "Perfil de voluntario con disponibilidad y oficios. En cada punto y cada actividad la iniciativa dice si le faltan manos, oficios, donación en especie o difusión.",
-        en: "A volunteer profile with availability and skills. At each point and activity, the initiative says whether it needs hands, skills, in-kind donations or outreach.",
-      },
-      {
-        es: "Seguir a una iniciativa y recibir lo que publica sin tener que ir a buscarlo. Consultar el mapa sigue siendo anónimo: la cuenta es para quien vuelve.",
-        en: "Follow an initiative and get what it posts without going looking for it. Reading the map stays anonymous: the account is for people who come back.",
+        es: "Que cada organización pida gestionar su punto y lo mantenga al día ella misma, con el sello «Verificada» renovado cada 90 días. Consultar el mapa sigue siendo anónimo: la cuenta es para quien vuelve.",
+        en: "Every organisation asks to manage its own point and keeps it up to date itself, with the “Verified” seal renewed every 90 days. Reading the map stays anonymous: the account is for people who come back.",
       },
       {
         es: "Talleres de preparación ante desastres en las comunidades.",
