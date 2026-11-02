@@ -71,17 +71,24 @@ export default function ProfileEditor({
   profile,
   content,
   onSaved,
+  platform = false,
 }: {
   center: Center;
   profile: CenterProfile;
   content: InitiativeProfile;
   onSaved: () => void;
+  /**
+   * El perfil de HelpMaps, que es la plataforma y no una organización: un canal para hablar
+   * a la comunidad. Sin estado, sin «qué hace falta», sin horario ni lugar, y con las
+   * novedades primero, que es para lo que existe.
+   */
+  platform?: boolean;
 }) {
   const { t } = useI18n();
   const helpers = useSiteHelpers();
   const [mode, setMode] = useState<Mode>("edit");
   const [screen, setScreen] = useState<"profile" | "settings">("profile");
-  const [tab, setTab] = useState("info");
+  const [tab, setTab] = useState(platform ? "posts" : "info");
   const [composer, setComposer] = useState<Composer>(null);
   const [editing, setEditing] = useState<SectionId | null>(null);
   const [createdEvent, setCreatedEvent] = useState<CalendarEvent | null>(null);
@@ -182,6 +189,7 @@ export default function ProfileEditor({
       content: (
         <InfoSections
           center={center}
+          platform={platform}
           profile={profile}
           editable={editable}
           editing={editing}
@@ -310,7 +318,9 @@ export default function ProfileEditor({
                     <TypeGlyph name={style.icon} size={18} />
                   )}
                 </span>
-                <span className="pedit-composer-q">{t("pedit.composer")}</span>
+                <span className="pedit-composer-q">
+                  {t(platform ? "official.composer" : "pedit.composer")}
+                </span>
                 <Icon.camera />
               </button>
             )
@@ -318,11 +328,17 @@ export default function ProfileEditor({
           {posts.length > 0 ? (
             <PostList posts={posts} campaigns={campaigns} />
           ) : editable && composer !== "post" ? (
-            <p className="pedit-none">{t("pedit.noPosts")}</p>
+            <p className="pedit-none">{t(platform ? "official.noPosts" : "pedit.noPosts")}</p>
           ) : null}
         </div>
       ),
     });
+  }
+
+  // En la plataforma, primero las novedades —para eso existe— y la información al final.
+  if (platform) {
+    const orden = ["posts", "campaigns", "agenda", "info"];
+    tabs.sort((a, b) => orden.indexOf(a.id) - orden.indexOf(b.id));
   }
 
   return (
@@ -370,17 +386,23 @@ export default function ProfileEditor({
       <div className="pedit-id">
         <h2 className="prof-name">{center.name}</h2>
         <p className="prof-meta">
-          {t(`type.${center.type}` as "type.iniciativa")}
-          {place ? ` · ${place}` : ""}
+          {platform ? (
+            t("official.kind")
+          ) : (
+            <>
+              {t(`type.${center.type}` as "type.iniciativa")}
+              {place ? ` · ${place}` : ""}
+            </>
+          )}
         </p>
-        {!editable && estado ? (
+        {!editable && estado && !platform ? (
           <span className={`prof-status prof-status-${estado}`}>{t(`status.${estado}`)}</span>
         ) : null}
       </div>
 
       {editable ? (
         <>
-          <StatusBox profile={profile} onSaved={onSaved} />
+          {platform ? null : <StatusBox profile={profile} onSaved={onSaved} />}
 
           {claims.length > 0 ? (
             <button type="button" className="pedit-claims" onClick={() => setScreen("settings")}>
@@ -400,16 +422,18 @@ export default function ProfileEditor({
             </button>
           ) : null}
 
-          <Completeness
-            center={center}
-            profile={profile}
-            content={content}
-            onSaved={onSaved}
-            onPick={(id) => {
-              setTab("info");
-              setEditing(id);
-            }}
-          />
+          {platform ? null : (
+            <Completeness
+              center={center}
+              profile={profile}
+              content={content}
+              onSaved={onSaved}
+              onPick={(id) => {
+                setTab("info");
+                setEditing(id);
+              }}
+            />
+          )}
 
           <div className="pedit-quick">
             <button type="button" className="pedit-q" onClick={() => start("post")}>

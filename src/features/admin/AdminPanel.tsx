@@ -53,6 +53,7 @@ import { isDigital } from "@/domain/center";
 import { coverageLabel } from "@/features/centers/coverage";
 import AdminMetrics from "@/features/admin/AdminMetrics";
 import ReverifyQueue from "@/features/admin/ReverifyQueue";
+import OfficialPanel from "@/features/admin/OfficialPanel";
 import { daysSince, lastTouched } from "@/domain/center";
 import { verifyState } from "@/domain/verification";
 
@@ -75,7 +76,15 @@ function Age({ at, now, ago, late }: { at: string; now: number; ago: (iso: strin
   );
 }
 
-type Tab = "activity" | "centers" | "submissions" | "reports" | "volunteers" | "donations" | "area";
+type Tab =
+  | "activity"
+  | "centers"
+  | "submissions"
+  | "reports"
+  | "volunteers"
+  | "donations"
+  | "area"
+  | "official";
 type TypeFilter = "all" | "points" | "digital";
 type CentersView = "list" | "verify";
 type VolView = "requests" | "team";
@@ -676,6 +685,17 @@ export default function AdminPanel({
             count={zones.length}
           />
         ) : null}
+        {/* Publicar como HelpMaps. Sólo admin: lo que sale de aquí va arriba del feed de
+            todo el país. */}
+        {isAdmin ? (
+          <TabButton
+            id="official"
+            tab={tab}
+            onClick={setTab}
+            label={t("admin.tab.official")}
+            icon={<Icon.news />}
+          />
+        ) : null}
       </nav>
 
       {/* No <h1> here: the overlay's own header already says "Panel del equipo" directly
@@ -1192,6 +1212,8 @@ export default function AdminPanel({
           ))}
         </div>
       ) : null}
+
+      {tab === "official" && isAdmin ? <OfficialPanel /> : null}
 
       {tab === "area" && isAdmin ? (
         <ZoneEditor

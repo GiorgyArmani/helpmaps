@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import type { Activity, Campaign, InitiativePost } from "@/domain/types";
+import Link from "next/link";
+import type { Activity, Campaign, FeaturedLocation, InitiativePost } from "@/domain/types";
 import type { InitiativeProfile } from "@/data/initiatives";
-import { Icon } from "@/ui/icons";
+import { Icon, TypeGlyph } from "@/ui/icons";
 import { getSupabase } from "@/lib/supabase/client";
 import { useAccount } from "@/features/account/useAccount";
 import { useI18n, useTimeAgo } from "@/i18n/context";
-import { BRAND } from "@/config";
+import { BRAND, typeStyle } from "@/config";
+import { useSiteHelpers } from "@/features/app/SiteProvider";
 import { fetchMyAttendance, joinActivity, leaveActivity } from "@/data/events";
 import { downloadIcs, googleCalendarUrl, type CalendarEvent } from "@/lib/calendar";
 import EventNeeds from "@/features/volunteer/EventNeeds";
@@ -460,7 +462,8 @@ export function PostList({
               <span className={`ipost-kind ipost-${p.kind}`}>{t(kindKey(p.kind))}</span>
               <span className="ipost-ago">{ago(p.created_at)}</span>
             </p>
-            <p className="ipost-body">{p.body}</p>
+            <p className="ipost-body">{postBody(p, t)}</p>
+            {p.featured ? <FeaturedCard featured={p.featured} /> : null}
             {deCampana ? (
               <p className="ipost-camp">{t("post.fromCampaign", { name: deCampana })}</p>
             ) : null}
@@ -471,7 +474,54 @@ export function PostList({
   );
 }
 
+/**
+ * El texto de una entrada. La bienvenida se escribe aquí, en el idioma de quien lee: la que
+ * guarda la base (`db/22_bienvenida.sql`) está en castellano y es para la API.
+ */
+export function postBody(
+  p: InitiativePost,
+  t: (key: "post.welcome", vars: { name: string }) => string,
+): string {
+  if (p.kind === "bienvenida" && p.featured) return t("post.welcome", { name: p.featured.name });
+  return p.body;
+}
+
+/**
+ * La organización que presenta una entrada de HelpMaps: un enlace a su perfil, que es
+ * donde está «Seguir». Es la tarjeta entera y no un botón pequeño: la invitación es ésta.
+ */
+export function FeaturedCard({ featured }: { featured: FeaturedLocation }) {
+  const { t } = useI18n();
+  const helpers = useSiteHelpers();
+  const style = typeStyle(featured.type);
+  const region = helpers.regionLabel(featured.region);
+  return (
+    <Link className="ifeat" href={`/c/${featured.id}`}>
+      <span className="ifeat-av" style={{ color: style.color }}>
+        {featured.photo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element -- bucket por país
+          <img src={featured.photo_url} alt="" loading="lazy" decoding="async" />
+        ) : (
+          <TypeGlyph name={style.icon} size={22} />
+        )}
+      </span>
+      <span className="ifeat-txt">
+        <b>{featured.name}</b>
+        <span>
+          {t(`type.${featured.type}` as "type.iniciativa")}
+          {region ? ` · ${region}` : ""}
+        </span>
+      </span>
+      <span className="ifeat-cta">
+        {t("post.featuredCta")}
+        <Icon.chevron />
+      </span>
+    </Link>
+  );
+}
+
 function kindKey(kind: InitiativePost["kind"]) {
+  if (kind === "bienvenida") return "post.kind.bienvenida" as const;
   return kind === "entrega"
     ? ("post.kind.entrega" as const)
     : kind === "necesidad"
@@ -506,19 +556,19 @@ function formatDate(iso: string, lang: string): string {
   return new Intl.DateTimeFormat(locale(lang), { day: "numeric", month: "long" }).format(d);
 }
 
-function formatDayNumber(iso: string, lang: string): string {
+export function formatDayNumber(iso: string, lang: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return new Intl.DateTimeFormat(locale(lang), { day: "numeric" }).format(d);
 }
 
-function formatMonthShort(iso: string, lang: string): string {
+export function formatMonthShort(iso: string, lang: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return new Intl.DateTimeFormat(locale(lang), { month: "short" }).format(d).replace(".", "");
 }
 
-function formatTime(iso: string, lang: string): string {
+export function formatTime(iso: string, lang: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return new Intl.DateTimeFormat(locale(lang), { hour: "numeric", minute: "2-digit" }).format(d);

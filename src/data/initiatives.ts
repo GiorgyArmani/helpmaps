@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Activity, Campaign, InitiativePost } from "@/domain/types";
+import type { Activity, Campaign, FeaturedLocation, InitiativePost } from "@/domain/types";
 import { shrinkImage } from "@/lib/image";
 import { parseHours, type WeeklyHours } from "@/domain/hours";
 import { needsVolunteers, toEventNeeds, toSkills, type EventNeed, type Skill } from "@/domain/volunteer";
@@ -34,6 +34,35 @@ const ACTIVITY_COLUMNS_15 = `${ACTIVITY_COLUMNS_13},needs,skills`;
 let columnasVoluntariadoAusentes = false;
 
 const POST_COLUMNS = "id,location_id,campaign_id,kind,body,photo_url,created_at";
+
+/**
+ * Con `db/22_bienvenida.sql`: la organización de la que habla la entrada, embebida en la
+ * misma consulta —nombre, tipo, región y foto— para que la tarjeta se dibuje sin una
+ * segunda espera. El `!featured_location_id` elige la relación: la tabla tiene dos
+ * columnas que apuntan a `locations`.
+ */
+const POST_COLUMNS_22 =
+  POST_COLUMNS +
+  ",featured_location_id,featured:locations!featured_location_id(id,name,type,region,info:center_info(photo_url))";
+
+/** Esta base no corrió db/22: se lee como antes, sin organización destacada. */
+let columnasBienvenidaAusentes = false;
+
+/**
+ * Una lectura de entradas, con la columna nueva si la hay. Cualquier error de la versión
+ * larga cae a la corta: una relación que la base no conoce (PGRST200) no es «falta la
+ * columna», pero tampoco puede dejar el perfil sin publicaciones.
+ */
+async function leerEntradas(
+  leer: (columnas: string) => PromiseLike<{ data: unknown; error: { code?: string } | null }>,
+): Promise<{ data: unknown; error: { code?: string } | null }> {
+  if (!columnasBienvenidaAusentes) {
+    const r = await leer(POST_COLUMNS_22);
+    if (!r.error) return r;
+    columnasBienvenidaAusentes = true;
+  }
+  return leer(POST_COLUMNS);
+}
 
 type Row = Record<string, unknown>;
 
@@ -146,6 +175,22 @@ function mapPost(row: Row): InitiativePost {
     body: String(row.body ?? "").trim(),
     photo_url: text(row.photo_url),
     created_at: String(row.created_at ?? ""),
+    featured: mapFeatured(row.featured),
+  };
+}
+
+function mapFeatured(raw: unknown): FeaturedLocation | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Row;
+  if (!row.id || !row.name) return null;
+  // `center_info` es 1:1, pero según la versión de PostgREST llega como objeto o lista.
+  const info = Array.isArray(row.info) ? (row.info[0] as Row | undefined) : (row.info as Row | null);
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    type: row.type as FeaturedLocation["type"],
+    region: text(row.region),
+    photo_url: info ? text(info.photo_url) : null,
   };
 }
 
@@ -299,13 +344,15 @@ export async function fetchPosts(
   limit = 10,
 ): Promise<InitiativePost[]> {
   if (tablasAusentes) return [];
-  const { data, error } = await sb
-    .from("initiative_posts")
-    .select(POST_COLUMNS)
-    .eq("location_id", locationId)
-    .eq("status", "published")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  const { data, error } = await leerEntradas((columnas) =>
+    sb
+      .from("initiative_posts")
+      .select(columnas)
+      .eq("location_id", locationId)
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+  );
   if (faltaLaTabla(error)) tablasAusentes = true;
   if (error || !data) return [];
   return (data as unknown as Row[]).map(mapPost);
@@ -1020,12 +1067,14 @@ function mapClaim(row: Row): DonationClaim {
  */
 export async function fetchFeedPosts(sb: SupabaseClient, limit = 120): Promise<InitiativePost[]> {
   if (tablasAusentes) return [];
-  const { data, error } = await sb
-    .from("initiative_posts")
-    .select(POST_COLUMNS)
-    .eq("status", "published")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  const { data, error } = await leerEntradas((columnas) =>
+    sb
+      .from("initiative_posts")
+      .select(columnas)
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+  );
   if (faltaLaTabla(error)) tablasAusentes = true;
   if (error || !data) return [];
   return (data as unknown as Row[]).map(mapPost);

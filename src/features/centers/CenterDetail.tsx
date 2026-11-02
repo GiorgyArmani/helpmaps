@@ -272,8 +272,17 @@ export default function CenterDetail({
     <>
       <div className="dhero">
 
-        <span className="dav" style={{ color: style.color }}>
-          <TypeGlyph name={style.icon} size={38} />
+        {/* Con foto de perfil, la foto: es la cara de la iniciativa y la misma que ve en su
+            página. Sin ella, el icono del tipo. El hueco mide lo mismo en los dos casos, así
+            que cuando el perfil llega después nada se mueve. */}
+        <span className={`dav${profile.images.photo ? " dav-photo" : ""}`} style={{ color: style.color }}>
+          {profile.images.photo ? (
+            // Sin `next/image` por lo mismo que en /c/<id>: el bucket es de cada país.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.images.photo} alt="" decoding="async" />
+          ) : (
+            <TypeGlyph name={style.icon} size={38} />
+          )}
         </span>
         <div>
           <h2 className="dname">{center.name}</h2>

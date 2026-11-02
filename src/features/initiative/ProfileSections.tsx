@@ -45,7 +45,18 @@ interface SectionProps {
   onSaved: () => void;
 }
 
-export function InfoSections({ center, ...p }: SectionProps & { center: Center }) {
+export function InfoSections({
+  center,
+  platform = false,
+  ...p
+}: SectionProps & {
+  center: Center;
+  /**
+   * El perfil de HelpMaps: la plataforma, no una organización. No tiene estado, horario,
+   * lo que necesita ni lo que entrega, ni un lugar: sólo quién es y cómo contactarla.
+   */
+  platform?: boolean;
+}) {
   const { t, lang } = useI18n();
   const helpers = useSiteHelpers();
   const { profile, editable } = p;
@@ -60,6 +71,7 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
 
   return (
     <div className="ecards">
+      {platform ? null : (
       <EditableCard
         id="needs"
         title={t("pedit.secNeeds")}
@@ -73,8 +85,9 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
         }
         form={(done) => <NeedsForm profile={profile} onDone={done} />}
       />
+      )}
 
-      {profile.offers !== null ? (
+      {profile.offers !== null && !platform ? (
         <EditableCard
           id="offers"
           title={t("pedit.secOffers")}
@@ -106,6 +119,7 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
         form={(done) => <AboutForm profile={profile} onDone={done} />}
       />
 
+      {platform ? null : (
       <EditableCard
         id="hours"
         title={t("pedit.secHours")}
@@ -123,7 +137,9 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
         }
         form={(done) => <HoursForm profile={profile} onDone={done} />}
       />
+      )}
 
+      {platform ? null : (
       <EditableCard
         id="receives"
         title={t("pedit.secReceives")}
@@ -141,6 +157,7 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
         }
         form={(done) => <ReceivesForm profile={profile} onDone={done} />}
       />
+      )}
 
       <EditableCard
         id="contact"
@@ -181,6 +198,7 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
         form={(done) => <ContactForm profile={profile} onDone={done} />}
       />
 
+      {platform ? null : (
       <EditableCard
         id="donate"
         title={t("pedit.secDonate")}
@@ -200,9 +218,11 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
         }
         form={(done) => <DonateForm profile={profile} onDone={done} />}
       />
+      )}
 
       {/* Lo que la organización NO corrige sola, a la vista y con el motivo. Decirlo aquí
           evita que alguien lo busque, no lo encuentre y crea que el perfil está roto. */}
+      {platform ? null : (
       <section className="ecard">
         <div className="ecard-head">
           <h3 className="ecard-title">{t("pedit.secPlace")}</h3>
@@ -238,6 +258,7 @@ export function InfoSections({ center, ...p }: SectionProps & { center: Center }
           </p>
         ) : null}
       </section>
+      )}
     </div>
   );
 }

@@ -41,9 +41,12 @@ import { BRAND } from "@/config";
 export default function InitiativePanel({
   center,
   onClose,
+  platform = false,
 }: {
   center: Center;
   onClose: () => void;
+  /** El perfil de HelpMaps: ver `ProfileEditor`. */
+  platform?: boolean;
 }) {
   const { t } = useI18n();
   // Si no hay cliente configurado no hay nada que esperar, y el primer render ya lo sabe.
@@ -96,6 +99,7 @@ export default function InitiativePanel({
         profile={profile}
         content={content}
         onSaved={recargar}
+        platform={platform}
       />
     );
   }

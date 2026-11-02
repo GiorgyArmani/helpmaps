@@ -6,7 +6,14 @@ import { currentOffers } from "@/domain/center";
 import type { FeedItem, FeedMode } from "@/domain/feed";
 import { formatKm } from "@/domain/nearby";
 import { Icon } from "@/ui/icons";
-import { formatAmount } from "@/features/centers/InitiativeSections";
+import {
+  FeaturedCard,
+  formatAmount,
+  postBody,
+  formatDayNumber,
+  formatMonthShort,
+  formatTime,
+} from "@/features/centers/InitiativeSections";
 import { useI18n, useTimeAgo } from "@/i18n/context";
 import type { DictKey } from "@/i18n";
 import { FeedSkeleton } from "@/ui/Skeleton";
@@ -58,6 +65,7 @@ function hrefFor(item: FeedItem): string {
     return `/c/${item.center.id}?post=${item.post.id}#p-${item.post.id}`;
   }
   if (item.kind === "campaign") return `/c/${item.center.id}?tab=campaigns`;
+  if (item.kind === "event") return `/c/${item.center.id}?tab=agenda`;
   return `/c/${item.center.id}`;
 }
 
@@ -140,9 +148,24 @@ export default function FeedPanel({
       {shown.map((item) => (
         <article key={item.id} className="fitem">
           <Link className="fitem-head" href={hrefFor(item)}>
+            {/* Lo de HelpMaps se dice con palabra e icono, no sólo con color: «Destacado»
+                mientras está fijado arriba, y «Oficial» junto al nombre siempre. */}
+            {item.pinned ? (
+              <span className="fitem-kicker">
+                <Icon.bell />
+                {t("feed.pinned")}
+              </span>
+            ) : null}
             <span className="fitem-name">
               {item.center.name}
-              <VerifiedSeal center={item.center} size="icon" />
+              {item.official ? (
+                <span className="fitem-official">
+                  <Icon.shield />
+                  {t("feed.official")}
+                </span>
+              ) : (
+                <VerifiedSeal center={item.center} size="icon" />
+              )}
             </span>
             <span className="fitem-meta">
               {item.saved ? (
@@ -154,7 +177,7 @@ export default function FeedPanel({
               {item.km !== null ? <span>{formatKm(item.km, lang)}</span> : null}
               {/* Sin fecha no se pinta nada. Ver `FeedItem.at`: inventarle una a un
                   punto que nunca se confirmó decía «hace 20704 días». */}
-              {item.at ? <span>{ago(item.at)}</span> : null}
+              {item.at && item.kind !== "event" ? <span>{ago(item.at)}</span> : null}
             </span>
           </Link>
 
@@ -164,7 +187,8 @@ export default function FeedPanel({
                 // eslint-disable-next-line @next/next/no-img-element -- bucket por país
                 <img className="fitem-img" src={item.post.photo_url} alt="" loading="lazy" decoding="async" />
               ) : null}
-              <p className="fitem-body">{item.post.body}</p>
+              <p className="fitem-body">{postBody(item.post, t)}</p>
+              {item.post.featured ? <FeaturedCard featured={item.post.featured} /> : null}
             </>
           ) : null}
 
@@ -193,6 +217,27 @@ export default function FeedPanel({
                   goal: formatAmount(item.campaign.goal_amount, lang),
                   unit: item.campaign.goal_unit,
                 })}
+              </span>
+            </div>
+          ) : null}
+
+          {/* El evento, con el mismo taco de fecha que la agenda del perfil: es lo que se
+              escanea, y así no parece otro dato distinto al tocarlo. */}
+          {item.kind === "event" && item.event ? (
+            <div className="fitem-event">
+              <span className="iact-when">
+                <b>{formatDayNumber(item.event.starts_at, lang)}</b>
+                <span>{formatMonthShort(item.event.starts_at, lang)}</span>
+              </span>
+              <span className="iact-body">
+                <span className="iact-t">{item.event.title}</span>
+                <span className="iact-meta">
+                  {formatTime(item.event.starts_at, lang)}
+                  {item.event.place ? ` · ${item.event.place}` : ""}
+                </span>
+                {item.event.description ? (
+                  <span className="iact-d">{item.event.description}</span>
+                ) : null}
               </span>
             </div>
           ) : null}

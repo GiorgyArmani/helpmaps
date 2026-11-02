@@ -37,8 +37,14 @@ import { useMyLocation } from "@/features/nearby/useMyLocation";
 export default function PointActions({
   locationId,
   followable = false,
+  followOnly = false,
 }: {
   locationId: string;
+  /**
+   * Sólo «Seguir». Para el perfil de HelpMaps: no es un lugar al que ir, así que guardar,
+   * avisar de un cambio y «estoy aquí» no tienen sentido ahí.
+   */
+  followOnly?: boolean;
   /**
    * ¿Este punto publica? Seguir sólo tiene sentido con alguien que publique: un acopio
    * importado sin gestor no va a contar nada, y «Seguir» ahí sería una promesa vacía.
@@ -210,6 +216,8 @@ export default function PointActions({
           </button>
         ) : null}
 
+        {followOnly ? null : (
+          <>
         <button
           type="button"
           className={saved ? "btnp act-save" : "btng act-save"}
@@ -241,10 +249,12 @@ export default function PointActions({
               ? t("nearby.locating")
               : t("point.checkin")}
         </button>
+          </>
+        )}
       </div>
 
       {/* Lo que hay que saber ANTES de tocarlo: se comprueba dónde estás y no se guarda. */}
-      {checkin === "idle" && here.status !== "denied" ? (
+      {checkin === "idle" && here.status !== "denied" && !followOnly ? (
         <p className="small mut">{t("point.checkinHint")}</p>
       ) : null}
       {checkin === "far" ? (
@@ -253,7 +263,7 @@ export default function PointActions({
         </p>
       ) : null}
       {checkin === "error" ? <p className="lerr">{t("error.generic")}</p> : null}
-      {here.status === "denied" ? <p className="small mut">{t("nearby.denied")}</p> : null}
+      {here.status === "denied" && !followOnly ? <p className="small mut">{t("nearby.denied")}</p> : null}
       {checkin === "done" ? <p className="small mut">{t("point.checkedInHint")}</p> : null}
 
       {showFollow && followers !== null ? (

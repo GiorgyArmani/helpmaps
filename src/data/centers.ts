@@ -376,3 +376,30 @@ export async function fetchCenterById(
   if (error || !data) return null;
   return mapCenter(data as unknown as Record<string, unknown>);
 }
+
+// ── El perfil oficial de HelpMaps (`db/21_helpmaps_oficial.sql`) ────────────
+//
+// Es un punto más, marcado `official`. Se busca aparte y no en `fetchCenters` a propósito:
+// meter la columna en la consulta principal añadiría otro escalón a `withFallback`, y una
+// base sin la migración no puede quedarse con el mapa en blanco por un perfil que no tiene.
+
+/** `missing`: esta base todavía no corrió la migración. */
+export type OfficialLookup = { id: string | null; missing: boolean };
+
+export async function fetchOfficialLocation(sb: SupabaseClient): Promise<OfficialLookup> {
+  const { data, error } = await sb
+    .from("locations")
+    .select("id")
+    .eq("official", true)
+    .eq("active", true)
+    .maybeSingle();
+  if (error) return { id: null, missing: isMissingColumn(error) };
+  return { id: data ? String((data as { id: unknown }).id) : null, missing: false };
+}
+
+/** Crea el perfil si no existe y devuelve su id. Sólo un admin: lo comprueba la base. */
+export async function ensureOfficialLocation(sb: SupabaseClient, name: string): Promise<string> {
+  const { data, error } = await sb.rpc("ensure_official_location", { p_name: name });
+  if (error) throw error;
+  return String(data);
+}

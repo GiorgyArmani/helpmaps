@@ -584,6 +584,9 @@ const es = {
   "post.kind.avance": "Avance",
   "post.kind.entrega": "Entrega",
   "post.kind.necesidad": "Necesidad",
+  "post.kind.bienvenida": "Bienvenida",
+  "post.welcome": "{name} ya está en HelpMaps. Síguela para enterarte de sus campañas y jornadas.",
+  "post.featuredCta": "Ver y seguir",
   "post.fromCampaign": "De la campaña «{name}»",
 
   // ── Pestañas del panel e iniciativas digitales ──────────────────────────
@@ -593,6 +596,8 @@ const es = {
   "feed.needHelp": "Necesito ayuda",
   "feed.wantHelp": "Quiero ayudar",
   "feed.saved": "Guardado",
+  "feed.pinned": "Destacado",
+  "feed.official": "Oficial",
   "feed.empty": "Todavía no hay novedades por aquí.",
   "feed.emptyHint": "Cuando las iniciativas cuenten lo que hacen o abran una campaña, aparecerá aquí.",
   "panel.tab.digital": "Digitales",
@@ -987,7 +992,7 @@ const es = {
   "account.menu.eventsSub": "Los eventos a los que te anotaste",
   "account.menu.helpSub": "Tus oficios, cuándo puedes y el equipo",
   "account.menu.settingsSub": "Tu avatar y tu contraseña",
-  "settings.avatarLead": "Cámbialo cuando quieras. Lo que ganes al subir de nivel aparece aquí.",
+  "settings.avatarLead": "Tu avatar es un animal de nuestra fauna, vestido a tu gusto. Así te van a reconocer en HelpMaps.",
   "avatar.species": "Especie",
   "avatar.habitat": "Hábitat",
   "avatar.habitatHint": "Es solo el fondo. No tiene nada que ver con dónde vives.",
@@ -1471,6 +1476,15 @@ const es = {
     "Este despliegue todavía usa la configuración compilada, así que no hay dónde guardar una zona. Crea su emergencia en el registro y vuelve.",
   "area.readOnly": "Para marcar zonas necesitas el rol de administrador.",
   "admin.tab.area": "Zonas",
+  "admin.tab.official": "Publicar como HelpMaps",
+  "official.lead": "Es el perfil de la plataforma: desde aquí le hablas a toda la comunidad. Lo que publiques va primero en Novedades, para todo el país, durante 7 días. Cuando se aprueba una organización de /organizaciones, aquí se publica sola su bienvenida.",
+  "official.create": "Crear el perfil de {name}",
+  "official.createError": "No se pudo crear el perfil. Revisa que tu cuenta sea de administración.",
+  "official.missing": "Esta base todavía no tiene el perfil oficial: hay que correr db/21_helpmaps_oficial.sql en el editor SQL.",
+  "official.view": "Ver la página",
+  "official.kind": "Plataforma",
+  "official.composer": "¿Qué quieres contarle a la comunidad?",
+  "official.noPosts": "Todavía no hay publicaciones. Aquí saldrán tus avisos y la bienvenida a cada organización que se sume.",
   "layers.disclaimer":
     "Intensidad estimada por el USGS a partir del modelo del sismo. Se corrige en las horas siguientes y no reemplaza el reporte oficial de daños.",
 

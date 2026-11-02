@@ -73,6 +73,9 @@ const pt: Partial<Dict> = {
   "post.kind.avance": "Novidade",
   "post.kind.entrega": "Entrega",
   "post.kind.necesidad": "Necessidade",
+  "post.kind.bienvenida": "Boas-vindas",
+  "post.welcome": "{name} já está no HelpMaps. Siga para ficar por dentro das campanhas e mutirões.",
+  "post.featuredCta": "Ver e seguir",
   "post.fromCampaign": "Da campanha «{name}»",
   "nearby.askTitle": "O que há perto de você?",
   "nearby.askBody":
@@ -281,6 +284,17 @@ const pt: Partial<Dict> = {
     "Este site ainda serve a configuração compilada, então não há onde guardar uma zona.",
   "area.readOnly": "Marcar zonas exige o papel de administrador.",
   "admin.tab.area": "Zonas",
+  "feed.pinned": "Destaque",
+  "feed.official": "Oficial",
+  "admin.tab.official": "Publicar como HelpMaps",
+  "official.lead": "Este é o perfil da plataforma: daqui você fala com toda a comunidade. O que você publicar aparece primeiro em Novidades, para todo o país, durante 7 dias. Quando uma organização de /organizaciones é aprovada, as boas-vindas dela são publicadas aqui automaticamente.",
+  "official.create": "Criar o perfil de {name}",
+  "official.createError": "Não foi possível criar o perfil. Confira se sua conta é de administração.",
+  "official.missing": "Esta base ainda não tem o perfil oficial: rode db/21_helpmaps_oficial.sql no editor SQL.",
+  "official.view": "Ver a página",
+  "official.kind": "Plataforma",
+  "official.composer": "O que você quer contar para a comunidade?",
+  "official.noPosts": "Ainda não há publicações. Aqui aparecerão seus avisos e as boas-vindas de cada organização que entrar.",
   "layers.disclaimer":
     "Intensidade estimada pelo USGS a partir do modelo do sismo. É corrigida nas horas seguintes e não substitui o relatório oficial de danos.",
 

@@ -1602,9 +1602,12 @@ a {
 .ovbody {
   flex: 1;
   overflow-y: auto;
+  /* Lo lee lo que va fijo (`sticky`) dentro: se pega bajo este relleno, y para pegarse al
+     borde de verdad tiene que saber cuánto mide. */
+  --scroll-pad-top: 18px;
   /* El mismo canalón que la ficha dentro del panel: era 16px escrito a mano, y una
      medida repetida a mano es una medida que se separa en cuanto alguien toca una. */
-  padding: 18px calc(var(--gut) + env(safe-area-inset-right))
+  padding: var(--scroll-pad-top) calc(var(--gut) + env(safe-area-inset-right))
     calc(30px + env(safe-area-inset-bottom)) calc(var(--gut) + env(safe-area-inset-left));
 }
 
@@ -1718,6 +1721,18 @@ a {
   justify-content: center;
   color: var(--ink);
   overflow: hidden;
+}
+
+/* La foto de perfil llena el hueco: fondo blanco por si es un logo con transparencia. */
+.dav-photo {
+  background: #fff;
+}
+
+.dav img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .dname {
@@ -6599,9 +6614,107 @@ fieldset.fieldset {
   color: #b45309;
 }
 
+.ipost-bienvenida {
+  background: color-mix(in srgb, var(--brand) 10%, #fff);
+  color: var(--brand);
+}
+
 .ipost-ago {
   font-size: 0.6875rem;
   color: var(--mut);
+}
+
+/* La organización que presenta una entrada de HelpMaps (`FeaturedCard`). Bloque hundido
+   y SIN borde propio, como la campaña dentro de la tarjeta del feed: el fondo basta para
+   decir «esto es otra cosa», y toda la fila es el enlace. */
+.ifeat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--soft);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--t-tap) var(--ease);
+}
+
+.ifeat:active {
+  background: var(--soft2);
+}
+
+@media (hover: hover) {
+  .ifeat:hover {
+    background: var(--soft2);
+  }
+}
+
+.ifeat:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.ifeat-av {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: var(--e-1);
+}
+
+.ifeat-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ifeat-txt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ifeat-txt b {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.ifeat-txt span {
+  font-size: 0.75rem;
+  color: var(--mut-track);
+}
+
+.ifeat-cta {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.ifeat-cta svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ifeat {
+    transition: none;
+  }
 }
 
 .ipost-body {
@@ -7666,6 +7779,51 @@ fieldset.fieldset {
 .fitem-saved svg {
   width: 11px;
   height: 11px;
+}
+
+/* Lo que publica HelpMaps. Sin borde ni sombra propios: la tarjeta es la de siempre, y lo
+   que cambia se dice con palabra e icono. «Destacado» encima del nombre mientras está
+   fijado; «Oficial» junto al nombre, en el sitio que ocupa el sello de verificada. */
+.fitem-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--brand);
+}
+
+.fitem-kicker svg {
+  width: 12px;
+  height: 12px;
+}
+
+.fitem-official {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 10%, #fff);
+  color: var(--brand);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  vertical-align: 2px;
+}
+
+.fitem-official svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* El evento: el taco de fecha de la agenda (`.iact-when`) y su texto, en fila. */
+.fitem-event {
+  display: flex;
+  gap: 12px;
 }
 
 /* Igual que `.ipost-img`: la proporción reserva el hueco. Ver la nota de allí. */
@@ -10449,9 +10607,12 @@ fieldset.fieldset {
     padding: 0 32px;
   }
 
+  /* Arriba, no abajo: alineadas al pie del nombre, las acciones (dos filas y las notas)
+     crecían hacia arriba hasta pegarse a la portada. Arrancan bajo la portada y crecen
+     hacia abajo, que es donde hay sitio. */
   .prof-head {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 32px;
   }
@@ -10488,7 +10649,7 @@ fieldset.fieldset {
     gap: 4px;
     min-width: 0;
     max-width: 100%;
-    margin-bottom: 4px;
+    margin-top: 20px;
     text-align: right;
   }
 
@@ -11463,16 +11624,19 @@ button.layers-inside svg:last-child {
   min-width: 0;
 }
 
-/* La escena: queda fija arriba mientras se baja por las fichas. */
+/* La escena: queda fija arriba mientras se baja por las fichas. Se pega al borde mismo
+   del área que se desplaza, no bajo su relleno: en esa franja, y por las esquinas
+   redondeadas, asomaban las fichas que pasaban por detrás. El halo blanco tapa esas
+   esquinas; sin pegar, cae sobre el hueco blanco que la rodea y no se ve. */
 .ave-scene {
   position: sticky;
-  top: 0;
+  top: calc(-1 * var(--scroll-pad-top, 0px));
   z-index: 3;
   height: clamp(220px, 36dvh, 320px);
   border-radius: 24px;
   overflow: hidden;
   background: var(--soft);
-  box-shadow: var(--e-2);
+  box-shadow: var(--e-2), 0 0 0 12px #fff;
 }
 
 .ave-scene-in {
@@ -11545,7 +11709,7 @@ button.layers-inside svg:last-child {
 /* Pestañas (y zonas) fijas debajo de la escena. El alto de la escena es el mismo `clamp`. */
 .ave-bar {
   position: sticky;
-  top: clamp(220px, 36dvh, 320px);
+  top: calc(clamp(220px, 36dvh, 320px) - var(--scroll-pad-top, 0px));
   z-index: 3;
   display: flex;
   flex-direction: column;
@@ -12838,6 +13002,21 @@ button.layers-inside svg:last-child {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+/* «Seguir» sola (el perfil de HelpMaps): un botón de lado a lado, con el icono al lado de
+   la palabra. Un cuadro de un cuarto de ancho, solo en su fila, parecía un hueco. */
+.dactions:has(> .act-follow:only-child),
+.prof-do > div > .dactions:has(> .act-follow:only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dactions > .act-follow:only-child,
+.prof-do .dactions > .act-follow:only-child {
+  flex-direction: row;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 22px;
+}
+
 /* El nombre se recorta con «…», pero el distintivo de verificada no: va fuera del recorte,
    pegado al final del nombre visible. Si fuera dentro, en un nombre largo se perdería
    justo lo que distingue a esta organización. */
@@ -12856,4 +13035,19 @@ button.layers-inside svg:last-child {
 
 .cname > .vseal-icon {
   flex: 0 0 auto;
+}
+
+/* ── Publicar como HelpMaps (`OfficialPanel.tsx`) ── */
+
+.official-lead {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--mut-track);
+}
+
+.official-view {
+  align-self: flex-start;
+  min-height: 44px;
+  text-decoration: none;
 }

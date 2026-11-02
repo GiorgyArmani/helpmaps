@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabasePublic } from "@/lib/supabase/server";
-import { fetchCenter } from "@/data/centers";
+import { fetchCenter, fetchOfficialLocation } from "@/data/centers";
 import { EMPTY_PROFILE, fetchInitiativeProfile } from "@/data/initiatives";
 import {
   currentOffers,
@@ -128,8 +128,15 @@ export default async function CenterPage({ params, searchParams }: Params) {
   const center = await fetchCenter(sb, id, await currentEmergencyId()).catch(() => null);
   if (!center) notFound();
 
-  const profile = await fetchInitiativeProfile(sb, id).catch(() => EMPTY_PROFILE);
+  const [profile, official] = await Promise.all([
+    fetchInitiativeProfile(sb, id).catch(() => EMPTY_PROFILE),
+    fetchOfficialLocation(sb).catch(() => ({ id: null, missing: true })),
+  ]);
   const { campaigns, activities, posts, donate, images } = profile;
+  // El perfil de HelpMaps: la plataforma, no una organización. Habla a la comunidad, así
+  // que no lleva estado, ni qué hace falta, ni cómo llegar: novedades, campañas, agenda y
+  // «Seguir».
+  const platform = official.id === center.id;
   const hayAporte = Boolean(donate.info || donate.url);
 
   const status = statusOf(center);
@@ -144,7 +151,7 @@ export default async function CenterPage({ params, searchParams }: Params) {
   // Un enlace del feed apunta a una publicación concreta. Abrir en «Información» sería
   // aterrizar donde lo que te trajo no está.
   const alPost = Boolean(one(query.post));
-  const inicial = alPost ? "posts" : one(query.tab);
+  const inicial = alPost ? "posts" : (one(query.tab) ?? (platform ? "posts" : undefined));
 
   const info = center.info;
   const offers = currentOffers(center);
@@ -154,7 +161,37 @@ export default async function CenterPage({ params, searchParams }: Params) {
       id: "info",
       label: t("tab.info"),
       count: null,
-      content: (
+      content: platform ? (
+        <>
+          {info?.description ? <p className="sdesc">{info.description}</p> : null}
+          {info?.website || info?.instagram ? (
+            <div className="drows">
+              {info.website ? (
+                <div className="drow">
+                  <span className="dlabel">{t("center.website")}</span>
+                  <span className="dval">
+                    <a href={info.website} target="_blank" rel="noopener noreferrer">
+                      {info.website.replace(/^https?:\/\//, "")}
+                    </a>
+                  </span>
+                </div>
+              ) : null}
+              {info.instagram ? (
+                <div className="drow">
+                  <span className="dlabel">{t("center.instagram")}</span>
+                  <span className="dval">
+                    <a href={instagramUrl(info.instagram)} target="_blank" rel="noopener noreferrer">
+                      @{info.instagram}
+                    </a>
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <h3 className="dsection">{t("share.title")}</h3>
+          <ShareRow center={center} />
+        </>
+      ) : (
         <>
           {info?.needs ? (
             <div className="dneed">
@@ -297,6 +334,12 @@ export default async function CenterPage({ params, searchParams }: Params) {
     });
   }
 
+  // En la plataforma, primero las novedades —para eso existe— y la información al final.
+  if (platform) {
+    const orden = ["posts", "campaigns", "agenda", "info"];
+    tabs.sort((a, b) => orden.indexOf(a.id) - orden.indexOf(b.id));
+  }
+
   return (
     /* La página, no sólo la ficha.
        En una pantalla ancha, una columna de 720px sobre blanco infinito se lee como un
@@ -342,18 +385,26 @@ export default async function CenterPage({ params, searchParams }: Params) {
             </span>
             <h1 className="prof-name">{center.name}</h1>
             <p className="prof-meta">
-              {t(`type.${center.type}` as DictKey)}
-              {place ? ` · ${place}` : ""}
+              {platform ? (
+                t("official.kind")
+              ) : (
+                <>
+                  {t(`type.${center.type}` as DictKey)}
+                  {place ? ` · ${place}` : ""}
+                </>
+              )}
             </p>
-            <span className="prof-badges">
-              {/* Sin estado no hay etiqueta: un «Sin confirmar» en cada punto que nadie ha
-                  revisado se lee como que todo el mapa está sin confirmar. */}
-              {status ? <span className={`prof-status prof-status-${status}`}>{t(`status.${status}`)}</span> : null}
-              <VerifiedSeal center={center} />
-            </span>
+            {platform ? null : (
+              <span className="prof-badges">
+                {/* Sin estado no hay etiqueta: un «Sin confirmar» en cada punto que nadie ha
+                    revisado se lee como que todo el mapa está sin confirmar. */}
+                {status ? <span className={`prof-status prof-status-${status}`}>{t(`status.${status}`)}</span> : null}
+                <VerifiedSeal center={center} />
+              </span>
+            )}
             {/* El aviso va ANTES que las acciones: que el punto siga existiendo pesa más que
                 lo que esté pidiendo. */}
-            {status === "cerrado" ? (
+            {platform ? null : status === "cerrado" ? (
               <p className="prof-warn">{t("status.closedWarning")}</p>
             ) : status === "lleno" ? (
               <p className="prof-warn">{t("status.fullWarning")}</p>
@@ -368,6 +419,10 @@ export default async function CenterPage({ params, searchParams }: Params) {
               «estoy aquí» — el mismo orden que la ficha del mapa. En escritorio van juntos a
               la derecha del nombre. */}
           <div className="prof-do" style={{ ["--tc" as string]: style.color }}>
+            {platform ? (
+              <PointActions locationId={center.id} followable followOnly />
+            ) : (
+              <>
             <div className="dactions">
               {hasCoords(center) && !digital ? (
                 <a
@@ -405,6 +460,8 @@ export default async function CenterPage({ params, searchParams }: Params) {
               </Link>
             </div>
             <PointActions locationId={center.id} followable={isFollowable(center)} />
+              </>
+            )}
           </div>
         </div>
 
@@ -412,7 +469,9 @@ export default async function CenterPage({ params, searchParams }: Params) {
             en pestañas al otro. En el teléfono la columna no se pinta y la información sigue
             siendo la primera pestaña. */}
         <div className={`prof-grid${tabs.length > 1 ? " prof-grid-two" : ""}`}>
-          {tabs.length > 1 ? <aside className="prof-side">{tabs[0]!.content}</aside> : null}
+          {tabs.length > 1 ? (
+            <aside className="prof-side">{tabs.find((x) => x.id === "info")?.content}</aside>
+          ) : null}
           <div className="prof-main">
             <ProfileTabs tabs={tabs} initial={inicial} wideOmit="info" />
           </div>
@@ -421,9 +480,11 @@ export default async function CenterPage({ params, searchParams }: Params) {
         {/* «¿Es tu organización?», fuera de las pestañas: la columna lateral repite
             «Información» y el bloque se montaría dos veces. Es la puerta de la campaña de
             captación, cuyo enlace apunta aquí con `?gestionar=1`. */}
-        <div className="prof-claim">
-          <ManageRequest locationId={center.id} />
-        </div>
+        {platform ? null : (
+          <div className="prof-claim">
+            <ManageRequest locationId={center.id} />
+          </div>
+        )}
       </div>
     </main>
 

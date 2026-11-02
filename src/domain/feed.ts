@@ -1,4 +1,4 @@
-import type { Campaign, Center, InitiativePost } from "@/domain/types";
+import type { Activity, Campaign, Center, InitiativePost } from "@/domain/types";
 import { distanceKm, hasCoords, hasNeed, isOpenPoint } from "@/domain/center";
 
 /**
@@ -32,7 +32,14 @@ import { distanceKm, hasCoords, hasNeed, isOpenPoint } from "@/domain/center";
  * este archivo — «Necesito ayuda» enseñaba peticiones de ayuda, que es exactamente lo
  * contrario de lo que esa persona busca.
  */
-export type FeedKind = "post" | "campaign" | "need" | "open";
+export type FeedKind = "post" | "campaign" | "need" | "open" | "event";
+
+/**
+ * Cuánto se queda arriba lo que publica HelpMaps. Una semana: lo bastante para que lo vea
+ * quien abre la app de vez en cuando, y no tanto como para que un aviso viejo tape para
+ * siempre lo que está pasando cerca.
+ */
+export const OFFICIAL_PIN_DAYS = 7;
 
 export interface FeedItem {
   id: string;
@@ -48,6 +55,12 @@ export interface FeedItem {
   at: string | null;
   post?: InitiativePost;
   campaign?: Campaign;
+  /** Sólo los de HelpMaps: el feed no trae la agenda de cada iniciativa. */
+  event?: Activity;
+  /** Lo publica el perfil oficial de HelpMaps. */
+  official: boolean;
+  /** Oficial y reciente: va primero, para todos, en las dos caras del feed. */
+  pinned: boolean;
   /** Distancia en km si hay posición. `null` cuando no se ha dado permiso. */
   km: number | null;
   /** Guardado por esta persona: sube al principio. */
@@ -84,8 +97,21 @@ function vigencia(at: string | null): number {
 function score(item: FeedItem, mode: FeedMode): number {
   let s = 0;
 
+  // Lo fijado de HelpMaps va antes que todo, incluso que lo guardado: es el canal por el
+  // que el equipo avisa de algo grave, y un aviso que hay que buscar no avisa. Entre
+  // fijados manda lo cerca que esté de hoy —lo recién publicado, el evento de mañana— y no
+  // el tipo ni la cara del feed: un aviso urgente no baja porque sea una campaña.
+  if (item.pinned) {
+    const dias = item.at ? Math.abs(Date.now() - Date.parse(item.at)) / 86_400_000 : OFFICIAL_PIN_DAYS;
+    return 2_000_000 + Math.max(0, 1_000 - (Number.isFinite(dias) ? dias : OFFICIAL_PIN_DAYS) * 100);
+  }
+
   // Lo que esta persona guardó va primero, siempre. Es lo único que dijo que le importa.
   if (item.saved) s += 1_000_000;
+
+  // Un evento oficial que todavía no toca fijar: arriba de lo corriente, por debajo de lo
+  // guardado. Su fecha es futura, así que no pasa por la novedad de más abajo.
+  if (item.kind === "event") return s + 4_000;
 
   // Lo que la cara del feed está buscando. Los pesos son opuestos a propósito: es el
   // mismo material contestando dos preguntas contrarias.
@@ -132,6 +158,10 @@ export interface BuildInput {
   centers: Center[];
   posts: InitiativePost[];
   campaigns: Campaign[];
+  /** Los próximos eventos del perfil oficial. */
+  events?: Activity[];
+  /** El id del perfil oficial de HelpMaps, si esta base lo tiene. */
+  officialId?: string | null;
   /** Posición de quien mira, si la dio. Nunca sale del navegador. */
   from: { lat: number; lng: number } | null;
   saved: Set<string>;
@@ -139,10 +169,27 @@ export interface BuildInput {
 }
 
 /** Mezcla las tres fuentes en una lista ordenada. */
-export function buildFeed({ centers, posts, campaigns, from, saved, mode }: BuildInput): FeedItem[] {
+export function buildFeed({
+  centers,
+  posts,
+  campaigns,
+  events = [],
+  officialId = null,
+  from,
+  saved,
+  mode,
+}: BuildInput): FeedItem[] {
   const byId = new Map(centers.map((c) => [c.id, c]));
   const km = (c: Center): number | null =>
     from && hasCoords(c) ? distanceKm(from, c) : null;
+  const now = Date.now();
+  const isOfficial = (c: Center) => officialId !== null && c.id === officialId;
+  // Publicado hace menos de una semana.
+  const fresh = (at: string | null) => {
+    if (!at) return false;
+    const dias = (now - Date.parse(at)) / 86_400_000;
+    return Number.isFinite(dias) && dias <= OFFICIAL_PIN_DAYS;
+  };
 
   const items: FeedItem[] = [];
 
@@ -159,25 +206,55 @@ export function buildFeed({ centers, posts, campaigns, from, saved, mode }: Buil
       post,
       km: km(center),
       saved: saved.has(center.id),
+      official: isOfficial(center),
+      // Las bienvenidas no se fijan: si se suman diez organizaciones en una semana, diez
+      // tarjetas arriba taparían el aviso urgente para el que existe lo fijado.
+      pinned: isOfficial(center) && post.kind !== "bienvenida" && fresh(post.created_at),
     });
   }
 
   for (const campaign of campaigns) {
     const center = byId.get(campaign.location_id);
     if (!center) continue;
+    const at = campaign.updated_at ?? campaign.starts_on;
     items.push({
       id: `campaign:${campaign.id}`,
       kind: "campaign",
       center,
-      at: campaign.updated_at ?? campaign.starts_on,
+      at,
       campaign,
       km: km(center),
       saved: saved.has(center.id),
+      official: isOfficial(center),
+      pinned: isOfficial(center) && fresh(at),
     });
+  }
+
+  // Los eventos del perfil oficial. Se fijan en la semana anterior a que empiecen, que es
+  // cuando alguien todavía puede organizarse para ir.
+  const official = officialId ? byId.get(officialId) : undefined;
+  if (official) {
+    for (const event of events) {
+      if (event.location_id !== official.id) continue;
+      const faltan = (Date.parse(event.starts_at) - now) / 86_400_000;
+      items.push({
+        id: `event:${event.id}`,
+        kind: "event",
+        center: official,
+        at: event.starts_at,
+        event,
+        km: null,
+        saved: saved.has(official.id),
+        official: true,
+        pinned: Number.isFinite(faltan) && faltan <= OFFICIAL_PIN_DAYS,
+      });
+    }
   }
 
   // Las dos mitades que no son una tabla: salen de los puntos que ya están en memoria.
   for (const center of centers) {
+    // El perfil oficial no es un sitio al que ir ni pide insumos: habla por lo que publica.
+    if (isOfficial(center)) continue;
     const at = center.info?.last_confirmed_at ?? center.info?.updated_at ?? null;
 
     if (mode === "give" && hasNeed(center)) {
@@ -189,6 +266,8 @@ export function buildFeed({ centers, posts, campaigns, from, saved, mode }: Buil
         at: center.info?.updated_at ?? at,
         km: km(center),
         saved: saved.has(center.id),
+        official: false,
+        pinned: false,
       });
     }
 
@@ -203,6 +282,8 @@ export function buildFeed({ centers, posts, campaigns, from, saved, mode }: Buil
         at,
         km: km(center),
         saved: saved.has(center.id),
+        official: false,
+        pinned: false,
       });
     }
   }

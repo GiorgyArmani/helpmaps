@@ -32,9 +32,10 @@ import { useAccount } from "@/features/account/useAccount";
 import NotificationsView from "@/features/notifications/NotificationsView";
 import { useNotifications } from "@/features/notifications/useNotifications";
 import { fetchDonations } from "@/data/donations";
-import { fetchCenterById } from "@/data/centers";
+import { fetchCenterById, fetchOfficialLocation } from "@/data/centers";
 import {
   EMPTY_PROFILE,
+  fetchActivities,
   fetchFeedCampaigns,
   fetchFeedPosts,
   fetchInitiativeProfile,
@@ -43,7 +44,7 @@ import {
 } from "@/data/initiatives";
 import { buildFeed, type FeedMode } from "@/domain/feed";
 import FeedPanel from "@/features/feed/FeedPanel";
-import type { Campaign, InitiativePost } from "@/domain/types";
+import type { Activity, Campaign, InitiativePost } from "@/domain/types";
 import InitiativePanel from "@/features/initiative/InitiativePanel";
 import { getSupabase } from "@/lib/supabase/client";
 import { useQuakes } from "@/features/hazard/useQuakes";
@@ -72,6 +73,7 @@ import ContactForm from "@/features/donate/ContactForm";
 import VolunteerForm from "@/features/volunteer/VolunteerForm";
 import GuidedTour from "@/features/tour/GuidedTour";
 import { CookiePrefsLink } from "@/features/consent/CookieConsent";
+import { useConsent } from "@/features/consent/consent";
 import { PUBLIC_STEPS, STAFF_STEPS } from "@/features/tour/tourSteps";
 import { watchConnection } from "@/features/suggest/offlineQueue";
 import { useSiteHelpers } from "@/features/app/SiteProvider";
@@ -235,8 +237,29 @@ export default function AppShell({
   // que ver el del panel la primera vez que lo abre.
   const STAFF_TOUR_KEY = helpers.storageKey("stafftour:v1");
   const { t, lang } = useI18n();
-  const { centers, settings, loading, configured } = useCenters();
+  const { centers: allCenters, settings, loading, configured } = useCenters();
   const seismic = useQuakes();
+
+  // El perfil oficial de HelpMaps (`db/21_helpmaps_oficial.sql`). Habla por el feed y por
+  // su página, no es un sitio al que ir: fuera del mapa, de las listas y de los conteos.
+  // `allCenters` lo conserva porque es el índice con el que cada publicación encuentra su
+  // punto en el feed.
+  const [officialId, setOfficialId] = useState<string | null>(null);
+  useEffect(() => {
+    const sb = getSupabase();
+    if (!sb) return;
+    let vivo = true;
+    void fetchOfficialLocation(sb).then((r) => {
+      if (vivo) setOfficialId(r.id);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+  const centers = useMemo(
+    () => (officialId ? allCenters.filter((c) => c.id !== officialId) : allCenters),
+    [allCenters, officialId],
+  );
 
   const site = useSite();
 
@@ -313,6 +336,7 @@ export default function AppShell({
   // cliente — ver `domain/feed.ts` para por qué la cercanía no se calcula en el servidor.
   const [feedPosts, setFeedPosts] = useState<InitiativePost[]>([]);
   const [feedCampaigns, setFeedCampaigns] = useState<Campaign[]>([]);
+  const [feedEvents, setFeedEvents] = useState<Activity[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedMode, setFeedMode] = useState<FeedMode>("help");
   /**
@@ -453,6 +477,11 @@ export default function AppShell({
   // render matches the server, then the effect opens the tour on the next commit.
   const [tourOpen, setTourOpen] = useState(false);
   const [staffTourOpen, setStaffTourOpen] = useState(false);
+  // Primero las cookies, después el recorrido. Las dos salen en la primera visita y el velo
+  // del recorrido (más alto) tapaba el aviso, que es modal y no se puede saltar: la persona
+  // veía un diálogo apagado que no podía contestar. El recorrido espera a la respuesta.
+  const consent = useConsent();
+  const consentPending = Boolean(site.integrations.analytics.ga) && consent === null;
   // Reported by the panel every time it loads. It stays at 0 for a public visitor, who
   // never opens the panel and so never fetches the queues — the lazy session check this
   // sits behind is the whole point (see useStaffSession).
@@ -470,14 +499,14 @@ export default function AppShell({
     // 13-step tour of the public map on top of it buries the one thing they came to do.
     // Lo mismo con un punto compartido (`?c=`): vino a ver ESE punto, y el primer paso del
     // tour cierra las vistas — o sea, se lo cerraba en la cara.
-    if (initialAction || initialMine || initialCenterId) return;
+    if (initialAction || initialMine || initialCenterId || consentPending) return;
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reading an external store at mount
       if (!window.localStorage.getItem(TOUR_KEY)) setTourOpen(true);
     } catch {
       /* private mode: no tour rather than a tour on every load */
     }
-  }, [initialAction, initialMine, initialCenterId]);
+  }, [initialAction, initialMine, initialCenterId, consentPending]);
 
   // First time a staff member opens the panel, walk them through it. This IS the
   // onboarding: the welcome email links to the written manual, but somebody who just got
@@ -485,14 +514,14 @@ export default function AppShell({
   // status field, what never gets published) are things to be told before the first
   // entry, not after.
   useEffect(() => {
-    if (view !== "admin" || !staff.session) return;
+    if (view !== "admin" || !staff.session || consentPending) return;
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- external store at mount
       if (!window.localStorage.getItem(STAFF_TOUR_KEY)) setStaffTourOpen(true);
     } catch {
       /* private mode: no tour rather than one on every sign-in */
     }
-  }, [view, staff.session]);
+  }, [view, staff.session, consentPending]);
 
   // The tour's "open a real record" step needs the current list without the control
   // object being rebuilt (and the step's `before()` re-running) on every load tick.
@@ -570,16 +599,22 @@ export default function AppShell({
     const sb = getSupabase();
     if (!sb) return;
     let vivo = true;
-    void Promise.all([fetchFeedPosts(sb), fetchFeedCampaigns(sb)]).then(([p, c]) => {
+    void Promise.all([
+      fetchFeedPosts(sb),
+      fetchFeedCampaigns(sb),
+      // Sólo la agenda de HelpMaps: el feed no trae la de cada iniciativa.
+      officialId ? fetchActivities(sb, officialId) : Promise.resolve([] as Activity[]),
+    ]).then(([p, c, e]) => {
       if (!vivo) return;
       setFeedPosts(p);
       setFeedCampaigns(c);
+      setFeedEvents(e);
       setFeedLoading(false);
     });
     return () => {
       vivo = false;
     };
-  }, [panelTab]);
+  }, [panelTab, officialId]);
 
   // ── «Cerca» ─────────────────────────────────────────────────────────────
   //
@@ -653,20 +688,35 @@ export default function AppShell({
    */
   const feedItems = useMemo(() => {
     const all = buildFeed({
-      centers,
+      centers: allCenters,
       posts: feedPosts,
       campaigns: feedCampaigns,
+      events: feedEvents,
+      officialId,
       from: myLocation.fix,
       saved: account.favourites,
       mode: feedMode,
     });
     if (!zoneFocus) return all;
+    // Lo de HelpMaps sobrevive a la zona: habla a todo el país, también a quien mira un
+    // barrio.
     return all.filter(
       (item) =>
-        hasCoords(item.center) &&
-        pointInRing(zoneFocus.ring, item.center.lat, item.center.lng),
+        item.official ||
+        (hasCoords(item.center) &&
+          pointInRing(zoneFocus.ring, item.center.lat, item.center.lng)),
     );
-  }, [centers, feedPosts, feedCampaigns, myLocation.fix, account.favourites, feedMode, zoneFocus]);
+  }, [
+    allCenters,
+    feedPosts,
+    feedCampaigns,
+    feedEvents,
+    officialId,
+    myLocation.fix,
+    account.favourites,
+    feedMode,
+    zoneFocus,
+  ]);
 
   // Con un filtro de sitio puesto —una región, o una zona afectada abierta— la barra de
   // «N necesitan ayuda» tiene que contar DENTRO de ese sitio. Contando el país entero

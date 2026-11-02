@@ -283,7 +283,16 @@ export interface Activity {
   skills: Skill[];
 }
 
-export type PostKind = "avance" | "entrega" | "necesidad";
+export type PostKind = "avance" | "entrega" | "necesidad" | "bienvenida";
+
+/** La organización de la que habla una entrada del perfil de HelpMaps. */
+export interface FeaturedLocation {
+  id: string;
+  name: string;
+  type: LocationType;
+  region: string | null;
+  photo_url: string | null;
+}
 
 /** Lo que la iniciativa cuenta. Con `campaign_id`, es la rendición de esa campaña. */
 export interface InitiativePost {
@@ -294,4 +303,6 @@ export interface InitiativePost {
   body: string;
   photo_url: string | null;
   created_at: string;
+  /** Con `db/22_bienvenida.sql`: la organización que presenta (p. ej. una bienvenida). */
+  featured: FeaturedLocation | null;
 }

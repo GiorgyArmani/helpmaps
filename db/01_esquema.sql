@@ -4382,3 +4382,149 @@ create trigger trg_submissions_reward after update on public.submissions
   for each row execute function public.reward_approved_submission();
 
 notify pgrst, 'reload schema';
+
+-- ###########################################################################
+-- ### 025_helpmaps_oficial
+-- ###########################################################################
+-- El perfil de HelpMaps es un punto `digital` marcado `official` (uno por base, sólo un
+-- admin lo marca) desde el que el equipo publica para todo el país. Copia literal de
+-- db/21_helpmaps_oficial.sql.
+
+alter table public.locations
+  add column if not exists official boolean not null default false;
+
+create unique index if not exists locations_one_official
+  on public.locations ((true)) where official;
+
+-- ── Sólo un admin decide qué punto es la voz de HelpMaps ─────────────────────
+
+create or replace function private.guard_official()
+returns trigger
+language plpgsql
+set search_path = public
+as $guard$
+begin
+  if (tg_op = 'INSERT' and new.official)
+     or (tg_op = 'UPDATE' and new.official is distinct from old.official) then
+    if not private.is_admin() then
+      raise exception 'Sólo un admin puede marcar el perfil oficial' using errcode = '42501';
+    end if;
+  end if;
+  return new;
+end
+$guard$;
+
+drop trigger if exists trg_locations_official on public.locations;
+create trigger trg_locations_official before insert or update on public.locations
+  for each row execute function private.guard_official();
+
+-- ── Crear el perfil (o devolver el que ya hay) ────────────────────────────
+
+create or replace function public.ensure_official_location(p_name text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $ensure$
+declare
+  v_id text;
+begin
+  if not private.is_admin() then
+    raise exception 'Sólo un admin puede crear el perfil oficial' using errcode = '42501';
+  end if;
+
+  select id into v_id from public.locations where official limit 1;
+  if v_id is not null then
+    return v_id;
+  end if;
+
+  v_id := 'helpmaps-oficial';
+  insert into public.locations (id, name, type, active, official)
+  values (v_id, coalesce(nullif(btrim(p_name), ''), 'HelpMaps'), 'digital', true, true)
+  on conflict (id) do update set official = true, active = true;
+
+  -- `onboarded_at` ya puesto: el equipo entra directo al editor del perfil, sin el
+  -- recorrido de bienvenida pensado para una organización que llega por primera vez.
+  insert into public.center_info (location_id, status, onboarded_at)
+  values (v_id, 'abierto', now())
+  on conflict (location_id) do update
+    set onboarded_at = coalesce(public.center_info.onboarded_at, now());
+
+  return v_id;
+end
+$ensure$;
+
+revoke all on function public.ensure_official_location(text) from public, anon;
+grant execute on function public.ensure_official_location(text) to authenticated;
+
+notify pgrst, 'reload schema';
+
+-- ###########################################################################
+-- ### 026_bienvenida
+-- ###########################################################################
+-- Al aprobarse un registro de `/organizaciones`, el perfil oficial publica una bienvenida
+-- (`kind = bienvenida`, `featured_location_id` = la organización). Copia literal de
+-- db/22_bienvenida.sql.
+
+alter table public.initiative_posts
+  add column if not exists featured_location_id text
+    references public.locations(id) on delete cascade;
+
+create index if not exists initiative_posts_featured_idx
+  on public.initiative_posts (featured_location_id) where featured_location_id is not null;
+
+alter table public.initiative_posts drop constraint if exists initiative_posts_kind_check;
+alter table public.initiative_posts add constraint initiative_posts_kind_check
+  check (kind in ('avance','entrega','necesidad','bienvenida'));
+
+create or replace function public.welcome_approved_org()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $welcome$
+declare
+  v_official text;
+  v_name     text;
+begin
+  if new.status <> 'approved'
+     or old.status is not distinct from 'approved'
+     or new.location_id is null
+     or coalesce(new.payload->>'org', '') <> 'true' then
+    return new;
+  end if;
+
+  select id into v_official from public.locations where official and active limit 1;
+  if v_official is null or v_official = new.location_id then
+    return new;
+  end if;
+
+  if exists (
+    select 1 from public.initiative_posts
+     where location_id = v_official and featured_location_id = new.location_id
+  ) then
+    return new;
+  end if;
+
+  select name into v_name from public.locations where id = new.location_id;
+  if v_name is null then
+    return new;
+  end if;
+
+  insert into public.initiative_posts (location_id, kind, body, featured_location_id, status)
+  values (
+    v_official,
+    'bienvenida',
+    left(v_name, 200) || ' ya está en HelpMaps. Síguela para enterarte de sus campañas y jornadas.',
+    new.location_id,
+    'published'
+  );
+  return new;
+end
+$welcome$;
+
+drop trigger if exists trg_submissions_welcome on public.submissions;
+create trigger trg_submissions_welcome after update on public.submissions
+  for each row execute function public.welcome_approved_org();
+
+notify pgrst, 'reload schema';
