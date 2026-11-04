@@ -310,7 +310,7 @@ const es = {
   "donate.claimed": "Listo, les avisamos. Falta que la iniciativa confirme que le llegó.",
   // La misma regla que en el onboarding, dicha ahora a quien va a dar el dinero.
   "donate.directNote":
-    "Estos datos son de la iniciativa y el aporte le llega directo. {platform} no lo recibe ni se queda con nada.",
+    "Estos datos son de la iniciativa las donaciones llegan directo",
 
   // ── Mi iniciativa: onboarding y gestión ─────────────────────────────────
   "mine.kicker": "Tu iniciativa",
@@ -1673,7 +1673,8 @@ const es = {
   "orgs.endAdd": "Agregar mi organización",
   "follow.follow": "Seguir",
   "follow.following": "Siguiendo",
-  "follow.count": "Seguidores: {n}",
+  "follow.count": "{n} seguidores",
+  "follow.countSingle": "1 seguidor",
   "follow.first": "Sé la primera persona en seguirla.",
   "follow.followingHint": "Te avisaremos de sus campañas, jornadas y novedades.",
   "follow.needAccount": "Crea una cuenta para seguir a esta organización y enterarte de sus campañas y jornadas.",

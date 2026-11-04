@@ -63,6 +63,8 @@ export default function PointActions({
   const here = useMyLocation();
   const [checkin, setCheckin] = useState<"idle" | "sending" | "done" | "far" | "error">("idle");
   const [farKm, setFarKm] = useState<number | null>(null);
+  // Qué se acaba de activar, para explicarlo una vez y en ese momento — no en cada visita.
+  const [justOn, setJustOn] = useState<"follow" | "save" | null>(null);
 
   const saved = account.favourites.has(locationId);
   const following = account.follows.has(locationId);
@@ -88,6 +90,7 @@ export default function PointActions({
     if (!sb || followBusy) return;
     setFollowBusy(true);
     const next = !following;
+    setJustOn(next ? "follow" : null);
     // Optimista, como guardar: el botón responde ya y se revierte si falla.
     account.setFollowing(locationId, next);
     setFollowers((n) => (n === null ? n : Math.max(0, n + (next ? 1 : -1))));
@@ -107,6 +110,7 @@ export default function PointActions({
     const sb = getSupabase();
     if (!sb || busy) return;
     setBusy(true);
+    setJustOn(saved ? null : "save");
     // Optimista: el corazón responde ya. En una barra de señal, esperar la ida y vuelta
     // se siente como que el botón no funciona y la gente lo toca tres veces.
     account.setFavourite(locationId, !saved);
@@ -188,10 +192,30 @@ export default function PointActions({
 
   if (!account.checked) return null;
 
+  function followersLabel(n: number) {
+    return n === 1 ? t("follow.countSingle") : t("follow.count", { n });
+  }
+
+  const hint =
+    justOn === "follow" && following
+      ? t("follow.followingHint")
+      : justOn === "save" && saved
+        ? t("point.saveHint")
+        : null;
+  const count =
+    showFollow && followers !== null
+      ? followers > 0
+        ? followersLabel(followers)
+        : following
+          ? null
+          : t("follow.first")
+      : null;
+  const footNote = [count, hint].filter(Boolean).join(" · ");
+
   if (!account.userId) {
     return (
       <p className="small mut">
-        {followable && followers ? `${t("follow.count", { n: followers })} · ` : ""}
+        {followable && followers ? `${followersLabel(followers)} · ` : ""}
         {followable ? t("follow.needAccount") : t("point.needAccount")}{" "}
         <Link className="linkish" href="/registro">
           {t("login.createAccount")}
@@ -253,10 +277,9 @@ export default function PointActions({
         )}
       </div>
 
-      {/* Lo que hay que saber ANTES de tocarlo: se comprueba dónde estás y no se guarda. */}
-      {checkin === "idle" && here.status !== "denied" && !followOnly ? (
-        <p className="small mut">{t("point.checkinHint")}</p>
-      ) : null}
+      {/* Una sola nota bajo los botones: los seguidores y, justo después de seguir o
+          guardar, qué significa. Nada fijo que se repita en cada visita. */}
+      {footNote ? <p className="small mut">{footNote}</p> : null}
       {checkin === "far" ? (
         <p className="lerr">
           {farKm !== null ? t("point.tooFarKm", { km: farKm }) : t("point.tooFar")}
@@ -265,14 +288,6 @@ export default function PointActions({
       {checkin === "error" ? <p className="lerr">{t("error.generic")}</p> : null}
       {here.status === "denied" && !followOnly ? <p className="small mut">{t("nearby.denied")}</p> : null}
       {checkin === "done" ? <p className="small mut">{t("point.checkedInHint")}</p> : null}
-
-      {showFollow && followers !== null ? (
-        <p className="small mut">
-          {followers > 0 ? t("follow.count", { n: followers }) : t("follow.first")}
-          {following ? ` · ${t("follow.followingHint")}` : ""}
-        </p>
-      ) : null}
-      {saved ? <p className="small mut">{t("point.saveHint")}</p> : null}
 
       {open ? (
         <div className="form">
