@@ -20,7 +20,8 @@ import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
  *
  * ── EL SERVIDOR DE RUTAS ───────────────────────────────────────────────────
  *
- * `ROUTING_FOOT_URL` y `ROUTING_CAR_URL`: un OSRM por perfil. Por defecto, el público de
+ * `ROUTING_FOOT_URL` y `ROUTING_CAR_URL`: un OSRM por perfil (el nuestro, en `infra/osrm`,
+ * con `ROUTING_KEY`). Por defecto, el público de
  * FOSSGIS sobre OpenStreetMap, que SÓLO sirve para probar: su política de uso no admite
  * el tráfico de una app, y es un tercero que vería las coordenadas. En producción va un
  * OSRM propio con el extracto del país, sin registros.
@@ -28,6 +29,11 @@ import { clientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 const FOOT = process.env.ROUTING_FOOT_URL || "https://routing.openstreetmap.de/routed-foot";
 const CAR = process.env.ROUTING_CAR_URL || "https://routing.openstreetmap.de/routed-car";
+/**
+ * La clave de la puerta del OSRM propio (`infra/osrm`): sin ella responde 401, así que nadie
+ * más puede usar nuestro servidor de rutas. Sólo vive en el servidor, nunca en el navegador.
+ */
+const KEY = process.env.ROUTING_KEY || "";
 
 /** Pedir una ruta es un toque, no una ráfaga. */
 const MAX_PER_IP = 20;
@@ -62,7 +68,11 @@ async function leg(base: string, from: { lat: number; lng: number }, to: { lat: 
     `${base}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}` +
     `?overview=simplified&geometries=geojson&steps=false`;
   try {
-    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
+    const res = await fetch(url, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+      headers: KEY ? { "x-routing-key": KEY } : undefined,
+    });
     if (!res.ok) return null;
     const data = (await res.json()) as {
       code?: string;

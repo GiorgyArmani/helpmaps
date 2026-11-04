@@ -1,0 +1,120 @@
+# Servidor de rutas de «Cómo llegar» (ver infra/osrm/README.md).
+#
+# Dos OSRM —a pie y en carro— sobre el mapa de calles de Venezuela de OpenStreetMap.
+# La primera vez descarga el mapa y lo prepara (10–30 min); después arranca en segundos.
+#
+# PRIVACIDAD: lo que llega aquí son coordenadas de personas. Ningún servicio escribe
+# registros (`logging: none` y `--verbosity WARNING`): ni la ruta pedida ni desde dónde.
+
+x-osrm: &osrm
+  image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+  volumes:
+    - osrm-data:/data
+  logging:
+    driver: none
+
+services:
+  # 1. El mapa. Sólo se descarga si no está (o si se borra para actualizarlo).
+  descargar:
+    image: alpine:3.20
+    volumes:
+      - osrm-data:/data
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        if [ ! -s /data/venezuela.osm.pbf ]; then
+          wget -O /data/venezuela.osm.pbf.tmp "$${OSRM_PBF_URL}"
+          mv /data/venezuela.osm.pbf.tmp /data/venezuela.osm.pbf
+        fi
+    environment:
+      OSRM_PBF_URL: ${OSRM_PBF_URL:-https://download.geofabrik.de/south-america/venezuela-latest.osm.pbf}
+    restart: "no"
+
+  # 2. Preparar cada perfil, uno detrás de otro para no pedir el doble de memoria a la vez.
+  preparar-pie:
+    <<: *osrm
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mkdir -p /data/foot
+        if [ ! -s /data/foot/venezuela.osrm.mldgr ]; then
+          cp /data/venezuela.osm.pbf /data/foot/venezuela.osm.pbf
+          osrm-extract -p /opt/foot.lua /data/foot/venezuela.osm.pbf
+          osrm-partition /data/foot/venezuela.osrm
+          osrm-customize /data/foot/venezuela.osrm
+          rm /data/foot/venezuela.osm.pbf
+        fi
+    depends_on:
+      descargar:
+        condition: service_completed_successfully
+    restart: "no"
+
+  preparar-carro:
+    <<: *osrm
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mkdir -p /data/car
+        if [ ! -s /data/car/venezuela.osrm.mldgr ]; then
+          cp /data/venezuela.osm.pbf /data/car/venezuela.osm.pbf
+          osrm-extract -p /opt/car.lua /data/car/venezuela.osm.pbf
+          osrm-partition /data/car/venezuela.osrm
+          osrm-customize /data/car/venezuela.osrm
+          rm /data/car/venezuela.osm.pbf
+        fi
+    depends_on:
+      preparar-pie:
+        condition: service_completed_successfully
+    restart: "no"
+
+  # 3. Los dos servidores. Sólo los ve la puerta, nunca internet.
+  pie:
+    <<: *osrm
+    command: ["osrm-routed", "--algorithm", "mld", "--verbosity", "WARNING", "/data/foot/venezuela.osrm"]
+    depends_on:
+      preparar-carro:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  carro:
+    <<: *osrm
+    command: ["osrm-routed", "--algorithm", "mld", "--verbosity", "WARNING", "/data/car/venezuela.osrm"]
+    depends_on:
+      preparar-carro:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # 4. La puerta: lo único con dominio. Pide la clave que manda la app (`ROUTING_KEY`) y
+  #    reparte /pie/ y /carro/. Sin registro de accesos: la dirección pedida lleva las
+  #    coordenadas. En Dokploy, el dominio apunta a ESTE servicio, puerto 80.
+  puerta:
+    image: nginx:1.27-alpine
+    environment:
+      ROUTING_KEY: ${ROUTING_KEY:?Pon ROUTING_KEY en las variables del proyecto}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        cat > /etc/nginx/conf.d/default.conf <<CONF
+        server {
+          listen 80;
+          access_log off;
+          error_log /dev/null crit;
+          if (\$$http_x_routing_key != "$${ROUTING_KEY}") { return 401; }
+          location /pie/   { proxy_pass http://pie:5000/; }
+          location /carro/ { proxy_pass http://carro:5000/; }
+          location /       { return 404; }
+        }
+        CONF
+        exec nginx -g 'daemon off;'
+    depends_on:
+      - pie
+      - carro
+    logging:
+      driver: none
+    restart: unless-stopped
+
+volumes:
+  osrm-data:
