@@ -33,6 +33,7 @@ import { clusterPinHtml, glyphSvg } from "@/features/map/pinGlyphs";
 import { alertColor, quakePopupHtml, quakeRadius } from "@/features/hazard/quakeMarkers";
 import { Icon } from "@/ui/icons";
 import { rememberFix } from "@/features/nearby/useMyLocation";
+import { currentGuide, useGuide } from "@/features/guide/guide";
 import { useI18n } from "@/i18n/context";
 import type { DictKey } from "@/i18n";
 import { useSite, useSiteHelpers } from "@/features/app/SiteProvider";
@@ -219,6 +220,9 @@ export default function MapCanvas({
   // Las zonas afectadas publicadas, y aparte el anillo que se está dibujando.
   const zoneRef = useRef<LayerGroup | null>(null);
   const drawRef = useRef<LayerGroup | null>(null);
+  // «Cómo llegar»: la ruta y la persona, encima de todo lo demás.
+  const guideRef = useRef<LayerGroup | null>(null);
+  const guideFitRef = useRef<string | null>(null);
   // Las capas propias de la emergencia, montadas por id.
   const overlayRef = useRef<LayerGroup | null>(null);
   const mountedRef = useRef<Record<string, import("leaflet").Layer>>({});
@@ -293,6 +297,7 @@ export default function MapCanvas({
       hazardRef.current = L.layerGroup().addTo(map);
       // El anillo en edición, encima de todo lo que se dibuja: se está tocando.
       drawRef.current = L.layerGroup().addTo(map);
+      guideRef.current = L.layerGroup().addTo(map);
 
       // El plugin se carga después de Leaflet porque se engancha a su namespace.
       await import("leaflet.markercluster");
@@ -955,6 +960,9 @@ export default function MapCanvas({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !selectedId) return;
+    // Con la ruta abierta el encuadre es de la ruta: este salto (que también corre cuando
+    // la lista de puntos se refresca) la dejaba medio fuera de la pantalla.
+    if (currentGuide()?.target.id === selectedId) return;
     const c = centers.find((x) => x.id === selectedId);
     if (c && hasCoords(c)) {
       map.flyTo([c.lat, c.lng], Math.max(map.getZoom(), 15), { duration: 0.5 });
@@ -972,6 +980,81 @@ export default function MapCanvas({
       : site.country.geo.zoom;
     map.flyTo([pin.lat, pin.lng], zoom, { duration: 0.5 });
   }, [selectedId, centers, digital, region, ready]);
+
+  // ── cómo llegar ─────────────────────────────────────────────────────────
+  // La ruta del modo elegido, o la recta si no hubo ruta, y la persona encima. Se encuadra
+  // UNA vez por destino y modo: después la persona mueve el mapa a su gusto y una nueva
+  // lectura del GPS no se lo arrebata.
+  const guide = useGuide();
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = guideRef.current;
+    if (!map || !layer || !ready) return;
+    let cancelled = false;
+    void (async () => {
+      const L = (await import("leaflet")).default;
+      if (cancelled) return;
+      layer.clearLayers();
+      if (!guide) {
+        guideFitRef.current = null;
+        return;
+      }
+      const to: [number, number] = [guide.target.lat, guide.target.lng];
+      const fix = guide.fix;
+      if (!fix) return;
+      const me: [number, number] = [fix.lat, fix.lng];
+      const leg = guide.route?.[guide.mode] ?? null;
+      const line = leg ? leg.line : guide.routeStatus === "failed" ? [me, to] : null;
+      // El azul de la información, de la marca: ningún color se escribe a mano.
+      const blue = getComputedStyle(document.documentElement).getPropertyValue("--adm").trim() || "#2f74d0";
+      if (line) {
+        // Un trazo claro debajo y el color encima: se lee sobre cualquier fondo del mapa.
+        L.polyline(line, { color: "#fff", weight: 9, opacity: 0.9, interactive: false }).addTo(layer);
+        L.polyline(line, {
+          color: blue,
+          weight: 5,
+          opacity: 0.95,
+          dashArray: leg ? undefined : "2 10",
+          lineCap: "round",
+          interactive: false,
+        }).addTo(layer);
+      }
+      if (fix.accuracy > 30) {
+        L.circle(me, {
+          radius: fix.accuracy,
+          color: blue,
+          weight: 1,
+          opacity: 0.3,
+          fillOpacity: 0.08,
+          interactive: false,
+        }).addTo(layer);
+      }
+      L.marker(me, {
+        icon: L.divIcon({ className: "mkwrap", html: `<span class="me"></span>`, iconSize: [0, 0] }),
+        interactive: false,
+        keyboard: false,
+      }).addTo(layer);
+      // El punto del botón «mi ubicación» se queda quieto mientras éste se mueve: sobra.
+      meRef.current?.remove();
+      meRef.current = null;
+
+      const key = `${guide.target.id}|${guide.mode}|${leg ? "r" : guide.routeStatus}`;
+      if (guideFitRef.current === key || (!leg && guide.routeStatus !== "failed")) return;
+      guideFitRef.current = key;
+      const wide = window.matchMedia("(min-width: 900px)").matches;
+      map.fitBounds(L.latLngBounds([...(line ?? [me, to]), me, to]), {
+        // Lo que tapa el mapa: la tarjeta de la ruta abajo en el teléfono y el panel a la
+        // izquierda en escritorio.
+        paddingTopLeft: wide ? [500, 140] : [40, 170],
+        paddingBottomRight: wide ? [60, 280] : [40, 260],
+        maxZoom: 17,
+        animate: true,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [guide, ready]);
 
   // ── my location ─────────────────────────────────────────────────────────
   // A denied or unavailable fix has to SAY so. Silently dropping back to the idle state

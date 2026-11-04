@@ -68,3 +68,27 @@ export async function setFollow(sb: SupabaseClient, locationId: string, on: bool
   if (error) throw error;
   return false;
 }
+
+// Sin `db/24_seguidores_avatar.sql` la función no existe: se deja de pedir en la pestaña y
+// el perfil enseña sólo el número.
+let sinAvatares = false;
+
+/**
+ * Los avatares de quienes siguen un punto, el más reciente primero. Sólo el dibujo: la base
+ * no devuelve ni nombres ni ids (`follower_avatars`). Crudo: quien lo pinta lo valida contra
+ * el catálogo de su país.
+ */
+export async function fetchFollowerAvatars(
+  sb: SupabaseClient,
+  locationId: string,
+  limit = 5,
+): Promise<unknown[]> {
+  if (ausente || sinAvatares) return [];
+  const { data, error } = await sb.rpc("follower_avatars", { p_location: locationId, p_limit: limit });
+  if (error) {
+    // `PGRST202` la función no está en la caché de PostgREST; `42883` no existe.
+    if (error.code === "PGRST202" || error.code === "42883") sinAvatares = true;
+    return [];
+  }
+  return Array.isArray(data) ? data : [];
+}

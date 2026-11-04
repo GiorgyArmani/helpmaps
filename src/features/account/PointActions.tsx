@@ -1,16 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/i18n/context";
 import { Icon } from "@/ui/icons";
 import { Button, Field, Notice, TextArea } from "@/ui/primitives";
 import { getSupabase } from "@/lib/supabase/client";
 import { createPointReport, toggleFavourite } from "@/data/account";
-import { fetchFollowersCount, followsAvailable, setFollow } from "@/data/follows";
+import { fetchFollowerAvatars, fetchFollowersCount, followsAvailable, setFollow } from "@/data/follows";
 import { REPORT_KINDS, type ReportKind } from "@/domain/account";
 import { useAccount } from "@/features/account/useAccount";
 import { useMyLocation } from "@/features/nearby/useMyLocation";
+import { useSite } from "@/features/app/SiteProvider";
+import { useSessionPeek } from "@/features/account/useSessionPeek";
+import { faunaOf, parseAvatar, type Avatar } from "@/domain/avatar";
+import { myAvatar } from "@/features/avatar/mine";
+import FollowersPile, { PILE_MAX } from "@/features/account/FollowersPile";
 
 /**
  * Lo que una persona con cuenta puede hacer sobre un punto concreto: guardarlo, y avisar
@@ -71,25 +76,59 @@ export default function PointActions({
   const [followBusy, setFollowBusy] = useState(false);
   // Cuántos la siguen: prueba social, y lo que invita a sumarse. Público, sin nombres.
   const [followers, setFollowers] = useState<number | null>(null);
+  // Sus avatares, crudos como llegan. Y si esta persona la seguía ANTES de tocar el botón
+  // en esta visita (`null` = no lo ha tocado): si la seguía, su animal ya viene en la lista.
+  const [rawFaces, setRawFaces] = useState<unknown[] | null>(null);
+  const [followedBefore, setFollowedBefore] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!followable) return;
     const sb = getSupabase();
     if (!sb) return;
     let vivo = true;
-    void fetchFollowersCount(sb, locationId).then((n) => {
-      if (vivo) setFollowers(n);
+    void Promise.all([
+      fetchFollowersCount(sb, locationId),
+      fetchFollowerAvatars(sb, locationId, PILE_MAX),
+    ]).then(([n, faces]) => {
+      if (!vivo) return;
+      setFollowers(n);
+      setRawFaces(faces);
     });
     return () => {
       vivo = false;
     };
   }, [followable, locationId]);
 
+  const site = useSite();
+  const peek = useSessionPeek();
+  const fauna = useMemo(() => faunaOf(site.country), [site.country]);
+  const mine = useMemo(
+    () => (account.userId ? myAvatar(fauna, account.profile?.avatar, peek.avatar) : null),
+    [account.userId, fauna, account.profile?.avatar, peek.avatar],
+  );
+
+  // Las caras que se ven. Al seguir, la de esta persona entra la primera en el acto; al
+  // dejar de seguir, sale. Sin migración (`db/24`) la lista llega vacía y queda el número.
+  const faces = useMemo<Avatar[] | null>(() => {
+    if (rawFaces === null) return null;
+    const list = rawFaces
+      .map((raw) => parseAvatar(raw, { species: fauna, level: 5 }))
+      .filter((av): av is Avatar => av !== null);
+    if (!mine || followedBefore === null) return list;
+    const key = JSON.stringify(mine);
+    if (followedBefore) {
+      const i = list.findIndex((av) => JSON.stringify(av) === key);
+      if (i >= 0) list.splice(i, 1);
+    }
+    return following ? [mine, ...list] : list;
+  }, [rawFaces, fauna, mine, followedBefore, following]);
+
   const onToggleFollow = useCallback(async () => {
     const sb = getSupabase();
     if (!sb || followBusy) return;
     setFollowBusy(true);
     const next = !following;
+    setFollowedBefore((v) => (v === null ? following : v));
     setJustOn(next ? "follow" : null);
     // Optimista, como guardar: el botón responde ya y se revierte si falla.
     account.setFollowing(locationId, next);
@@ -210,17 +249,18 @@ export default function PointActions({
           ? null
           : t("follow.first")
       : null;
-  const footNote = [count, hint].filter(Boolean).join(" · ");
 
   if (!account.userId) {
     return (
-      <p className="small mut">
-        {followable && followers ? `${followersLabel(followers)} · ` : ""}
-        {followable ? t("follow.needAccount") : t("point.needAccount")}{" "}
-        <Link className="linkish" href="/registro">
-          {t("login.createAccount")}
-        </Link>
-      </p>
+      <>
+        {followable && followers ? <FollowersPile faces={faces ?? []} label={followersLabel(followers)} /> : null}
+        <p className="small mut">
+          {followable ? t("follow.needAccount") : t("point.needAccount")}{" "}
+          <Link className="linkish" href="/registro">
+            {t("login.createAccount")}
+          </Link>
+        </p>
+      </>
     );
   }
 
@@ -277,9 +317,13 @@ export default function PointActions({
         )}
       </div>
 
-      {/* Una sola nota bajo los botones: los seguidores y, justo después de seguir o
-          guardar, qué significa. Nada fijo que se repita en cada visita. */}
-      {footNote ? <p className="small mut">{footNote}</p> : null}
+      {/* Una sola línea bajo los botones: los animalitos de quienes la siguen con el número
+          y, justo después de seguir o guardar, qué significa. Nada fijo en cada visita. */}
+      {showFollow ? (
+        <FollowersPile faces={followers === null ? null : (faces ?? [])} label={count} suffix={hint} />
+      ) : hint ? (
+        <p className="small mut">{hint}</p>
+      ) : null}
       {checkin === "far" ? (
         <p className="lerr">
           {farKm !== null ? t("point.tooFarKm", { km: farKm }) : t("point.tooFar")}

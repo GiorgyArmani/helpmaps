@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import type { Center } from "@/domain/types";
-import { currentOffers, directionsUrl, hasCoords, isDigital, lastTouched } from "@/domain/center";
+import { currentOffers, hasCoords, isDigital, lastTouched } from "@/domain/center";
+import { startGuide } from "@/features/guide/guide";
 import { typeStyle } from "@/config";
 import { Icon, TypeGlyph } from "@/ui/icons";
 import { Badge } from "@/ui/primitives";
@@ -321,7 +322,11 @@ export default function CenterDetail({
           <button
             type="button"
             className="btnp"
-            onClick={() => window.open(directionsUrl(center), "_blank", "noopener")}
+            // La ruta se dibuja en nuestro mapa; Google Maps y Waze quedan en la tarjeta
+            // para seguirla paso a paso. Pide la ubicación aquí, en respuesta al toque.
+            onClick={() =>
+              startGuide({ id: center.id, name: center.name, lat: center.lat, lng: center.lng })
+            }
           >
             <Icon.directions />
             {t("center.directions")}

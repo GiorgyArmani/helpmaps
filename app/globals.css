@@ -13051,3 +13051,285 @@ button.layers-inside svg:last-child {
   min-height: 44px;
   text-decoration: none;
 }
+
+/* ── Seguidores: los animalitos de quienes siguen, solapados, y el número al lado ──
+ *
+ * Discos de 28px que se pisan un tercio: así se leen como un grupo de gente y no como una
+ * fila de botones. Las caras no se tocan (el número es lo que se lee), así que el tamaño
+ * no tiene que llegar a 44px. El anillo es del color de la página para que cada cara se
+ * recorte sobre la anterior sin inventar un borde.
+ */
+.fpile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  margin: 8px 0 0;
+}
+
+.fpile-faces {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.fpile-face {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--soft);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.fpile-face + .fpile-face {
+  margin-left: -9px;
+}
+
+.fpile-face .ave-disc,
+.fpile-face .ave-disc svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.fpile-skel {
+  width: 132px;
+  height: 20px;
+  border-radius: 999px;
+}
+
+/* En escritorio la franja de acciones va alineada a la derecha. */
+@media (min-width: 1024px) {
+  .prof-head .prof-do .fpile {
+    justify-content: flex-end;
+    margin: 0;
+  }
+}
+
+/* ── «Cómo llegar» en nuestro mapa ─────────────────────────────────────────
+ *
+ * Una tarjeta sobre el mapa: abajo y a todo el ancho en el teléfono —donde llega el
+ * pulgar—, y al lado del panel en escritorio. Mientras está abierta, en el teléfono la hoja
+ * de puntos se aparta: la ruta es lo que se vino a ver.
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.guide {
+  position: absolute;
+  left: var(--gut);
+  right: var(--gut);
+  bottom: calc(var(--gut) + env(safe-area-inset-bottom));
+  z-index: 640;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: var(--gut);
+  background: #fff;
+  border-radius: var(--r-lg);
+  box-shadow: var(--e-3);
+  color: var(--ink);
+}
+
+@media (max-width: 899px) {
+  .app-guiding .sheet,
+  .app-guiding .pointsctl {
+    display: none;
+  }
+}
+
+@media (min-width: 900px) {
+  .guide {
+    left: 484px;
+    right: auto;
+    bottom: 24px;
+    width: 380px;
+    max-width: calc(100% - 508px);
+  }
+}
+
+.guide-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.guide-pin {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--adm);
+}
+
+.guide-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.guide-kick {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mut);
+}
+
+.guide-name {
+  font-size: 1rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guide-x {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin: -6px -6px -6px 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mut);
+  cursor: pointer;
+  transition: background var(--t-tap) var(--ease);
+}
+
+.guide-x:active {
+  background: var(--soft);
+}
+
+.guide-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.guide-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--t-ui) var(--ease),
+    background var(--t-ui) var(--ease);
+}
+
+.guide-mode svg {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  color: var(--mut);
+}
+
+.guide-mode-txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.guide-mode-txt b {
+  font-size: 1.0625rem;
+  line-height: 1.2;
+}
+
+.guide-mode-txt span {
+  font-size: 0.8125rem;
+  color: var(--mut-track);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.guide-mode-on {
+  border-color: var(--adm);
+  background: color-mix(in srgb, var(--adm) 8%, #fff);
+  box-shadow: inset 0 0 0 1px var(--adm);
+}
+
+.guide-mode-on svg {
+  color: var(--adm);
+}
+
+.guide-mode-skel {
+  display: block;
+  height: 60px;
+  border-radius: var(--r-md);
+}
+
+.guide-msg {
+  margin: 0;
+  font-size: 0.9063rem;
+  line-height: 1.45;
+}
+
+.guide-note {
+  margin: -4px 0 0;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.guide-arrived {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--ok) 10%, #fff);
+}
+
+.guide-arrived svg {
+  flex: 0 0 auto;
+  color: var(--ok);
+}
+
+.guide-arrived > span {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.875rem;
+}
+
+.guide-apps {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-apps-lbl {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.guide-apps .btng {
+  min-height: 44px;
+  padding: 10px 12px;
+  text-decoration: none;
+}

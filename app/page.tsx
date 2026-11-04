@@ -33,6 +33,9 @@ export default async function Home({
       // invitación: cae directo en el onboarding, con todo fresco en la cabeza, en vez
       // de aterrizar en el mapa a buscar una entrada de menú que nunca ha visto.
       initialMine={first(params.mine) === "1"}
+      // `?ir=1` junto a `?c=` abre el punto con la ruta ya en marcha: es a donde lleva
+      // «Cómo llegar» desde el perfil público.
+      initialGuide={first(params.ir) === "1"}
     />
   );
 }

@@ -7,7 +7,6 @@ import { EMPTY_PROFILE, fetchInitiativeProfile } from "@/data/initiatives";
 import {
   currentOffers,
   daysSince,
-  directionsUrl,
   hasCoords,
   isDigital,
   isStale,
@@ -425,15 +424,11 @@ export default async function CenterPage({ params, searchParams }: Params) {
               <>
             <div className="dactions">
               {hasCoords(center) && !digital ? (
-                <a
-                  className="btnp"
-                  href={directionsUrl(center)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                // A nuestro mapa, con la ruta ya en marcha. Misma pestaña: no sale de la app.
+                <Link className="btnp" href={`/?c=${center.id}&ir=1`}>
                   <Icon.directions />
                   {t("center.directions")}
-                </a>
+                </Link>
               ) : null}
               {center.whatsapp ? (
                 <a

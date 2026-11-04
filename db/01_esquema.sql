@@ -4528,3 +4528,33 @@ create trigger trg_submissions_welcome after update on public.submissions
   for each row execute function public.welcome_approved_org();
 
 notify pgrst, 'reload schema';
+
+-- ###########################################################################
+-- ### 027_seguidores_avatar
+-- ###########################################################################
+-- Los avatares (sólo el dibujo, sin nombre ni id) de quienes siguen a una organización,
+-- para el perfil. Copia literal de db/24_seguidores_avatar.sql.
+
+create or replace function public.follower_avatars(p_location text, p_limit integer default 5)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $fa$
+  select coalesce(jsonb_agg(a.avatar), '[]'::jsonb)
+  from (
+    select p.avatar
+    from public.center_follows f
+    join public.profiles p on p.user_id = f.user_id
+    where f.location_id = p_location
+      and p.avatar is not null
+    order by f.created_at desc
+    limit least(greatest(coalesce(p_limit, 5), 1), 8)
+  ) a;
+$fa$;
+
+revoke all on function public.follower_avatars(text, integer) from public;
+grant execute on function public.follower_avatars(text, integer) to anon, authenticated;
+
+notify pgrst, 'reload schema';

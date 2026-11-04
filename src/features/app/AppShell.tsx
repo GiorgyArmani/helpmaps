@@ -83,6 +83,8 @@ import LevelUp, { useLevelUp } from "@/features/notifications/LevelUp";
 import { useSessionPeek } from "@/features/account/useSessionPeek";
 import { faunaOf } from "@/domain/avatar";
 import { myAvatar } from "@/features/avatar/mine";
+import GuideBar from "@/features/guide/GuideBar";
+import { startGuide, stopGuide, useGuide } from "@/features/guide/guide";
 
 // Leaflet touches `window` at import time, so the map never renders on the server.
 const MapCanvas = dynamic(() => import("@/features/map/MapCanvas"), {
@@ -169,7 +171,7 @@ function initialStack(centerId?: string, panel?: boolean, action?: EntryAction):
  */
 function navUrl(entry: NavEntry<View>): string {
   const url = new URL(window.location.href);
-  for (const key of ["c", "a", "panel", "mine"]) url.searchParams.delete(key);
+  for (const key of ["c", "a", "panel", "mine", "ir"]) url.searchParams.delete(key);
   switch (entry.view) {
     case "detail":
       if (entry.id) url.searchParams.set("c", entry.id);
@@ -215,6 +217,7 @@ export default function AppShell({
   initialAction,
   initialPanel,
   initialMine,
+  initialGuide,
 }: {
   initialCenterId?: string;
   initialAction?: EntryAction;
@@ -227,6 +230,8 @@ export default function AppShell({
    * aunque RLS lo pararía en cada consulta, la pantalla se dibujaría igual.
    */
   initialMine?: boolean;
+  /** Con `initialCenterId`: abre ese punto con «Cómo llegar» ya en marcha. */
+  initialGuide?: boolean;
 }) {
   const helpers = useSiteHelpers();
   // Las banderas de los tours se namespacean por la emergencia RESUELTA. Eran constantes
@@ -735,6 +740,20 @@ export default function AppShell({
     [centers, selectedId, managedCenter],
   );
 
+  // «Cómo llegar». Llegando con `?ir=1` la ruta arranca en cuanto el punto está en
+  // memoria, una sola vez. Y se apaga al salir de la app: el GPS no sigue encendido para
+  // una pantalla que ya no está.
+  const guide = useGuide();
+  const guideAsked = useRef(!initialGuide);
+  useEffect(() => {
+    if (guideAsked.current || !selected || selected.id !== initialCenterId) return;
+    guideAsked.current = true;
+    if (hasCoords(selected) && !isDigital(selected)) {
+      startGuide({ id: selected.id, name: selected.name, lat: selected.lat, lng: selected.lng });
+    }
+  }, [selected, initialCenterId]);
+  useEffect(() => stopGuide, []);
+
   // Se pide sólo si hace falta: se gestiona algo, se está mirando, y no salió en la carga
   // general. En el caso normal —punto activo— esto no dispara ninguna petición.
   useEffect(() => {
@@ -1003,7 +1022,10 @@ export default function AppShell({
   // El menú de Colaborar ya no comparte columna con los controles del mapa: se despliega
   // desde la barra de arriba y no los cruza, así que no hace falta apartarlos.
   return (
-    <div className={`app${folded ? " sheetmin" : ""}${drawingZone ? " app-drawing" : ""}`}>
+    <div
+      className={`app${folded ? " sheetmin" : ""}${drawingZone ? " app-drawing" : ""}${guide ? " app-guiding" : ""}`}
+    >
+      <GuideBar />
       <MapCanvas
         centers={visible}
         digital={visibleDigital}

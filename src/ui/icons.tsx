@@ -72,6 +72,22 @@ export const Icon = {
       <circle cx="12" cy="10" r="2.5" />
     </Svg>
   ),
+  // A pie y en carro: los dos modos de «Cómo llegar».
+  walk: (p: IconProps) => (
+    <Svg {...p}>
+      <circle cx="13" cy="4.5" r="1.8" />
+      <path d="m9 21 2.2-6.2M15.5 21l-2.3-5.4-2-2.3.9-4.6M7 11.5l2.6-3.2 2.5-.6 2.4 2.8 2.5 1" />
+    </Svg>
+  ),
+  car: (p: IconProps) => (
+    <Svg {...p}>
+      <path d="M5 16.5V12l1.8-4.6A2 2 0 0 1 8.7 6h6.6a2 2 0 0 1 1.9 1.4L19 12v4.5" />
+      <path d="M4 16.5h16v1.8a.7.7 0 0 1-.7.7h-1.6a.7.7 0 0 1-.7-.7v-1.8M7.7 16.5v1.8a.7.7 0 0 1-.7.7H5.4a.7.7 0 0 1-.7-.7" />
+      <path d="M5 12h14" />
+      <circle cx="8" cy="14.2" r=".6" fill="currentColor" />
+      <circle cx="16" cy="14.2" r=".6" fill="currentColor" />
+    </Svg>
+  ),
   // GPS crosshair. The small centre circle is the point, not a ring around it — at r=7
   // the ticks detach from the body and it reads as a sun rather than a fix on a map.
   target: (p: IconProps) => (
