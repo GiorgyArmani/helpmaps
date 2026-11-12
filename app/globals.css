@@ -3032,59 +3032,79 @@ textarea.finput {
 
 /* Hub landing (helpmaps.net)
  *
- * Una sola columna, mucho blanco y casi nada de cromo: la portada de la red no tiene que
- * vender nada, tiene que decir qué es esto y llevar al mapa del país.
+ * La portada de la red no tiene que vender nada: tiene que decir qué es esto, enseñar
+ * dónde funciona y llevar al mapa del país.
  *
- * ── LAS TRES DECISIONES QUE ARREGLAN EL "no parece haber orden" ──────────────
+ * ── LAS REGLAS DE ESTA PÁGINA ───────────────────────────────────────────────
  *
- * 1. UNA MEDIDA POR ROL, Y SIEMPRE LA MISMA. Antes el `h1` no tenía ancho máximo y
- *    corría los 944 px del contenedor (más de 100 caracteres por línea) mientras el
- *    párrafo de debajo se cortaba a 62ch. Dos ritmos distintos apilados: el ojo no
- *    encontraba un borde derecho al que agarrarse. Ahora la frase para a 26ch y el
- *    párrafo a 58ch — siguen siendo distintos, pero es una escalera deliberada, no ruido.
+ * 1. UN SOLO BORDE IZQUIERDO. Cada sección va a todo lo ancho y su contenido en un
+ *    `.hub-wrap`: un ancho máximo y un canalón (`--hub-gut`, que crece en escritorio)
+ *    para toda la página. Títulos, listas y pie arrancan en esa misma línea. Antes todo
+ *    iba centrado en una columna de 980 px, y cada bloque centrado tiene su propio borde:
+ *    el ojo no encontraba dónde agarrarse.
  *
- * 2. EL ESPACIO AGRUPA. Todo tenía `gap: 14px` dentro y `40px` fuera, así que la bajada
- *    quedaba tan separada de su título como el título de la sección anterior. Aquí hay
- *    cuatro escalones (8 / 16 / 28 / 72) y cada uno significa una cosa: dentro de un
- *    grupo, entre grupos, del encabezado a su contenido, entre secciones.
+ * 2. EL ESPACIO AGRUPA. Poco aire dentro de un grupo, más del encabezado a su contenido
+ *    y mucho entre secciones (`--hub-pad`). Las secciones se separan por ese aire y por
+ *    un cambio de fondo, no por filetes.
  *
- * 3. LA MARCA ES LO MÁS GRANDE. "HelpMaps" iba a 1.05rem al lado de un titular de
- *    2.6rem: el nombre era el elemento más pequeño de la página que existe para
- *    presentarlo. Ahora es la primera línea del `h1` y la pieza mayor de la portada.
+ * 3. LA MARCA ES LO MÁS GRANDE. "HelpMaps" es la primera línea del `h1` y la pieza mayor
+ *    de la portada; la frase va debajo, más pequeña.
  *
- * Contraste: el texto secundario NO usa `--mut` (#7b818c da 3.6:1 sobre blanco y no
- * pasa el mínimo AA de 4.5:1 para texto). `--hub-mut` es la misma idea a 6.2:1.
+ * 4. LA PORTADA ENSEÑA LA RED. El mundo en ASCII con los países encendidos
+ *    (`HubWorld.tsx`) va en la primera pantalla, al lado del nombre, en vez de un mapa
+ *    de teselas más abajo.
+ *
+ * Nada de aquí escribe un color: todo sale de los tokens de marca. El texto secundario
+ * NO usa `--mut` (3,6:1 sobre blanco, no llega al 4,5:1 de AA): `--hub-mut` es la tinta
+ * al 70 %, unos 6,5:1 sobre blanco y por encima de 6:1 sobre `--soft`.
  */
 .hub {
-  --hub-mut: #5b616b;
+  --hub-mut: color-mix(in srgb, var(--ink) 70%, #fff);
+  --hub-max: 1200px;
+  --hub-gut: var(--gut);
   --hub-gap-tight: 8px;
   --hub-gap-item: 16px;
-  --hub-gap-block: 28px;
-  --hub-gap-section: clamp(56px, 8vw, 72px);
+  --hub-gap-block: clamp(28px, 4vw, 44px);
+  --hub-pad: clamp(56px, 9vw, 112px);
 
-  max-width: 980px;
-  margin: 0 auto;
-  padding: clamp(32px, 7vw, 72px) 20px 72px;
   color: var(--ink);
   font-family: var(--font-sans);
-  display: flex;
-  flex-direction: column;
-  gap: var(--hub-gap-section);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 720px) {
+  .hub {
+    --hub-gut: 32px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .hub {
+    --hub-gut: 40px;
+  }
+}
+
+/* El envoltorio: el único sitio de la página que pone margen lateral. */
+.hub-wrap {
+  width: 100%;
+  max-width: calc(var(--hub-max) + 2 * var(--hub-gut));
+  margin-inline: auto;
+  padding-inline: var(--hub-gut);
 }
 
 /* ── Selector de idioma ──────────────────────────────────────────────────── */
 
-/* Arriba a la derecha y en píldora: es lo único de la página que no es contenido, así
-   que se anuncia como control sin robarle peso a la marca. Margen negativo abajo para
-   que no consuma un escalón entero del ritmo vertical — es una barra, no una sección. */
+/* El mismo control segmentado del resto de la aplicación: pista hundida y pastilla
+   blanca elevada para lo activo. Arriba a la derecha: es lo único de la página que no es
+   contenido. */
 .hub-langs {
-  align-self: flex-end;
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
+  margin-left: auto;
   gap: 2px;
   padding: 3px;
-  border: 1px solid var(--line);
   border-radius: 999px;
-  margin-bottom: calc(var(--hub-gap-section) * -1 + var(--hub-gap-block));
+  background: color-mix(in srgb, var(--ink) 6%, var(--soft));
 }
 
 .hub-lang {
@@ -3092,15 +3112,17 @@ textarea.finput {
   align-items: center;
   justify-content: center;
   min-width: 52px;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 14px;
   border-radius: 999px;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--hub-mut);
+  color: var(--mut-track);
   text-decoration: none;
-  transition: background-color 180ms ease-out, color 180ms ease-out;
+  transition:
+    background-color var(--t-tap) var(--ease),
+    color var(--t-tap) var(--ease);
 }
 
 .hub-lang:hover {
@@ -3108,20 +3130,78 @@ textarea.finput {
 }
 
 .hub-lang[aria-current] {
-  background: var(--accent);
-  color: #fff;
+  background: #fff;
+  box-shadow: var(--e-1);
+  color: var(--ink);
 }
 
 /* ── Portada ─────────────────────────────────────────────────────────────── */
 
-/* Centrada. Con una sola columna y tan poco dentro, el eje central es lo que hace que
-   la marca lea como el asunto de la página y no como una etiqueta en un margen. */
-.hub-hero {
+.hub-hero > .hub-wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--hub-gap-block);
+  padding-block: 16px clamp(40px, 7vw, 72px);
+}
+
+/* En el teléfono, una columna: primero las palabras, después el dibujo. */
+.hub-hero-grid {
+  flex: 1;
+  display: grid;
+  gap: 40px;
+  padding-top: clamp(28px, 6vw, 48px);
+}
+
+/* En escritorio la portada ocupa la primera pantalla entera, con el texto y el mundo a
+   la misma altura: la sección siguiente no asoma hasta que se baja. Con tope, para que en
+   un monitor muy alto no quede un bloque perdido en mitad de una pantalla vacía. */
+@media (min-width: 960px) {
+  .hub-hero > .hub-wrap {
+    min-height: min(100svh, 920px);
+  }
+
+  .hub-hero-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    align-content: center;
+    gap: 56px;
+    padding-top: 0;
+  }
+}
+
+.hub-hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+/* La portada entra una vez, al cargar: cada pieza sube un poco, una detrás de otra. */
+.hub-hero-text > * {
+  animation: hub-enter 520ms var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.hub-hero-text > :nth-child(2) {
+  --i: 1;
+}
+
+.hub-hero-text > :nth-child(3) {
+  --i: 2;
+}
+
+.hub-hero-text > :nth-child(4) {
+  --i: 3;
+}
+
+@keyframes hub-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Marca y frase son un solo h1 en dos líneas. `display: flex` en columna para que la
@@ -3130,182 +3210,464 @@ textarea.finput {
   margin: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--hub-gap-item);
-  font-weight: 800;
+  align-items: flex-start;
+  gap: 20px;
+  font-family: var(--font-display);
+  font-weight: 700;
 }
 
 .hub-mark {
   display: flex;
   align-items: center;
-  gap: clamp(12px, 2vw, 18px);
+  gap: clamp(12px, 1.6vw, 18px);
 }
 
 .hub-mark-logo {
-  width: clamp(44px, 7vw, 60px);
-  height: clamp(44px, 7vw, 60px);
-  border-radius: 14px;
+  width: clamp(48px, 5.4vw, 68px);
+  height: clamp(48px, 5.4vw, 68px);
+  border-radius: var(--r-lg);
   display: block;
   flex: 0 0 auto;
 }
 
+/* El tamaño y el interletrado apretado llevan el peso, no la negrita: a 76 px un 800
+   se emplasta. */
 .hub-wordmark {
-  font-size: clamp(2.5rem, 8vw, 4rem);
+  font-size: clamp(2.75rem, 6.2vw, 4.75rem);
   line-height: 1;
   letter-spacing: -0.04em;
 }
 
-/* Peso 500 y no 800: la frase explica, no compite con el nombre. */
+/* Peso 500 y en tinta: la frase es lo que la página afirma, pero no compite con el
+   nombre. */
 .hub-tagline {
-  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  font-family: var(--font-sans);
+  font-size: clamp(1.25rem, 2.1vw, 1.625rem);
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.3;
   letter-spacing: -0.015em;
-  color: var(--hub-mut);
-  /* 38ch, no 26ch: a 26 la frase caía en cuatro líneas de ~23 caracteres, una columna
-     más estrecha que el propio logotipo — se leía apretada y desalineada respecto a él.
-     A 38 son tres líneas algo más anchas que "HelpMaps", que es lo que hace que el
-     bloque se lea como una unidad con la marca y no como una nota al margen. */
-  max-width: 38ch;
-  margin-inline: auto;
+  max-width: 30ch;
   text-wrap: balance;
 }
 
 .hub-lead {
+  margin: 0;
   font-size: 1.0625rem;
   line-height: 1.65;
-  color: #454a53;
-  max-width: 58ch;
-  margin: 0 auto;
+  color: var(--hub-mut);
+  max-width: 54ch;
 }
 
 .hub-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: var(--hub-gap-item);
+  gap: 8px 20px;
 }
 
 /* Una sola acción primaria en la portada; la otra queda como enlace. */
 .hub-cta {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  padding: 0 20px;
+  min-height: 48px;
+  padding: 0 22px;
   border-radius: 999px;
   background: var(--accent);
   color: #fff;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 600;
   text-decoration: none;
-  transition: opacity 180ms ease-out;
+  transition:
+    background-color var(--t-tap) var(--ease),
+    transform var(--t-tap) var(--ease);
 }
 
 .hub-cta:hover {
-  opacity: 0.86;
+  background: color-mix(in srgb, var(--accent) 84%, #fff);
+}
+
+.hub-cta:active {
+  transform: scale(0.97);
 }
 
 /* Un enlace de texto, no un botón.
  *
- * Dos correcciones sobre la versión anterior:
- *
  *   · El subrayado es `text-decoration`, no `border-bottom`. Un borde se dibuja en el
- *     BORDE DE LA CAJA, así que al darle `min-height: 44px` para que fuera un objetivo
- *     táctil decente la línea se despegaba y quedaba flotando muy por debajo del texto,
- *     con pinta de botón a medio hacer. `text-decoration` sigue al texto, de modo que el
- *     área táctil puede crecer por `padding` sin arrastrar la línea.
+ *     BORDE DE LA CAJA, así que al darle altura para que fuera un objetivo táctil
+ *     decente la línea se despegaba y quedaba flotando muy por debajo del texto.
+ *     `text-decoration` sigue al texto, de modo que el área táctil puede crecer por
+ *     `padding` sin arrastrar la línea.
  *
- *   · Sin flecha. Aparecía en los cinco enlaces de la página y, repetida, deja de
- *     significar "esto lleva a otro sitio" y pasa a ser ruido.
+ *   · Sin flecha. Repetida en cada enlace de la página deja de significar "esto lleva a
+ *     otro sitio" y pasa a ser ruido.
  */
 .hub-action {
-  display: inline-block;
-  padding: 11px 0;
-  font-size: 0.9375rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 1rem;
   font-weight: 500;
   color: var(--ink);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
   text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
-  transition: text-decoration-color 180ms ease-out;
+  transition: text-decoration-color var(--t-ui) var(--ease);
 }
 
 .hub-action:hover {
   text-decoration-color: currentColor;
 }
 
+/* Las cifras: el número delante, en grande, y su nombre detrás. */
+.hub-stats {
+  list-style: none;
+  margin: 0;
+  padding: 20px 0 0;
+  width: 100%;
+  display: flex;
+  gap: 40px;
+  border-top: 1px solid var(--line);
+}
+
+.hub-stats > li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hub-stats strong {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── El mundo en ASCII ───────────────────────────────────────────────────── */
+
+/* El cuadro: recorta lo que el zoom derrama y funde los cuatro bordes, para que el
+   mundo salga del cuadro sin un corte recto. Su proporción está declarada, así el hueco
+   queda reservado antes de pintar. En el teléfono va a sangre, de borde a borde. */
+.hub-world-box {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  margin-inline: calc(-1 * var(--hub-gut));
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  mask-composite: intersect;
+}
+
+@media (min-width: 960px) {
+  .hub-world-box {
+    aspect-ratio: 5 / 4;
+    margin-inline: 0;
+  }
+}
+
+/* Letra monoespaciada del sistema: `textLength` estira cada fila al ancho exacto, así que
+   da igual cuál tenga cada aparato. La tierra, apagada; en preparación, a media tinta y
+   con otro carácter (`+`), para que no dependa sólo del color; en línea, en tinta.
+
+   El zoom: primero se imprime el mundo entero (~1 s) y después el dibujo crece hasta
+   donde HelpMaps ya funciona. `--fx/--fy` (el centro de esa zona, en % del dibujo) y
+   `--zs` (los aumentos) los pone `HubWorld` a partir de la red. El estado final es el
+   estilo base y la animación sólo trae el dibujo desde el mundo entero: con el movimiento
+   reducido se ve directamente acercado. Un solo `transform`, sin recalcular nada. */
+.hub-world {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  dominant-baseline: central;
+  user-select: none;
+  transform-origin: var(--fx) var(--fy);
+  transform: translate(calc(50% - var(--fx)), calc(50% - var(--fy))) scale(var(--zs));
+  animation: hub-world-zoom 2400ms cubic-bezier(0.65, 0, 0.35, 1) 1500ms backwards;
+}
+
+@keyframes hub-world-zoom {
+  from {
+    transform: none;
+  }
+}
+
+.hub-world-land {
+  fill: color-mix(in srgb, var(--ink) 18%, #fff);
+}
+
+.hub-world-soon {
+  fill: color-mix(in srgb, var(--ink) 55%, #fff);
+}
+
+.hub-world-live {
+  fill: var(--ink);
+}
+
+/* Fila a fila, de arriba abajo, como una terminal que imprime el mundo. */
+.hub-world-row {
+  animation: hub-world-type 240ms steps(3, end) both;
+  animation-delay: calc(var(--r) * 16ms);
+}
+
+@keyframes hub-world-type {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Donde ya funciona: una arroba en el sitio de una celda, con el verde de «En línea», y
+   una onda que crece y se apaga. Entran cuando el zoom ya llegó. Sólo `transform` y `opacity`. */
+.hub-world-pin {
+  animation: hub-world-type 400ms ease-out 3900ms both;
+}
+
+.hub-world-at {
+  fill: var(--ok);
+}
+
+.hub-world-ping {
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 0.8px;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hub-world-ping 2.8s ease-out infinite;
+  animation-delay: calc(4.4s + var(--k) * 0.9s);
+}
+
+@keyframes hub-world-ping {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+
 /* ── Secciones ───────────────────────────────────────────────────────────── */
 
 .hub-section {
+  padding-block: var(--hub-pad);
+}
+
+/* El cambio de fondo es lo que separa una sección de la siguiente. */
+.hub-section-soft {
+  background: var(--soft);
+}
+
+.hub-section > .hub-wrap {
   display: flex;
   flex-direction: column;
   gap: var(--hub-gap-block);
 }
 
-/* Filete de separación: el recurso más barato para que una sección se lea como una
-   sección sin añadir ni una caja ni un color. */
-.hub-section + .hub-section,
-.hub-foot {
-  border-top: 1px solid var(--line);
-  padding-top: var(--hub-gap-section);
-}
-
 .hub-head {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--hub-gap-tight);
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .hub-h2 {
-  font-size: clamp(1.25rem, 2.2vw, 1.5rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
   margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
 }
 
 .hub-sub {
-  font-size: 1rem;
+  margin: 0;
+  font-size: 1.0625rem;
   line-height: 1.6;
   color: var(--hub-mut);
-  max-width: 58ch;
-  margin: 0 auto;
+  max-width: 52ch;
 }
 
-/* ── Mapa ────────────────────────────────────────────────────────────────── */
+/* ── Países ──────────────────────────────────────────────────────────────── */
 
-.hub-map {
-  height: clamp(280px, 46vw, 400px);
-  width: 100%;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  overflow: hidden;
+.hub-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
 }
 
-.hub-pin,
-.hub-pin-soon {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
+.hub-rows > li {
+  border-bottom: 1px solid var(--line);
+}
+
+/* En el teléfono: código, nombre y estado en un renglón; la nota y el destino debajo. */
+.hub-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "code name status"
+    "note note note"
+    "go go go";
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 72px;
+  padding: 18px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* En escritorio, una sola línea por país, con las columnas alineadas entre filas. */
+@media (min-width: 900px) {
+  .hub-row {
+    grid-template-columns: 44px 160px minmax(0, 1fr) 148px 210px;
+    grid-template-areas: "code name note status go";
+    gap: 0 24px;
+    padding: 22px 16px;
+    /* El fondo del `:hover` sobresale 16px por cada lado; el texto sigue en la línea. */
+    margin-inline: -16px;
+    border-radius: var(--r-md);
+  }
+}
+
+.hub-code {
+  grid-area: code;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: var(--soft2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.hub-row-name {
+  grid-area: name;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.hub-row .hub-status {
+  grid-area: status;
+}
+
+.hub-row-note {
+  grid-area: note;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--hub-mut);
+}
+
+.hub-row-go {
+  grid-area: go;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 19px;
-  background: #fff;
-  border: 3px solid var(--accent);
-  box-shadow: 0 3px 10px rgba(16, 20, 28, 0.28);
-  cursor: pointer;
+  gap: 4px;
+  color: var(--hub-mut);
 }
 
-.hub-pin-soon {
-  border-style: dashed;
-  border-color: var(--hub-mut);
-  opacity: 0.7;
-  cursor: default;
+.hub-row-go svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  transition: transform var(--t-ui) var(--ease);
+}
+
+@media (min-width: 900px) {
+  .hub-row-go {
+    justify-content: flex-end;
+  }
+}
+
+/* Un país en preparación no es un enlace, y se nota sin depender del color: el código
+   va en hueco y con trazo discontinuo, como el pin que tenía en el mapa, no lleva
+   destino, y el estado lo dice con su palabra. */
+div.hub-row .hub-code {
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--ink) 30%, #fff);
+  color: var(--hub-mut);
+}
+
+div.hub-row .hub-row-name {
+  color: var(--hub-mut);
+}
+
+a.hub-row {
+  cursor: pointer;
+  transition: background-color var(--t-ui) var(--ease);
+}
+
+@media (hover: hover) and (min-width: 900px) {
+  a.hub-row:hover {
+    background: var(--soft);
+  }
+
+  a.hub-row:hover .hub-row-go {
+    color: var(--ink);
+  }
+
+  a.hub-row:hover .hub-row-go svg {
+    transform: translateX(3px);
+  }
+}
+
+/* El estado es una palabra, no un color: `data-live` cambia el punto Y el texto, así que
+   no depende de distinguir verde de gris. */
+.hub-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--hub-mut);
+  white-space: nowrap;
+}
+
+.hub-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+  flex: 0 0 auto;
+}
+
+/* El verde va SOLO en el punto, nunca en el texto: `--ok` sobre blanco da ~3:1 y no
+   llega al 4.5:1 que necesita un texto de 13px. La palabra ya dice el estado, así que el
+   color es refuerzo y puede permitirse ser decorativo. */
+.hub-status[data-live]::before {
+  background: var(--ok);
+  opacity: 1;
+}
+
+.hub-host {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  color: inherit;
+  overflow-wrap: anywhere;
 }
 
 /* ── Tarjetas ────────────────────────────────────────────────────────────── */
@@ -3315,139 +3677,132 @@ textarea.finput {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
 }
 
 .hub-grid > li {
   display: flex;
 }
 
+/* Toda la tarjeta es el destino. Blanca sobre la franja suave y levantada con la escala
+   de elevación: al pasar el cursor sube un escalón (`--e-1` → `--e-2`) y dos píxeles. */
 .hub-card {
   flex: 1;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 18px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--hub-gap-tight);
+  gap: 10px;
+  padding: 24px;
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--e-1);
   color: inherit;
   text-decoration: none;
-  transition: border-color 180ms ease-out;
-}
-
-/* Toda la tarjeta es el destino, así que tiene que anunciarse como pulsable sin
-   recurrir a una flecha ni a un botón dentro: el borde se oscurece y el fondo se tiñe
-   apenas. Dos señales a la vez, porque solo el color del borde es demasiado sutil para
-   quien no lo está buscando. */
-a.hub-card {
   cursor: pointer;
+  transition:
+    transform var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
 }
 
-a.hub-card:hover {
-  border-color: var(--accent);
+@media (hover: hover) {
+  .hub-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--e-2);
+  }
+}
+
+.hub-card:active {
+  transform: scale(0.99);
+}
+
+.hub-card-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 6px;
+  border-radius: var(--r-md);
   background: var(--soft);
 }
 
-.hub-card-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  font-size: 1.0625rem;
+.hub-card-name {
+  font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
-.hub-flag {
-  font-size: 1.15rem;
-  line-height: 1;
-}
-
-.hub-card-name {
-  flex: 1;
-}
-
-/* El estado es una palabra, no un color: `data-live` cambia el punto Y el texto, así que
-   no depende de distinguir verde de gris. */
-.hub-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--hub-mut);
-  white-space: nowrap;
-}
-
-.hub-status::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.45;
-  flex: 0 0 auto;
-}
-
-/* El verde va SOLO en el punto, nunca en el texto: `--ok` sobre blanco da ~3:1 y no
-   llega al 4.5:1 que necesita un texto de 12px. La palabra ya dice el estado, así que el
-   color es refuerzo y puede permitirse ser decorativo. */
-.hub-status[data-live]::before {
-  background: var(--ok);
-  opacity: 1;
-}
-
-/* 15px, no 13px: era el cuerpo de texto de las tarjetas y quedaba por debajo de lo
-   cómodo de leer en un teléfono. */
+/* 15px, no 13px: es el cuerpo de texto de las tarjetas y por debajo de eso no se lee
+   cómodo en un teléfono. */
 .hub-card-body {
   font-size: 0.9375rem;
   line-height: 1.55;
   color: var(--hub-mut);
 }
 
-.hub-host {
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 0.8125rem;
-  color: var(--hub-mut);
+.hub-card .hub-host {
   margin-top: auto;
-  padding-top: 4px;
-}
-
-/* Un enlace suelto como hijo directo de la sección: `align-items` por defecto lo
-   estiraría a todo el ancho y el subrayado cruzaría la página entera. */
-.hub-section > .hub-action {
-  align-self: center;
+  padding-top: 8px;
+  color: var(--hub-mut);
 }
 
 /* ── API ─────────────────────────────────────────────────────────────────── */
 
-.hub-code {
+/* Dos columnas en escritorio, con el mismo reparto que la portada: las palabras a la
+   izquierda, la cosa a la derecha. */
+.hub-section > .hub-split {
+  display: grid;
+  gap: var(--hub-gap-block);
+}
+
+@media (min-width: 960px) {
+  .hub-section > .hub-split {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    gap: 56px;
+  }
+}
+
+/* El único bloque en tinta de la página: es lo que se copia. */
+.hub-code-block {
   display: block;
-  white-space: pre;
   overflow-x: auto;
-  background: var(--soft);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 16px 18px;
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 0.8125rem;
-  line-height: 1.8;
-  color: var(--ink);
+  padding: 24px;
+  border-radius: var(--r-lg);
+  background: var(--ink);
+  box-shadow: var(--e-3);
+  color: color-mix(in srgb, #fff 84%, var(--ink));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 2;
+}
+
+/* En el teléfono la dirección se parte en vez de esconderse tras un scroll lateral. */
+.hub-code-line {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.hub-code-line b {
+  font-weight: 700;
+  color: var(--ok);
 }
 
 /* ── Pie ─────────────────────────────────────────────────────────────────── */
 
 .hub-foot {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--hub-gap-item);
+  border-top: 1px solid var(--line);
+  padding-block: 20px 40px;
   font-size: 0.875rem;
   color: var(--hub-mut);
+}
+
+.hub-foot > .hub-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 24px;
 }
 
 .hub-foot a {
@@ -3455,6 +3810,9 @@ a.hub-card:hover {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+  transition: color var(--t-tap) var(--ease);
 }
 
 .hub-foot a:hover {
@@ -3473,6 +3831,7 @@ a.hub-card:hover {
   .hub *,
   .hub *::before,
   .hub *::after {
+    animation: none !important;
     transition-duration: 0.01ms !important;
   }
 }
